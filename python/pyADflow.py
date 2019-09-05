@@ -393,6 +393,13 @@ class ADFLOW(AeroSolver):
 
         self.mesh.setSurfaceDefinition(pts, conn, faceSizes, cgnsBlockIDs)
 
+    def setSurfaceTransferTS(self, surfaceTransfer):
+
+        # time spectral after-design undeformed surface mesh to
+        # after-design deformed surface mesh transfer
+
+        self.surfaceTransfer = surfaceTransfer
+
     def getSolverMeshIndices(self):
         '''
         Get the list of indices to pass to the mesh object for the
@@ -2337,9 +2344,9 @@ class ADFLOW(AeroSolver):
     #   i.e. an Aerostructural solver
     # =========================================================================
 
-    def getSurfaceCoordinates(self, groupName=None, includeZipper=True):
+    def getSurfaceCoordinates(self, groupName=None, includeZipper=True, TS=0):
         # This is an alias for getSurfacePoints
-        return self.getSurfacePoints(groupName, includeZipper)
+        return self.getSurfacePoints(groupName, includeZipper, TS)
 
     def getPointSetName(self,apName):
         """
@@ -2620,12 +2627,17 @@ class ADFLOW(AeroSolver):
         if machRef is None:
             machRef = mach
 
-        if machGrid is None:
-            if self.getOption('equationMode').lower()=='time spectral':
-                machGrid = mach
-            else:
-                # Steady, unsteady
-                machGrid = 0.0
+        # turn this part off since dcl/dx is *not* verified under this case
+        # if machGrid is None:
+        #     if self.getOption('equationMode').lower()=='time spectral':
+        #         machGrid = mach
+        #     else:
+        #         # Steady, unsteady
+        #         machGrid = 0.0
+
+        # change default to this case since dcl/dx is verified under this case
+        machGrid = 0.0
+
 
         # 1. Angle of attack:
         dToR = numpy.pi/180.0
@@ -2651,10 +2663,15 @@ class ADFLOW(AeroSolver):
         # Mach number for time spectral needs to be set to set to zero
         # If time-spectral (TS) then mach = 0, machcoef = mach, machgrid = mach
         # If Steady-State (SS), time-accurate (TA) then mach = mach, machcoef = mach, machgrid = 0
-        if self.getOption('equationMode').lower()=='time spectral':
-            self.adflow.inputphysics.mach = 0.0
-        else:
-            self.adflow.inputphysics.mach = mach
+
+        # turn this part off since dcl/dx is *not* verified under this case
+        # if self.getOption('equationMode').lower()=='time spectral':
+        #     self.adflow.inputphysics.mach = 0.0
+        # else:
+        #     self.adflow.inputphysics.mach = mach
+
+        # change default to this case since dcl/dx is verified under this case
+        self.adflow.inputphysics.mach = mach
 
         self.adflow.inputphysics.machcoef = machRef
         self.adflow.inputphysics.machgrid = machGrid
@@ -2680,6 +2697,12 @@ class ADFLOW(AeroSolver):
         # 4. Periodic Parameters --- These are not checked/verified
         # and come directly from aeroProblem. Make sure you specify
         # them there properly!!
+        if self.getOption('useexternaldynamicmesh'):
+            AP.degreePol = 0
+            AP.coefPol = [0.0]
+            AP.degreeFourier = 1
+            AP.cosCoefFourier = [0.0]
+            AP.sinCoefFourier = [0.0]
         if  self.getOption('alphaMode'):
             self.adflow.inputmotion.degreepolalpha = int(AP.degreePol)
             self.adflow.inputmotion.coefpolalpha = AP.coefPol
@@ -3321,7 +3344,7 @@ class ADFLOW(AeroSolver):
         """
         self.adflow.utils.stabilityderivativedriver()
 
-    def updateGeometryInfo(self, warpMesh=True):
+    def updateGeometryInfo(self, warpMesh=True, HSCflag=False):
         """
         Update the ADflow internal geometry info.
         """
@@ -3340,7 +3363,11 @@ class ADFLOW(AeroSolver):
                 self.adflow.killsignals.routinefailed = False
                 self.adflow.killsignals.fatalFail = False
                 self.updateTime = time.time()-timeA
-                if newGrid is not None:
+                if ((newGrid is not None and not self.getOption('useexternaldynamicmesh')) or 
+                HSCflag):
+                    # since updateGeometryInfo assumes one slice
+                    # when using ts with externally defined mesh, the grid is provided externally;
+                    # updateGeometryInfo mainly serves to update the metrics and etc.
                     self.adflow.warping.setgrid(newGrid)
             # Update geometric data, depending on the type of simulation
             if self.getOption('equationMode').lower() == 'unsteady':
@@ -4464,6 +4491,8 @@ class ADFLOW(AeroSolver):
             'windaxis':[bool, False],
             'alphafollowing':[bool,True],
             'tsstability': [bool, False],
+            'usetsinterpolatedgridvelocity': [bool, False],
+            'useexternaldynamicmesh': [bool, True],
 
             # Convergence Paramters
             'l2convergence':[float, 1e-6],
@@ -4781,6 +4810,8 @@ class ADFLOW(AeroSolver):
             'windaxis':['stab', 'usewindaxis'],
             'alphafollowing':['stab', 'tsalphafollowing'],
             'tsstability':['stab', 'tsstability'],
+            'usetsinterpolatedgridvelocity': ['ts', 'usetsinterpolatedgridvelocity'],
+            'useexternaldynamicmesh': ['ts', 'useexternaldynamicmesh'],
 
             # Convergence Paramters
             'l2convergence':['iter', 'l2conv'],
