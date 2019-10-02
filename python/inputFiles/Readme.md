@@ -8,3 +8,6 @@ wget http://mdolab.engin.umich.edu/sites/default/files/mdolabwebsite/repos/adflo
 tar -xzvf adflow_input_files.tar.gz 
 
 The above should extract the files to the `adflow/python/inputFiles` directory.
+
+Additional files may be found in additional_inputFiles_hsc
+
