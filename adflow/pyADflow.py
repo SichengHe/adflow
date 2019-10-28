@@ -2798,7 +2798,6 @@ class ADFLOW(AeroSolver):
                 # Steady, unsteady
                 machGrid = 0.0
 
-
         # 1. Angle of attack:
         dToR = numpy.pi/180.0
         self.adflow.inputphysics.alpha = alpha*dToR

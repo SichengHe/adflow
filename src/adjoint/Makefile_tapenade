@@ -83,12 +83,6 @@ initializeFlow%referenceState(mach, machcoef, pInfDim, TinfDim, rhoInfDim, velDi
               (mach, machcoef, pInfDim, TinfDim, rhoInfDim, velDirFreeStream, \
                pRef, rhoRef, Tref, muRef, timeRef, pInf, pinfCorr, rhoInf, uInf, rGas, muInf,  winf) \
 \
-initializeFlow%timeSpectralCoef(sections%timePeriod, timeRef, coefSpectral, matrixCoefSpectral, diagMatCoefSpectral) > \
-              (sections%timePeriod, timeRef, coefSpectral, matrixCoefSpectral, diagMatCoefSpectral) \
-\
-initializeFlow%timeSpectralMatrices(coefSpectral, matrixCoefSpectral, diagMatCoefSpectral, dscalar, dvector) > \
-              (coefSpectral, matrixCoefSpectral, diagMatCoefSpectral, dscalar, dvector) \
-\
 bcData%BCDataIsoThermalwall(bcVarArray, Tref) > \
                            (BCData%TNS_wall, Tref) \
 \

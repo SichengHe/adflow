@@ -3861,7 +3861,6 @@ contains
        call normalVelocitiesAllLevels(mm)
 
        call slipVelocitiesFineLevel(.false., t, mm)
-
        call slipVelocitiesCoarseLevels(mm)
 
     enddo
