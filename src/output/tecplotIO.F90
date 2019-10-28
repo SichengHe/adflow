@@ -147,7 +147,6 @@ contains
     end if
 
     do sps=1, nTimeIntervalsSpectral
-   !  do sps=1, 1
        nAbsSlices = nAbsSlices + 1
 
        if (nAbsSlices > nSliceMax) then
@@ -305,7 +304,6 @@ contains
        endif
 
        do sps=1,nTimeIntervalsSpectral
-      !  do sps=1,1
 
           ! If it is time spectral we need to agument the filename
           if (equationMode == timeSpectral) then
