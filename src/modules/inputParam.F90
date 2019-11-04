@@ -616,6 +616,13 @@ module inputTimeSpectral
 
   integer(kind=intType) :: nTimeIntervalsSpectral
 
+  ! coefSpectral(:, :): Stores coeff for dscalar etc. The first
+  !                     dimension is number of sections.
+
+  real(kind=realType), dimension(:, :), allocatable :: coefSpectral
+  real(kind=realType), dimension(:, :, :, :), allocatable :: matrixCoefSpectral
+  real(kind=realType), dimension(:, :, :), allocatable :: diagMatCoefSpectral
+
   ! dscalar(:,:,:): Matrix for the time derivatices of scalar
   !                 quantities; different for every section to
   !                 allow for different periodic angles.
@@ -670,6 +677,15 @@ module inputTimeSpectral
   logical :: useTSInterpolatedGridVelocity
 
   real(kind=realType) :: omegaFourier
+
+#ifndef USE_TAPENADE
+  real(kind=realType), dimension(:, :), allocatable :: coefSpectrald
+  real(kind=realType), dimension(:, :, :, :), allocatable :: matrixCoefSpectrald
+  real(kind=realType), dimension(:, :, :), allocatable :: diagMatCoefSpectrald
+  real(kind=realType), dimension(:, :, :), allocatable :: dscalard
+  real(kind=realType), dimension(:, :, :), allocatable :: dvectord
+#endif
+  
 
 end module inputTimeSpectral
 

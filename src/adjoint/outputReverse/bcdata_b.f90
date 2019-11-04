@@ -869,7 +869,7 @@ contains
       use constants
       use communication, only : adflow_comm_world
       use inputphysics, only : rgasdim
-      use section, only : sections
+      use section, only : sections, sectionsd
       implicit none
 !
 !        local variables.
@@ -1731,7 +1731,7 @@ contains
 !         prescribedsupersonicinlet sets the variables for this
 !         supersonic inlet to prescribed values.
 !
-      use section, only : sections
+      use section, only : sections, sectionsd
       implicit none
 !
 !        local variables.
