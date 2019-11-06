@@ -679,6 +679,7 @@ module inputTimeSpectral
   real(kind=realType) :: omegaFourier
 
 #ifndef USE_TAPENADE
+  real(kind=realType) :: omegaFourierd
   real(kind=realType), dimension(:, :), allocatable :: coefSpectrald
   real(kind=realType), dimension(:, :, :, :), allocatable :: matrixCoefSpectrald
   real(kind=realType), dimension(:, :, :), allocatable :: diagMatCoefSpectrald

@@ -11,7 +11,7 @@ contains
     use adjointvars
     use blockPointers, only : nDom
     use communication, only : adflow_comm_world
-    use inputTimeSpectral, only : nTimeIntervalsSpectral
+    use inputTimeSpectral, only : nTimeIntervalsSpectral, omegaFourierd
     use inputPhysics, only :pointRefd, alphad, betad, equations, machCoefd, &
          machd, machGridd, rgasdimd
     use iteration, only : currentLevel, groundLevel
@@ -76,6 +76,7 @@ contains
     pointrefd(1) = extraDot(iPointRefX)
     pointrefd(2) = extraDot(iPointRefY)
     pointrefd(3) = extraDot(iPointRefZ)
+    omegaFourierd = extraDot(iomegafourier)
     rgasdimd = zero
 
     ! Run the super-dee-duper master forward rotuine
