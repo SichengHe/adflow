@@ -27,7 +27,8 @@
       integer(kind=intType), parameter :: iaxisy2=20
       integer(kind=intType), parameter :: iaxisz1=21
       integer(kind=intType), parameter :: iaxisz2=22
-      integer(kind=intType), parameter :: nDesignExtra=22
+      integer(kind=intType), parameter :: iomegafourier=23
+      integer(kind=intType), parameter :: nDesignExtra=24
 
       ! nNodesGlobal  Total number of nodes on each level
       ! nNodesLocal   Number of nodes owned by the processor on each level

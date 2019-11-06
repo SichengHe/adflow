@@ -67,6 +67,7 @@ ALL_RES_FILES =	$(SRC)/adjoint/adjointExtra.F90\
 		$(SRC)/overset/oversetUtilities.F90\
 		$(SRC)/wallDistance/wallDistance.F90\
 		$(SRC)/bcdata/BCData.F90\
+		$(SRC)/partitioning/partitioning.F90\
 
 
 
@@ -234,6 +235,8 @@ oversetUtilities%newtonUpdate(xCen, blk, frac) > \
 oversetUtilities%fracToWeights(frac) > \
 			      (weights) \
 \
+partitioning%timePeriodSpectral(omegaFourier, sections%timePeriod) > \
+	                           (omegaFourier, sections%timePeriod) \
 "
 
 #applyLowSpeedPreconditioner(w, P, dw) > (w, dw, P) \
@@ -280,7 +283,11 @@ sa%saResScale(scratch) > (dw) \
 \
 turbutils%saEddyViscosity(w,rlv) > (w,rlv,rev) \
 \
-turbutils%turbAdvection(w,scratch)>(w,scratch)"
+turbutils%turbAdvection(w,scratch)>(w,scratch) \
+\
+partitioning%timePeriodSpectral(omegaFourier, sections%timePeriod) > \
+	                           (omegaFourier, sections%timePeriod) \
+"
 
 #================================================================
 

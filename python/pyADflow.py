@@ -3477,6 +3477,134 @@ class ADFLOW(AeroSolver):
     #   product that is possible from the solver.
     #   =========================================================================
 
+    def get_xvd_dom_fwd(self, xvdot, nxvdot, xvdot_sps, sps, nTime):
+
+        # HACK: may need to be moved to fortran layer
+
+        """
+            Mapping volume coordinate dot from one time instance (xvdot_sps from sps)
+            to the global volume dot array (xvdot) which is ordered with ndom->time instance.
+            There are (nxvdot) dof per time instance.
+            sps: 0, 1, ntimeintervalsspectral - 1 (python)
+        """
+
+        # get the info of the data set
+        nDom = self.adflow.masterroutines.hsc_get_ndom()
+        nDof_list = [] # n dof per dom
+
+        il_list = []
+        jl_list = []
+        kl_list = []
+        for nn in xrange(1, nDom + 1):
+            il, jl, kl = self.adflow.masterroutines.hsc_get_iljlkl(nn, 1)
+
+            il_list.append(il)
+            jl_list.append(jl)
+            kl_list.append(kl)
+
+            nDof_list.append(il*jl*kl*3)
+
+        # chop the array into lists
+        xvdot_sps_list = []
+        ind = 0
+        for nn in xrange(nDom):
+
+            il = il_list[nn]
+            jl = jl_list[nn]
+            kl = kl_list[nn]
+
+            ind_loc_bgn = ind
+            ind_loc_end = ind_loc_bgn + il*jl*kl*3
+
+            xvdot_sps_list.append(xvdot_sps[ind_loc_bgn:ind_loc_end])
+
+            ind = ind_loc_end
+
+        # get the global coord of the list
+        xvdot_sps_gloIndices = []
+        for nn in xrange(nDom):
+
+            ind_glo_bgn = 0
+
+            for mm in xrange(nn):
+
+                nDof_loc = nDof_list[mm]
+
+                ind_glo_bgn += nDof_loc*nTime
+
+            ind_glo_bgn += sps*nDof_list[nn]
+            ind_glo_end = ind_glo_bgn + nDof_list[nn]
+
+            xvdot_sps_gloIndices.append([ind_glo_bgn, ind_glo_end])
+
+
+        # fill in
+        for nn in xrange(nDom):
+            ind_glo_bgn, ind_glo_end = xvdot_sps_gloIndices[nn]
+
+            xvdot[ind_glo_bgn:ind_glo_end] += xvdot_sps_list[nn]
+
+    def get_xvd_dom_bwd(self, xvbar, nxvbar, xvbar_sps, sps, nTime):
+
+        # HACK: may need to be moved to fortran layer
+
+        """
+            Mapping volume coordinate dot to one time instance (xvbar_sps from sps)
+            from the global volume bar array (xvbar) which is ordered with ndom->time instance.
+            There are (nxvbar) dof per time instance.
+            sps: 0, 1, ntimeintervalsspectral - 1 (python)
+        """
+
+        # get the info of the data set
+        nDom = self.adflow.masterroutines.hsc_get_ndom()
+        nDof_list = [] # n dof per dom
+
+        il_list = []
+        jl_list = []
+        kl_list = []
+        for nn in xrange(1, nDom + 1):
+            il, jl, kl = self.adflow.masterroutines.hsc_get_iljlkl(nn, 1)
+
+            il_list.append(il)
+            jl_list.append(jl)
+            kl_list.append(kl)
+
+            nDof_list.append(il*jl*kl*3)
+
+        # get the global coord of the list
+        xvbar_sps_gloIndices = []
+        for nn in xrange(nDom):
+
+            ind_glo_bgn = 0
+
+            for mm in xrange(nn):
+
+                nDof_loc = nDof_list[mm]
+
+                ind_glo_bgn += nDof_loc*nTime
+
+            ind_glo_bgn += sps*nDof_list[nn]
+            ind_glo_end = ind_glo_bgn + nDof_list[nn]
+
+            xvbar_sps_gloIndices.append([ind_glo_bgn, ind_glo_end])
+
+        # fill in the array
+        ind = 0
+        for nn in xrange(nDom):
+
+            il = il_list[nn]
+            jl = jl_list[nn]
+            kl = kl_list[nn]
+
+            ind_loc_bgn = ind
+            ind_loc_end = ind_loc_bgn + il*jl*kl*3
+
+            ind_glo_bgn, ind_glo_end = xvbar_sps_gloIndices[nn]
+
+            xvbar_sps[ind_loc_bgn:ind_loc_end] = xvbar[ind_glo_bgn:ind_glo_end]
+
+            ind = ind_loc_end
+
     def computeJacobianVectorProductFwd(self, xDvDot=None, xSDot=None, xVDot=None, wDot=None,
                                         residualDeriv=False, funcDeriv=False, fDeriv=False,
                                         groupName=None):
@@ -3527,12 +3655,18 @@ class ADFLOW(AeroSolver):
 
         # Process the Xs perturbation
         if xSDot is None:
-            xsdot = numpy.zeros_like(self.coords0)
-            xsdot = self.mapVector(xsdot, self.allFamilies,
-                                   self.designFamilyGroup,
-                                   includeZipper=False)
+            xsdot = []
+            for sps in xrange(nTime):
+                xsdot_loc = numpy.zeros_like(self.coords0)
+                xsdot_loc = self.mapVector(xsdot_loc, self.allFamilies,
+                                self.designFamilyGroup,
+                                includeZipper=False)
+                xsdot.append(xsdot_loc)
         else:
-            xsdot = xSDot
+            xsdot = []
+            for sps in xrange(nTime):
+                xsdot.append(xSDot[sps])
+
             useSpatial = True
 
         # Process the Xv perturbation
@@ -3582,11 +3716,51 @@ class ADFLOW(AeroSolver):
         # already existing (and possibly nonzero) xsdot and xvdot
         if xDvDot is not None or xSDot is not None:
             if xDvDot is not None and self.DVGeo is not None:
-                xsdot += self.DVGeo.totalSensitivityProd(xDvDot, self.curAP.ptSetName, self.comm, config=self.curAP.name).reshape(xsdot.shape)
+
+                # xs0dot = self.DVGeo.totalSensitivityProd(xDvDot, self.curAP.ptSetName, self.comm, config=self.curAP.name).reshape(xsdot[0].shape)
+                xs0dot = self.DVGeo.totalSensitivityProd(xDvDot, self.curAP.ptSetName, self.comm).reshape(xsdot[0].shape)
+                if self.getOption('equationMode').lower() == 'time spectral':  
+                    if 0: # airfoil case
+                        xsndot = self.surfaceTransfer.setXS_d(xs0dot)
+                        for sps in xrange(nTime):
+                            xsdot[sps] += xsndot[sps]
+                    if 1:
+                        cfdPts0 = self.getInitialSurfaceCoordinates(HSCflag=False)
+                        xsndot = self.surfaceTransfer.setXS_d(cfdPts0, xs0dot)
+                        for sps in xrange(nTime):
+                            xsdot[sps] += xsndot[sps]
+                else:
+                    xsdot[0] += xs0dot
+            
             if self.mesh is not None:
-                xsdot = self.mapVector(xsdot, self.meshFamilyGroup,
+
+                if self.getOption('equationMode').lower() == 'time spectral':
+
+                    nxvdot = len(xvdot)
+                    nxvdot = int(nxvdot/nTime)
+
+                    for sps in xrange(nTime):
+
+                        xsdot_loc = xsdot[sps]
+
+                        xsdot_loc = self.mapVector(xsdot_loc, self.meshFamilyGroup,
+                                        self.designFamilyGroup, includeZipper=False)
+
+                        # deform the mesh object to match each time instance
+                        pts = self.getSurfaceCoordinates(groupName=None, includeZipper=False, TS=sps)
+
+                        self.mesh.setSurfaceCoordinates(pts)
+                        self.mesh.warpMesh()
+
+                        xvdot_increment_loc = self.mesh.warpDerivFwd(xsdot_loc)
+
+                        self.get_xvd_dom_fwd(xvdot, nxvdot, xvdot_increment_loc, sps, nTime)
+                        
+                        # xvdot[sps*nxvdot:(sps+1)*nxvdot] += xvdot_increment_loc
+                else:
+                    xsdot[0] = self.mapVector(xsdot[0], self.meshFamilyGroup,
                                        self.designFamilyGroup, includeZipper=False)
-                xvdot += self.mesh.warpDerivFwd(xsdot)
+                    xvdot += self.mesh.warpDerivFwd(xsdot[0])
             useSpatial = True
 
         # Sizes for output arrays
@@ -5009,6 +5183,7 @@ class ADFLOW(AeroSolver):
         iDV['xref'] = self.adflow.adjointvars.ipointrefx
         iDV['yref'] = self.adflow.adjointvars.ipointrefy
         iDV['zref'] = self.adflow.adjointvars.ipointrefz
+        iDV['omegafourier'] = self.adflow.adjointvars.iomegafourier
 
         # Convert to python indexing
         for key in iDV:

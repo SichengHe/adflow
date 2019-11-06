@@ -709,7 +709,8 @@ contains
     use block, only : flowDoms, flowDomsd
     use blockPointers, only : nDom, il, jl, kl, ie, je, ke, ib, jb, kb, BCData, &
          nBOcos, nViscBocos
-    use inputtimespectral, only : nTimeIntervalsSpectral
+    use inputtimespectral, only : nTimeIntervalsSpectral, coefSpectrald, matrixCoefSpectrald, &
+         diagMatCoefSpectrald, dscalard, dvectord
     use flowvarrefstate, only : winf, winfd, nw, nt1, nt2
     use inputDiscretization, only : useApproxWallDistance
     use inputPhysics, only : wallDistanceNeeded
@@ -719,6 +720,7 @@ contains
     use adjointVars, only : derivVarsAllocated
     use utils, only : EChk, setPointers, getDirAngle
     use cgnsGrid, only : cgnsDoms, cgnsDomsd, cgnsNDom
+    use section, only : nSections, sectionsd
     implicit none
 
     ! Input parameters
@@ -730,6 +732,7 @@ contains
     integer(kind=intType) :: inBeg, jnBeg, inStop, jnStop
     integer(kind=intType) :: massShape(2), max_face_size
     integer(kind=intType) :: iBoco, nDataset, iData, nDirichlet, iDirichlet, nArray
+    integer(kind=intType) :: nnn, mmm, kkk
     ! First create the derivative flowdoms structure flowDomsd. Note we
     ! only allocate information for the finest grid.
 
@@ -899,6 +902,19 @@ contains
        end do
     end do
 
+    ! Allocate the derivatives values for the timeperiod
+    allocate(sectionsd(nSections))
+
+    nnn = nTimeIntervalsSpectral
+    mmm = 3*nnn
+    kkk = nnn - 1
+
+    allocate(dscalard(nsections, nnn, nnn))
+    allocate(dvectord(nsections, mmm, mmm))
+    allocate(coefspectrald(nsections, kkk))
+    allocate(matrixcoefspectrald(nsections, kkk, 3, 3))
+    allocate(diagmatcoefspectrald(nsections, 3, 3))
+
     derivVarsAllocated = .True.
   end subroutine allocDerivativeValues
 
@@ -915,6 +931,7 @@ contains
     use oversetData, only : oversetPresent
     use cgnsGrid, only : cgnsDoms, cgnsDomsd, cgnsNDom
     use actuatorRegionData, only : nActuatorRegions, actuatorRegionsd
+    use section, only : nSections, sectionsd
     implicit none
 
     ! Input parameters
@@ -923,6 +940,11 @@ contains
     ! Working parameters
     integer(kind=intType) :: mm, i, iDom
     integer(kind=intType) :: iBoco, iData, iDirichlet
+
+    integer(kind=intType) :: ii, jj, kk, ll
+    integer(kind=intType) :: nnn, mmm, kkk
+
+
     flowDomsd(nn, level, sps)%d2wall = zero
     flowDomsd(nn, level, sps)%x = zero
     flowDomsd(nn, level, sps)%si = zero
@@ -1058,6 +1080,56 @@ contains
     do i=1, nActuatorRegions
        actuatorRegionsd(i)%F = zero
        actuatorRegionsd(i)%T = zero
+    end do
+
+    ! zero the timeperiod seed
+    omegaFourierd = zero
+    do i=1, nSections
+       sectionsd(i)%timePeriod = zero
+    end do
+
+    nnn = nTimeIntervalsSpectral
+    mmm = 3*nnn
+    kkk = nnn - 1
+
+    do kk=1, nnn
+      do jj=1, nnn
+        do ii=1, nSections   
+          dscalard(ii, jj, kk) = zero
+        end do
+      end do
+    end do
+
+    do kk=1, mmm
+      do jj=1, mmm
+        do ii=1, nSections   
+          dvectord(ii, jj, kk) = zero
+        end do
+      end do
+    end do
+
+    do jj=1, kkk
+      do ii=1, nSections   
+        coefSpectrald(ii, jj) = zero
+      end do
+    end do
+
+    do ll=1, 3
+      do kk=1, 3
+        do jj=1, kkk
+          do ii=1, nSections   
+            matrixCoefSpectrald(ii, jj, kk, ll) = zero
+          end do
+        end do
+      end do
+    end do
+
+    do kk=1, 3
+      do jj=1, 3
+        do ii=1, nSections   
+          diagMatCoefSpectrald(ii, jj, kk) = zero
+        end do
+      end do
     end do
 
   end subroutine zeroADSeeds

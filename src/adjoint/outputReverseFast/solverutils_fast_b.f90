@@ -36,7 +36,7 @@ contains
 &   radiineededcoarse, radiineededfine, precond
     use inputphysics, only : equationmode
     use iteration, only : groundlevel, currentlevel
-    use section, only : sections
+    use section, only : sections, sectionsd
     use inputtimespectral, only : ntimeintervalsspectral
     use utils_fast_b, only : terminate
     implicit none
