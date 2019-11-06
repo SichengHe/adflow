@@ -185,6 +185,83 @@ python module libadflow
 
        end module inputparamroutines
 
+       module masterroutines
+         subroutine callmaster ! in masterRoutines.F90:masterroutines
+         end subroutine callmaster
+         subroutine settimeperiod(value) ! in masterRoutines.F90:masterroutines
+           use constants
+           use section, only: sections,nsections
+           real(kind=realtype) intent(in) :: value
+         end subroutine settimeperiod
+         subroutine hsc_getdw(mm,sps,i,j,k,ii,value) ! in masterRoutines.F90:masterroutines
+           use blockpointers
+           integer(kind=inttype) intent(in) :: mm
+           integer(kind=inttype) intent(in) :: sps
+           integer(kind=inttype) intent(in) :: i
+           integer(kind=inttype) intent(in) :: j
+           integer(kind=inttype) intent(in) :: k
+           integer(kind=inttype) intent(in) :: ii
+           real(kind=realtype) intent(out) :: value
+         end subroutine hsc_getdw
+         subroutine getrho(value) ! in masterRoutines.F90:masterroutines
+           use flowvarrefstate, only: rhoinfdim
+           use constants
+           real(kind=realtype) intent(out) :: value
+         end subroutine getrho
+         subroutine setrho(value) ! in masterRoutines.F90:masterroutines
+           use flowvarrefstate, only: rhoinfdim
+           use constants
+           real(kind=realtype) intent(in) :: value
+         end subroutine setrho
+         subroutine getp(value) ! in masterRoutines.F90:masterroutines
+           use flowvarrefstate, only: pinfdim
+           use constants
+           real(kind=realtype) intent(out) :: value
+         end subroutine getp
+         subroutine setp(value) ! in masterRoutines.F90:masterroutines
+           use flowvarrefstate, only: pinfdim
+           use constants
+           real(kind=realtype) intent(in) :: value
+         end subroutine setp
+         subroutine gett(value) ! in masterRoutines.F90:masterroutines
+           use flowvarrefstate, only: tinfdim
+           use constants
+           real(kind=realtype) intent(out) :: value
+         end subroutine gett
+         subroutine sett(value) ! in masterRoutines.F90:masterroutines
+           use flowvarrefstate, only: tinfdim
+           use constants
+           real(kind=realtype) intent(in) :: value
+         end subroutine sett
+         subroutine hsc_getx(mm,sps,i,j,k,ii,value) ! in masterRoutines.F90:masterroutines
+           use blockpointers
+           integer(kind=inttype) intent(in) :: mm
+           integer(kind=inttype) intent(in) :: sps
+           integer(kind=inttype) intent(in) :: i
+           integer(kind=inttype) intent(in) :: j
+           integer(kind=inttype) intent(in) :: k
+           integer(kind=inttype) intent(in) :: ii
+           real(kind=realtype) intent(out) :: value
+         end subroutine hsc_getx
+         subroutine hsc_setx(mm,sps,i,j,k,ii,value) ! in masterRoutines.F90:masterroutines
+           use blockpointers
+           integer(kind=inttype) intent(in) :: mm
+           integer(kind=inttype) intent(in) :: sps
+           integer(kind=inttype) intent(in) :: i
+           integer(kind=inttype) intent(in) :: j
+           integer(kind=inttype) intent(in) :: k
+           integer(kind=inttype) intent(in) :: ii
+           real(kind=realtype) intent(in) :: value
+         end subroutine hsc_setx
+         subroutine hsc_get_ndom(value)
+            integer(kind=inttype), intent(out) :: value
+          end subroutine hsc_get_ndom
+          subroutine hsc_get_iljlkl(nn, sps, value1, value2, value3)
+            integer(kind=inttype), intent(in) :: nn, sps
+            integer(kind=inttype), intent(out) :: value1, value2, value3
+          end subroutine hsc_get_iljlkl
+       end module masterroutines
+
        module nksolver
 
          integer(kind=inttype) :: nk_innerpreconits
@@ -1413,7 +1490,8 @@ python module libadflow
             integer(kind=inttype), parameter,optional :: iaxisy2=20
             integer(kind=inttype), parameter,optional :: iaxisz1=21
             integer(kind=inttype), parameter,optional :: iaxisz2=22
-            integer(kind=inttype), parameter,optional :: ndesignextra=22
+            integer(kind=inttype), parameter,optional :: iomegafourier=23
+            integer(kind=inttype), parameter,optional :: ndesignextra=24
           end module adjointvars
 
        module adjointpetsc

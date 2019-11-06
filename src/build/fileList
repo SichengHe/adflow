@@ -151,6 +151,7 @@ fortranFiles=	ADT/adtUtils.F90\
 		adjoint/outputForward/oversetutilities_d.f90\
 		adjoint/outputForward/bcdata_d.f90\
 		adjoint/outputForward/BCExtra_d.F90\
+		adjoint/outputForward/partitioning_d.f90\
 		\
 		adjoint/outputReverse/adjointextra_b.f90\
 		adjoint/outputReverse/utils_b.f90\

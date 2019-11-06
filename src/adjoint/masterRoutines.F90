@@ -1,5 +1,154 @@
 module masterRoutines
 contains
+
+  subroutine callmaster
+
+	! Debug handle HSC
+
+    call master(.true.)
+
+  end subroutine callmaster
+
+  subroutine settimeperiod(value)
+
+    use constants
+    use section, only: sections, nSections
+
+    real(kind=realType), intent(in) :: value
+    integer(kind=intType) :: mm
+
+    do mm=1,nSections
+      sections(mm)%timePeriod = value
+    end do
+
+  end subroutine settimeperiod
+
+  subroutine getrho(value)
+
+    use constants
+    use flowVarRefState, only: rhoInfDim
+
+    real(kind=realType), intent(out) :: value
+
+    value = rhoInfDim
+
+  end subroutine getrho
+
+  subroutine setrho(value)
+
+    use constants
+    use flowVarRefState, only: rhoInfDim
+
+    real(kind=realType), intent(in) :: value
+
+    rhoInfDim = value
+
+  end subroutine setrho
+
+  subroutine getp(value)
+
+    use constants
+    use flowVarRefState, only: PinfDim
+
+    real(kind=realType), intent(out) :: value
+
+    value = PinfDim
+
+  end subroutine getp
+
+  subroutine setp(value)
+
+    use constants
+    use flowVarRefState, only: PinfDim
+
+    real(kind=realType), intent(in) :: value
+
+    PinfDim = value
+
+  end subroutine setp
+
+  subroutine getT(value)
+
+    use constants
+    use flowVarRefState, only: tinfdim
+
+    real(kind=realType), intent(out) :: value
+
+    value = tinfdim
+
+  end subroutine getT
+
+  subroutine setT(value)
+
+    use constants
+    use flowVarRefState, only: tinfdim
+
+    real(kind=realType), intent(in) :: value
+
+    tinfdim = value
+
+  end subroutine setT
+
+  subroutine hsc_getdw(mm, sps, i, j, k, ii, value)
+
+    use blockPointers
+
+    integer(kind=intType), intent(in) :: mm, sps, i, j, k, ii
+    real(kind=realType), intent(out) :: value
+
+    value = flowDoms(mm, 1, sps)%dw(i, j, k, ii)
+
+  end subroutine hsc_getdw
+
+  subroutine hsc_getx(mm, sps, i, j, k, ii, value)
+
+    use blockPointers
+
+    integer(kind=intType), intent(in) :: mm, sps, i, j, k, ii
+    real(kind=realType), intent(out) :: value
+
+    value = flowDoms(mm, 1, sps)%x(i, j, k, ii)
+  
+  end subroutine hsc_getx
+
+  subroutine hsc_setx(mm, sps, i, j, k, ii, value)
+
+    use blockPointers
+
+    integer(kind=intType), intent(in) :: mm, sps, i, j, k, ii
+    real(kind=realType), intent(in) :: value
+
+    flowDoms(mm, 1, sps)%x(i, j, k, ii) = value
+  
+  end subroutine hsc_setx
+
+  subroutine hsc_get_nDom(value)
+
+    use constants
+    use blockPointers, only : nDom
+    
+    integer(kind=intType), intent(out) :: value
+    value = nDom
+
+  end subroutine hsc_get_nDom
+
+  subroutine hsc_get_iljlkl(nn, sps, value1, value2, value3)
+
+    use constants
+    use blockPointers, only : il, jl, kl
+    use utils, only : setPointers
+   
+    integer(kind=intType), intent(in) :: nn, sps
+    integer(kind=intType), intent(out) :: value1, value2, value3
+
+    call setPointers(nn, 1, sps)
+
+    value1 = il 
+    value2 = jl 
+    value3 = kl
+
+  end subroutine hsc_get_iljlkl
+
   subroutine master(useSpatial, famLists, funcValues, forces, &
        bcDataNames, bcDataValues, bcDataFamLists)
 
@@ -16,7 +165,7 @@ contains
     use inputPhysics , only : turbProd, equationMode, equations, turbModel
     use inputDiscretization, only : lowSpeedPreconditioner, lumpedDiss, spaceDiscr, useAPproxWallDistance
     use inputTimeSpectral, only : nTimeIntervalsSpectral
-    use initializeFlow, only : referenceState
+    use initializeFlow, only : referenceState, timespectralmatrices
     use section, only: sections, nSections
     use monitor, only : timeUnsteadyRestart
     use sa, only : saSource, saViscous, saResScale, qq
@@ -39,7 +188,7 @@ contains
     use oversetCommUtilities, only : updateOversetConnectivity
     use actuatorRegionData, only : nActuatorRegions
     use wallDistanceData, only : xSurfVec, xSurf
-    
+    use partitioning, only : timePeriodSpectral
     implicit none
 
     ! Input Arguments:
@@ -90,7 +239,10 @@ contains
           end if
        end do
     end if
-
+    
+    call timePeriodSpectral
+    call timespectralmatrices
+    
     do sps=1,nTimeIntervalsSpectral
        do nn=1,nDom
           call setPointers(nn, 1, sps)
@@ -268,7 +420,7 @@ contains
          computeSpeedOfSoundSquared_d, allNodalGradients_d, adjustInflowAngle_d
     use solverutils_d, only : timeStep_Block_d
     use turbbcroutines_d, only : applyAllTurbBCthisblock_d,  bcTurbTreatment_d
-    use initializeflow_d, only : referenceState_d
+    use initializeflow_d, only : referenceState_d, timespectralmatrices_d
     use surfaceIntegrations, only : getSolution_d
     use adjointExtra_d, only : xhalo_block_d, volume_block_d, metric_BLock_d, boundarynormals_d
     use adjointextra_d, only : resscale_D, sumdwandfw_d
@@ -277,6 +429,7 @@ contains
     use inputOverset, only : oversetUpdateMode
     use oversetCommUtilities, only : updateOversetConnectivity_d
     use actuatorRegionData, only : nActuatorRegions
+    use partitioning_d, only : timeperiodspectral_d
 #include <petsc/finclude/petsc.h>
     use petsc
     implicit none
@@ -379,6 +532,12 @@ contains
        end do
        call setBCDataFineGrid_d(.true.)
     end if
+
+
+    print*, "oooooooooooo"
+    call timeperiodspectral_d
+    print*, "kkkkkkkkkkkk"
+    call timespectralmatrices_d
 
     do sps=1,nTimeIntervalsSpectral
        do nn=1,nDom

@@ -2,6 +2,261 @@ module partitioning
 
 contains
 
+  subroutine timePeriodSpectral
+   !
+   !       timePeriodSpectral determines the time of one period for the
+   !       time spectral method. It is possible that sections have
+   !       different periodic times.
+   !
+   use constants
+   use communication, only : myID, adflow_comm_world
+   use inputMotion, only : degreeFourXRot, degreeFourYRot, degreeFourZrot, &
+        omegaFourAlpha, omegaFourBeta, omegaFourMach, omegaFourXRot, &
+        omegaFourYRot, omegaFourZRot, degreeFourMach, degreeFourAlpha, &
+        degreeFourBeta
+   use inputPhysics, only : equationMOde, flowType
+   use inputTimeSpectral, only : omegaFourier
+   use section, only : sections, nSections
+   use utils, only : terminate
+   implicit none
+   !
+   !      Local parameter.
+   !
+   real(kind=realType), parameter :: tol  = 1.e-5_realType
+   !
+   !      Local variables.
+   !
+   integer :: ierr
+   integer(kind=intType) :: nn
+
+   real(kind=realType) :: tt, omega
+   real(kind=realType) :: timePeriod
+
+   logical :: timeDetermined
+
+   ! This routine is only used for the spectral solutions. Return
+   ! immediately if a different mode is solved.
+
+   if(equationMode /= timeSpectral) return
+
+   ! First check if a rotational frequency has been specified.
+   ! Only for external flows.
+
+   timeDetermined = .false.
+
+   externalTest: if(flowType == externalFlow) then
+#ifndef  USE_TAPENADE
+      ! X-rotation.
+
+      if(degreeFourXRot > 0) then
+         timePeriod     = two*pi/omegaFourXRot
+         timeDetermined = .true.
+      endif
+
+      ! Y-rotation.
+
+      if(degreeFourYRot > 0) then
+         tt = two*pi/omegaFourYRot
+
+         ! Check if a time period was already determined. If so, try
+         ! to determine a common time. Otherwise just copy the data.
+
+         if( timeDetermined ) then
+            timePeriod = commonTimeSpectral(timePeriod, tt)
+         else
+            timePeriod     = tt
+            timeDetermined = .true.
+         endif
+      endif
+
+      ! Z-rotation.
+
+      if(degreeFourZRot > 0) then
+         tt = two*pi/omegaFourZRot
+
+         ! Check if a time period was already determined. If so, try
+         ! to determine a common time. Otherwise just copy the data.
+
+         if( timeDetermined ) then
+            timePeriod = commonTimeSpectral(timePeriod, tt)
+         else
+            timePeriod     = tt
+            timeDetermined = .true.
+         endif
+      endif
+
+
+      ! Alpha
+      !print *,'degreeFourAlpha',degreefouralpha,omegafouralpha,sincoeffouralpha
+      if(degreeFourAlpha > 0) then
+         tt = two*pi/omegaFourAlpha
+         !print *,'timePeriod',tt
+         ! Check if a time period was already determined. If so, try
+         ! to determine a common time. Otherwise just copy the data.
+
+         if( timeDetermined ) then
+            timePeriod = commonTimeSpectral(timePeriod, tt)
+         else
+            timePeriod     = tt
+            timeDetermined = .true.
+         endif
+      endif
+
+
+      ! Beta
+
+      if(degreeFourBeta > 0) then
+         tt = two*pi/omegaFourBeta
+
+         ! Check if a time period was already determined. If so, try
+         ! to determine a common time. Otherwise just copy the data.
+
+         if( timeDetermined ) then
+            timePeriod = commonTimeSpectral(timePeriod, tt)
+         else
+            timePeriod     = tt
+            timeDetermined = .true.
+         endif
+      endif
+
+      ! Mach
+
+      if(degreeFourMach > 0) then
+         tt = two*pi/omegaFourMach
+
+         ! Check if a time period was already determined. If so, try
+         ! to determine a common time. Otherwise just copy the data.
+
+         if( timeDetermined ) then
+            timePeriod = commonTimeSpectral(timePeriod, tt)
+         else
+            timePeriod     = tt
+            timeDetermined = .true.
+         endif
+      endif
+#endif
+      ! aeroelastic case
+      if(omegaFourier > 0) then 
+        tt = two*pi/omegaFourier
+
+         ! Check if a time period was already determined. If so, try
+         ! to determine a common time. Otherwise just copy the data.
+
+         if( timeDetermined ) then
+            timePeriod = commonTimeSpectral(timePeriod, tt)
+         else
+            timePeriod     = tt
+            timeDetermined = .true.
+         endif
+      end if
+
+!!$         ! Altitude.
+!!$
+!!$         if(degreeFourAltitude > 0) then
+!!$           tt = two*pi/omegaFourAltitude
+!!$
+!!$           ! Check if a time period was already determined. If so, try
+!!$           ! to determine a common time. Otherwise just copy the data.
+!!$
+!!$           if( timeDetermined ) then
+!!$             timePeriod = commonTimeSpectral(timePeriod, tt)
+!!$           else
+!!$             timePeriod     = tt
+!!$             timeDetermined = .true.
+!!$           endif
+!!$         endif
+
+   endif externalTest
+
+   ! If it was possible to determine the time, copy it to the
+   ! sections and return.
+
+
+   if( timeDetermined ) then
+      do nn=1,nSections
+         sections(nn)%timePeriod = timePeriod/sections(nn)%nSlices
+         !print *,'sectionTimePeriod',sections(nn)%timePeriod,nn
+      enddo
+      return
+   endif
+
+#ifndef  USE_TAPENADE
+   ! Try to determine the periodic time via the rotation rate of the
+   ! sections and its number of slices.
+
+   sectionLoop: do nn=1,nSections
+
+      ! Test if the section is rotating, because only for rotating
+      ! sections the periodic time can be determined.
+
+      testRotating: if( sections(nn)%rotating ) then
+
+         ! Determine the magnitude of the rotation rate and the
+         ! corresponding periodic time period.
+
+         omega = sqrt(sections(nn)%rotRate(1)**2 &
+              +      sections(nn)%rotRate(2)**2 &
+              +      sections(nn)%rotRate(3)**2)
+
+         tt = two*pi/omega
+
+         ! If a time period was already determined, check if this is
+         ! identical to tt. If not print an error message and exit.
+
+         if( timeDetermined ) then
+
+            tt = abs(tt-timePeriod)/timePeriod
+            if(tt > tol) then
+               if(myID == 0)                          &
+                    call terminate("timePeriodSpectral", &
+                    "Rotational frequencies of the rotating &
+                    &sections are not identical.")
+               call mpi_barrier(ADflow_comm_world, ierr)
+            endif
+
+         else
+
+            ! Just copy the data.
+
+            timePeriod     = tt
+            timeDetermined = .true.
+
+         endif
+
+      endif testRotating
+   enddo sectionLoop
+#endif
+
+   ! Divide the periodic time by the number of slices to get the
+   ! characteristic time for every section.
+
+   do nn=1,nSections
+      sections(nn)%timePeriod = timePeriod/sections(nn)%nSlices
+   enddo
+
+   ! Return if it was possible to determine the time.
+
+   if( timeDetermined ) return
+
+   ! Periodic time could not be determined. Print an error
+   ! message and exit.
+#ifndef  USE_TAPENADE
+   if(myID == 0)                          &
+        call terminate("timePeriodSpectral", &
+        "Not possible to determine the periodic time &
+        &for the time spectral method")
+   call mpi_barrier(ADflow_comm_world, ierr)
+#endif
+
+ end subroutine timePeriodSpectral
+
+   ! ----------------------------------------------------------------------
+   !                                                                      |
+   !                    No Tapenade Routine below this line               |
+   !                                                                      |
+   ! ----------------------------------------------------------------------
+
+#ifndef  USE_TAPENADE
   subroutine partitionAndReadGrid(partitionOnly)
     !
     !       partitionAndReadGrid determines the partitioning of the
@@ -835,252 +1090,6 @@ contains
     end do spectralLoop
 
   end subroutine initFineGridIblank
-
-  subroutine timePeriodSpectral
-    !
-    !       timePeriodSpectral determines the time of one period for the
-    !       time spectral method. It is possible that sections have
-    !       different periodic times.
-    !
-    use constants
-    use communication, only : myID, adflow_comm_world
-    use inputMotion, only : degreeFourXRot, degreeFourYRot, degreeFourZrot, &
-         omegaFourAlpha, omegaFourBeta, omegaFourMach, omegaFourXRot, &
-         omegaFourYRot, omegaFourZRot, degreeFourMach, degreeFourAlpha, &
-         degreeFourBeta
-    use inputPhysics, only : equationMOde, flowType
-    use inputTimeSpectral, only : omegaFourier
-    use section, only : sections, nSections
-    use utils, only : terminate
-    implicit none
-    !
-    !      Local parameter.
-    !
-    real(kind=realType), parameter :: tol  = 1.e-5_realType
-    !
-    !      Local variables.
-    !
-    integer :: ierr
-    integer(kind=intType) :: nn
-
-    real(kind=realType) :: tt, omega
-    real(kind=realType) :: timePeriod
-
-    logical :: timeDetermined
-
-    ! This routine is only used for the spectral solutions. Return
-    ! immediately if a different mode is solved.
-
-    if(equationMode /= timeSpectral) return
-
-    ! First check if a rotational frequency has been specified.
-    ! Only for external flows.
-
-    timeDetermined = .false.
-
-
-    externalTest: if(flowType == externalFlow) then
-
-       ! X-rotation.
-
-       if(degreeFourXRot > 0) then
-          timePeriod     = two*pi/omegaFourXRot
-          timeDetermined = .true.
-       endif
-
-       ! Y-rotation.
-
-       if(degreeFourYRot > 0) then
-          tt = two*pi/omegaFourYRot
-
-          ! Check if a time period was already determined. If so, try
-          ! to determine a common time. Otherwise just copy the data.
-
-          if( timeDetermined ) then
-             timePeriod = commonTimeSpectral(timePeriod, tt)
-          else
-             timePeriod     = tt
-             timeDetermined = .true.
-          endif
-       endif
-
-       ! Z-rotation.
-
-       if(degreeFourZRot > 0) then
-          tt = two*pi/omegaFourZRot
-
-          ! Check if a time period was already determined. If so, try
-          ! to determine a common time. Otherwise just copy the data.
-
-          if( timeDetermined ) then
-             timePeriod = commonTimeSpectral(timePeriod, tt)
-          else
-             timePeriod     = tt
-             timeDetermined = .true.
-          endif
-       endif
-
-
-       ! Alpha
-       !print *,'degreeFourAlpha',degreefouralpha,omegafouralpha,sincoeffouralpha
-       if(degreeFourAlpha > 0) then
-          tt = two*pi/omegaFourAlpha
-          !print *,'timePeriod',tt
-          ! Check if a time period was already determined. If so, try
-          ! to determine a common time. Otherwise just copy the data.
-
-          if( timeDetermined ) then
-             timePeriod = commonTimeSpectral(timePeriod, tt)
-          else
-             timePeriod     = tt
-             timeDetermined = .true.
-          endif
-       endif
-
-
-       ! Beta
-
-       if(degreeFourBeta > 0) then
-          tt = two*pi/omegaFourBeta
-
-          ! Check if a time period was already determined. If so, try
-          ! to determine a common time. Otherwise just copy the data.
-
-          if( timeDetermined ) then
-             timePeriod = commonTimeSpectral(timePeriod, tt)
-          else
-             timePeriod     = tt
-             timeDetermined = .true.
-          endif
-       endif
-
-       ! Mach
-
-       if(degreeFourMach > 0) then
-          tt = two*pi/omegaFourMach
-
-          ! Check if a time period was already determined. If so, try
-          ! to determine a common time. Otherwise just copy the data.
-
-          if( timeDetermined ) then
-             timePeriod = commonTimeSpectral(timePeriod, tt)
-          else
-             timePeriod     = tt
-             timeDetermined = .true.
-          endif
-       endif
-
-       ! aeroelastic case
-       if(omegaFourier > 0) then 
-         tt = two*pi/omegaFourier
-
-          ! Check if a time period was already determined. If so, try
-          ! to determine a common time. Otherwise just copy the data.
-
-          if( timeDetermined ) then
-             timePeriod = commonTimeSpectral(timePeriod, tt)
-          else
-             timePeriod     = tt
-             timeDetermined = .true.
-          endif
-       end if
-
-!!$         ! Altitude.
-!!$
-!!$         if(degreeFourAltitude > 0) then
-!!$           tt = two*pi/omegaFourAltitude
-!!$
-!!$           ! Check if a time period was already determined. If so, try
-!!$           ! to determine a common time. Otherwise just copy the data.
-!!$
-!!$           if( timeDetermined ) then
-!!$             timePeriod = commonTimeSpectral(timePeriod, tt)
-!!$           else
-!!$             timePeriod     = tt
-!!$             timeDetermined = .true.
-!!$           endif
-!!$         endif
-
-    endif externalTest
-
-    ! If it was possible to determine the time, copy it to the
-    ! sections and return.
-
-
-    if( timeDetermined ) then
-       do nn=1,nSections
-          sections(nn)%timePeriod = timePeriod/sections(nn)%nSlices
-          !print *,'sectionTimePeriod',sections(nn)%timePeriod,nn
-       enddo
-       return
-    endif
-
-    ! Try to determine the periodic time via the rotation rate of the
-    ! sections and its number of slices.
-
-    sectionLoop: do nn=1,nSections
-
-       ! Test if the section is rotating, because only for rotating
-       ! sections the periodic time can be determined.
-
-       testRotating: if( sections(nn)%rotating ) then
-
-          ! Determine the magnitude of the rotation rate and the
-          ! corresponding periodic time period.
-
-          omega = sqrt(sections(nn)%rotRate(1)**2 &
-               +      sections(nn)%rotRate(2)**2 &
-               +      sections(nn)%rotRate(3)**2)
-
-          tt = two*pi/omega
-
-          ! If a time period was already determined, check if this is
-          ! identical to tt. If not print an error message and exit.
-
-          if( timeDetermined ) then
-
-             tt = abs(tt-timePeriod)/timePeriod
-             if(tt > tol) then
-                if(myID == 0)                          &
-                     call terminate("timePeriodSpectral", &
-                     "Rotational frequencies of the rotating &
-                     &sections are not identical.")
-                call mpi_barrier(ADflow_comm_world, ierr)
-             endif
-
-          else
-
-             ! Just copy the data.
-
-             timePeriod     = tt
-             timeDetermined = .true.
-
-          endif
-
-       endif testRotating
-    enddo sectionLoop
-
-    ! Divide the periodic time by the number of slices to get the
-    ! characteristic time for every section.
-
-    do nn=1,nSections
-       sections(nn)%timePeriod = timePeriod/sections(nn)%nSlices
-    enddo
-
-    ! Return if it was possible to determine the time.
-
-    if( timeDetermined ) return
-
-    ! Periodic time could not be determined. Print an error
-    ! message and exit.
-
-    if(myID == 0)                          &
-         call terminate("timePeriodSpectral", &
-         "Not possible to determine the periodic time &
-         &for the time spectral method")
-    call mpi_barrier(ADflow_comm_world, ierr)
-
-  end subroutine timePeriodSpectral
 
   function commonTimeSpectral(t1, t2)
     !
@@ -2345,4 +2354,5 @@ contains
 
   end subroutine determineSections
 
+#endif
 end module partitioning
