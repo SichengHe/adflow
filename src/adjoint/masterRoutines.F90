@@ -164,14 +164,14 @@ contains
     use flowVarRefState, only : viscous
     use inputPhysics , only : turbProd, equationMode, equations, turbModel
     use inputDiscretization, only : lowSpeedPreconditioner, lumpedDiss, spaceDiscr, useAPproxWallDistance
-    use inputTimeSpectral, only : nTimeIntervalsSpectral
+    use inputTimeSpectral, only : nTimeIntervalsSpectral, usetsinterpolatedgridvelocity, dscalar
     use initializeFlow, only : referenceState, timespectralmatrices
     use section, only: sections, nSections
     use monitor, only : timeUnsteadyRestart
     use sa, only : saSource, saViscous, saResScale, qq
     use haloExchange, only : exchangeCoor, whalo2
     use wallDistance, only : updateWallDistancesQuickly
-    use solverUtils, only : timeStep_block
+    use solverUtils, only : timeStep_block, gridvelocitiesfinelevel_ts_block
     use flowUtils, only : allNodalGradients, computeLamViscosity, computePressureSimple, &
          computeSpeedOfSoundSquared, adjustInflowAngle
     use fluxes, only : inviscidDissFluxScalarApprox, inviscidDissFluxMatrixApprox, &
@@ -239,7 +239,9 @@ contains
        end do
     end if
     
+    ! compute time period
     call timePeriodSpectral
+    ! compute spectral differentiation coeff
     call timespectralmatrices
     
     do sps=1,nTimeIntervalsSpectral
@@ -250,6 +252,10 @@ contains
              call volume_block
              call metric_block
              call boundaryNormals
+ 
+             if (usetsinterpolatedgridvelocity) then
+                call gridvelocitiesfinelevel_ts_block(nn, sps)
+             end if 
 
              if (equations == RANSEquations .and. useApproxWallDistance) then
                 call updateWallDistancesQuickly(nn, 1, sps)
@@ -390,7 +396,7 @@ contains
     use flowVarRefState, only : viscous, timerefd
     use inputPhysics , only : turbProd, equationMode, equations, turbModel, wallDistanceNeeded
     use inputDiscretization, only : lowSpeedPreconditioner, lumpedDiss, spaceDiscr, useAPproxWallDistance
-    use inputTimeSpectral, only : nTimeIntervalsSpectral
+    use inputTimeSpectral, only : nTimeIntervalsSpectral, usetsinterpolatedgridvelocity
     use section, only: sections, nSections
     use monitor, only : timeUnsteadyRestart
     use utils, only : isWallType, setPointers, setPointers_d, EChk
@@ -399,14 +405,14 @@ contains
     use fluxes_d, only :inviscidDissFluxScalarApprox_d, inviscidDissFluxMatrixApprox_d, &
          inviscidUpwindFlux_d, inviscidDissFluxScalar_d, inviscidDissFluxMatrix_d, &
          inviscidUpwindFlux_d, viscousFlux_d, viscousFluxApprox_d, inviscidCentralFlux_d
-    use residuals_d, only : sourceTerms_block_d
+    use residuals_d, only : sourceTerms_block_d, initres_block_d
     use adjointPETSc, only : x_like
     use haloExchange, only : whalo2_d, exchangeCoor_d, exchangeCoor, whalo2
     use wallDistance_d, only : updateWallDistancesQuickly_d
     use wallDistanceData, only : xSurfVec, xSurfVecd, xSurf, xSurfd, wallScatter
     use flowutils_d, only : computePressureSimple_d, computeLamViscosity_d, &
          computeSpeedOfSoundSquared_d, allNodalGradients_d, adjustInflowAngle_d
-    use solverutils_d, only : timeStep_Block_d
+    use solverutils_d, only : timeStep_Block_d, gridvelocitiesfinelevel_ts_block_d
     use turbbcroutines_d, only : applyAllTurbBCthisblock_d,  bcTurbTreatment_d
     use initializeflow_d, only : referenceState_d, timespectralmatrices_d
     use surfaceIntegrations, only : getSolution_d
@@ -528,10 +534,9 @@ contains
        call setBCDataFineGrid_d(.true.)
     end if
 
-
-    print*, "oooooooooooo"
+    ! compute time period
     call timeperiodspectral_d
-    print*, "kkkkkkkkkkkk"
+    ! compute spectral differentiation coeff
     call timespectralmatrices_d
 
     do sps=1,nTimeIntervalsSpectral
@@ -553,6 +558,11 @@ contains
           call volume_block_d()
           call metric_block_d()
           call boundaryNormals_d()
+
+          if (usetsinterpolatedgridvelocity) then
+            call gridvelocitiesfinelevel_ts_block_d(nn, sps)
+          end if
+
           if (equations == RANSEquations .and. useApproxWallDistance) then
              call updateWallDistancesQuickly_d(nn, 1, sps)
           end if
@@ -609,6 +619,11 @@ contains
           call timeStep_block_d(.false.)
           dw = zero
           dwd = zero
+
+          if (usetsinterpolatedgridvelocity) then
+            call initres_block_d(1, nw, nn, sps)
+          end if
+
           ! Compute any source terms
           do iRegion=1, nActuatorRegions
              call sourceTerms_block_d(nn, .True. , iRegion, dummyReal, dummyReald)
