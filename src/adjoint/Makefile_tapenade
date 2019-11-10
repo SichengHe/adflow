@@ -163,8 +163,11 @@ turbBCRoutines%applyAllTurbBCThisBlock(rev, w, bvtj1, bvtj2, bvtk1, bvtk2, bvti1
 turbBCRoutines%bcTurbTreatment(w, rlv, d2wall, winf) > \
                               (w, rlv, d2wall, winf, bvtj1, bvtj2, bvtk1, bvtk2, bvti1, bvti2) \
 \
-solverUtils%timeStep_block(w, pInfCorr, rhoInf, si, sj, sk, p) > \
-              (w, pInfCorr, rhoInf, si, sj, sk, p, radi, radj, radk) \
+solverUtils%timeStep_block(w, pInfCorr, rhoInf, si, sj, sk, sfacei, sfacej, sfacek, p, radi, radj, radk) > \
+              (w, pInfCorr, rhoInf, si, sj, sk, sfacei, sfacej, sfacek, p, radi, radj, radk) \
+\
+solverutils%gridVelocitiesFineLevel_TS_block(flowDoms%x, si, sj, sk, s, sfacei, sfacej, sfacek, velDirFreestream, dscalar) > \
+                          (flowDoms%x, si, sj, sk, s, sfacei, sfacej, sfacek, velDirFreestream, dscalar) \
 \
 sa%saSource(w, rlv, vol, si, sj, sk, timeRef, d2wall) > \
            (w, rlv, vol, si, sj, sk, timeREf, scratch) \
@@ -178,11 +181,14 @@ sa%saViscous(w, vol, si, sj, sk, rlv, scratch) > \
 sa%saResScale(scratch, dw) > \
              (dw) \
 \
-residuals%sourceTerms_block(w, pref, uref, plocal, dw, actuatorRegions%force, actuatorRegions%heat) > \
-                           (w, pref, uref, plocal, dw, actuatorRegions%force, actuatorRegions%heat) \
+residuals%sourceTerms_block(w, vol, pref, uref, plocal, dw, actuatorRegions%force, actuatorRegions%heat) > \
+                           (w, vol, pref, uref, plocal, dw, actuatorRegions%force, actuatorRegions%heat) \
 \
-fluxes%inviscidCentralFlux(w, timeRef, vol, si, sj, sk, p, dw) > \
-                          (w, timeRef, vol, si, sj, sk, p, dw) \
+residuals%initres_block(dw, flowDoms%w, flowDoms%vol, dscalar, dvector) > \
+                       (dw, flowDoms%w, flowDoms%vol, dscalar, dvector) \
+\
+fluxes%inviscidCentralFlux(w, timeRef, vol, sfacei, sfacej, sfacek, si, sj, sk, p, dw) > \
+                          (w, timeRef, vol, sfacei, sfacej, sfacek, si, sj, sk, p, dw) \
 \
 fluxes%inviscidDissFluxScalar(w, pInfCorr, rhoInf, p, radi, radj, radk, fw) > \
                              (w, pInfCOrr, rhoInf, p, fw) \
@@ -251,6 +257,9 @@ partitioning%timePeriodSpectral(omegaFourier, sections%timePeriod) > \
 stateOnlyRoutines = "\
 residuals%sourceTerms_block(w, dw) > \
                            (w, dw) \
+\
+residuals%initres_block(dw, flowDoms%w) > \
+                       (dw, flowDoms%w) \
 \
 fluxes%inviscidCentralFlux(w, p, dw) > \
                           (w, p, dw) \

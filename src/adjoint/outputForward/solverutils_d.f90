@@ -12,12 +12,13 @@ module solverutils_d
 contains
 !  differentiation of timestep_block in forward (tangent) mode (with options i4 dr8 r8):
 !   variations   of useful results: *radi *radj *radk
-!   with respect to varying inputs: rhoinf pinfcorr *p *w *si *sj
-!                *sk
-!   rw status of diff variables: rhoinf:in pinfcorr:in *p:in *w:in
-!                *si:in *sj:in *sk:in *radi:out *radj:out *radk:out
-!   plus diff mem management of: p:in w:in si:in sj:in sk:in radi:in
-!                radj:in radk:in
+!   with respect to varying inputs: rhoinf pinfcorr *p *sfacei
+!                *sfacej *sfacek *w *si *sj *sk *radi *radj *radk
+!   rw status of diff variables: rhoinf:in pinfcorr:in *p:in *sfacei:in
+!                *sfacej:in *sfacek:in *w:in *si:in *sj:in *sk:in
+!                *radi:in-out *radj:in-out *radk:in-out
+!   plus diff mem management of: p:in sfacei:in sfacej:in sfacek:in
+!                w:in si:in sj:in sk:in radi:in radj:in radk:in
   subroutine timestep_block_d(onlyradii)
 !
 !       timestep computes the time step, or more precisely the time
@@ -30,8 +31,8 @@ contains
     use constants
     use blockpointers, only : ie, je, ke, il, jl, kl, w, wd, p, pd, &
 &   rlv, rlvd, rev, revd, radi, radid, radj, radjd, radk, radkd, si, sid&
-&   , sj, sjd, sk, skd, sfacei, sfacej, sfacek, dtl, gamma, vol, vold, &
-&   addgridvelocities, sectionid
+&   , sj, sjd, sk, skd, sfacei, sfaceid, sfacej, sfacejd, sfacek, &
+&   sfacekd, dtl, gamma, vol, vold, addgridvelocities, sectionid
     use flowvarrefstate, only : timeref, timerefd, eddymodel, gammainf&
 &   , pinfcorr, pinfcorrd, viscous, rhoinf, rhoinfd
     use inputdiscretization, only : adis, dirscaling, &
@@ -66,6 +67,7 @@ contains
     real(kind=realtype) :: rid, rjd, rkd, rijd, rjkd, rkid
     real(kind=realtype) :: vsi, vsj, vsk, rfl, dpi, dpj, dpk
     real(kind=realtype) :: sface, tmp
+    real(kind=realtype) :: sfaced
     logical :: radiineeded, doscaling
     intrinsic max
     intrinsic abs
@@ -89,9 +91,6 @@ contains
 ! return immediately if only the spectral radii must be computed
 ! and these are not needed for the flux computation.
     if (onlyradii .and. (.not.radiineeded)) then
-      radid = 0.0_8
-      radjd = 0.0_8
-      radkd = 0.0_8
       return
     else
 ! set the value of plim. to be fully consistent this must have
@@ -112,9 +111,7 @@ contains
 !
       select case  (precond) 
       case (noprecond) 
-        radid = 0.0_8
-        radjd = 0.0_8
-        radkd = 0.0_8
+        sfaced = 0.0_8
 ! no preconditioner. simply the standard spectral radius.
 ! loop over the cells, including the first level halo.
         do k=1,ke
@@ -141,8 +138,10 @@ contains
 ! normal in i-direction for a moving face. to avoid
 ! a number of multiplications by 0.5 simply the sum
 ! is taken.
-              if (addgridvelocities) sface = sfacei(i-1, j, k) + sfacei(&
-&                 i, j, k)
+              if (addgridvelocities) then
+                sfaced = sfaceid(i-1, j, k) + sfaceid(i, j, k)
+                sface = sfacei(i-1, j, k) + sfacei(i, j, k)
+              end if
 ! spectral radius in i-direction.
               sxd = sid(i-1, j, k, 1) + sid(i, j, k, 1)
               sx = si(i-1, j, k, 1) + si(i, j, k, 1)
@@ -151,7 +150,7 @@ contains
               szd = sid(i-1, j, k, 3) + sid(i, j, k, 3)
               sz = si(i-1, j, k, 3) + si(i, j, k, 3)
               qsid = uuxd*sx + uux*sxd + uuyd*sy + uuy*syd + uuzd*sz + &
-&               uuz*szd
+&               uuz*szd - sfaced
               qsi = uux*sx + uuy*sy + uuz*sz - sface
               if (qsi .ge. 0.) then
                 abs0d = qsid
@@ -172,8 +171,10 @@ contains
               rid = half*(abs0d+result1d)
               ri = half*(abs0+result1)
 ! the grid velocity in j-direction.
-              if (addgridvelocities) sface = sfacej(i, j-1, k) + sfacej(&
-&                 i, j, k)
+              if (addgridvelocities) then
+                sfaced = sfacejd(i, j-1, k) + sfacejd(i, j, k)
+                sface = sfacej(i, j-1, k) + sfacej(i, j, k)
+              end if
 ! spectral radius in j-direction.
               sxd = sjd(i, j-1, k, 1) + sjd(i, j, k, 1)
               sx = sj(i, j-1, k, 1) + sj(i, j, k, 1)
@@ -182,7 +183,7 @@ contains
               szd = sjd(i, j-1, k, 3) + sjd(i, j, k, 3)
               sz = sj(i, j-1, k, 3) + sj(i, j, k, 3)
               qsjd = uuxd*sx + uux*sxd + uuyd*sy + uuy*syd + uuzd*sz + &
-&               uuz*szd
+&               uuz*szd - sfaced
               qsj = uux*sx + uuy*sy + uuz*sz - sface
               if (qsj .ge. 0.) then
                 abs1d = qsjd
@@ -203,8 +204,10 @@ contains
               rjd = half*(abs1d+result1d)
               rj = half*(abs1+result1)
 ! the grid velocity in k-direction.
-              if (addgridvelocities) sface = sfacek(i, j, k-1) + sfacek(&
-&                 i, j, k)
+              if (addgridvelocities) then
+                sfaced = sfacekd(i, j, k-1) + sfacekd(i, j, k)
+                sface = sfacek(i, j, k-1) + sfacek(i, j, k)
+              end if
 ! spectral radius in k-direction.
               sxd = skd(i, j, k-1, 1) + skd(i, j, k, 1)
               sx = sk(i, j, k-1, 1) + sk(i, j, k, 1)
@@ -213,7 +216,7 @@ contains
               szd = skd(i, j, k-1, 3) + skd(i, j, k, 3)
               sz = sk(i, j, k-1, 3) + sk(i, j, k, 3)
               qskd = uuxd*sx + uux*sxd + uuyd*sy + uuy*syd + uuzd*sz + &
-&               uuz*szd
+&               uuz*szd - sfaced
               qsk = uux*sx + uuy*sy + uuz*sz - sface
               if (qsk .ge. 0.) then
                 abs2d = qskd
@@ -320,19 +323,9 @@ contains
       case (turkel) 
         call terminate('timestep', &
 &                'turkel preconditioner not implemented yet')
-        radid = 0.0_8
-        radjd = 0.0_8
-        radkd = 0.0_8
       case (choimerkle) 
         call terminate('timestep', &
 &                'choi merkle preconditioner not implemented yet')
-        radid = 0.0_8
-        radjd = 0.0_8
-        radkd = 0.0_8
-      case default
-        radid = 0.0_8
-        radjd = 0.0_8
-        radkd = 0.0_8
       end select
     end if
   end subroutine timestep_block_d
@@ -534,6 +527,299 @@ contains
       end select
     end if
   end subroutine timestep_block
+!  differentiation of gridvelocitiesfinelevel_ts_block in forward (tangent) mode (with options i4 dr8 r8):
+!   variations   of useful results: *sfacei *sfacej *s *sfacek
+!   with respect to varying inputs: veldirfreestream *dscalar *(flowdoms.x)
+!                *sfacei *sfacej *s *sfacek *si *sj *sk
+!   rw status of diff variables: veldirfreestream:in *dscalar:in
+!                *(flowdoms.x):in *sfacei:in-out *sfacej:in-out
+!                *s:in-out *sfacek:in-out *si:in *sj:in *sk:in
+!   plus diff mem management of: dscalar:in flowdoms.x:in sfacei:in
+!                sfacej:in s:in sfacek:in si:in sj:in sk:in
+  subroutine gridvelocitiesfinelevel_ts_block_d(nn, sps)
+    use precision
+    use constants
+!, only: ndom, ie, je, ke, x, s, sfacei, si, sfacej, sj, sfacek, sk
+    use blockpointers
+    use inputphysics, only : machgrid, veldirfreestream, &
+&   veldirfreestreamd
+    use flowvarrefstate, only : gammainf, pinf, pinfd, rhoinf, rhoinfd
+!use partitioning, only: timeperiodspectral
+    use inputtimespectral, only : dscalar, dscalard, &
+&   ntimeintervalsspectral
+    implicit none
+!      local variables
+    integer(kind=inttype), intent(in) :: nn, sps
+! index variables
+    integer :: i, j, k, mm, ii, ie_l, je_l, ke_l
+! cell volume center coords
+    real(kind=realtype) :: x_vc, y_vc, z_vc
+    real(kind=realtype) :: x_vcd, y_vcd, z_vcd
+! cell face center coords
+    real(kind=realtype) :: x_fc, y_fc, z_fc
+    real(kind=realtype) :: x_fcd, y_fcd, z_fcd
+! sound speed
+    real(kind=realtype) :: ainf
+! infinite speed
+    real(kind=realtype) :: velxgrid, velygrid, velzgrid
+    real(kind=realtype) :: velxgridd, velygridd, velzgridd
+    intrinsic sqrt
+    real(kind=realtype) :: arg1
+! get the grid free stream velocity
+    arg1 = gammainf*pinf/rhoinf
+    ainf = sqrt(arg1)
+    velxgridd = -(ainf*machgrid*veldirfreestreamd(1))
+    velxgrid = ainf*machgrid*(-veldirfreestream(1))
+    velygridd = -(ainf*machgrid*veldirfreestreamd(2))
+    velygrid = ainf*machgrid*(-veldirfreestream(2))
+    velzgridd = -(ainf*machgrid*veldirfreestreamd(3))
+    velzgrid = ainf*machgrid*(-veldirfreestream(3))
+! get the temporal info (t ect.)
+!call timeperiodspectral
+!
+!            ************************************************************
+!            *                                                          *
+!            * grid velocities of the cell centers, including the       *
+!            * 1st level halo cells.                                    *
+!            *                                                          *
+!            ************************************************************
+!
+! initialize with free stream velocity
+    ie_l = flowdoms(nn, 1, sps)%ie
+    je_l = flowdoms(nn, 1, sps)%je
+    ke_l = flowdoms(nn, 1, sps)%ke
+    do k=1,ke_l
+      do j=1,je_l
+        do i=1,ie_l
+          sd(i, j, k, 1) = velxgridd
+          s(i, j, k, 1) = velxgrid
+          sd(i, j, k, 2) = velygridd
+          s(i, j, k, 2) = velygrid
+          sd(i, j, k, 3) = velzgridd
+          s(i, j, k, 3) = velzgrid
+        end do
+      end do
+    end do
+! the velocity contributed from mesh deformation 
+    do mm=1,ntimeintervalsspectral
+      ie_l = flowdoms(nn, 1, mm)%ie
+      je_l = flowdoms(nn, 1, mm)%je
+      ke_l = flowdoms(nn, 1, mm)%ke
+      do k=1,ke_l
+        do j=1,je_l
+          do i=1,ie_l
+            x_vcd = eighth*(flowdomsd(nn, 1, mm)%x(i-1, j-1, k-1, 1)+&
+&             flowdomsd(nn, 1, mm)%x(i, j-1, k-1, 1)+flowdomsd(nn, 1, mm&
+&             )%x(i-1, j, k-1, 1)+flowdomsd(nn, 1, mm)%x(i, j, k-1, 1)+&
+&             flowdomsd(nn, 1, mm)%x(i-1, j-1, k, 1)+flowdomsd(nn, 1, mm&
+&             )%x(i, j-1, k, 1)+flowdomsd(nn, 1, mm)%x(i-1, j, k, 1)+&
+&             flowdomsd(nn, 1, mm)%x(i, j, k, 1))
+            x_vc = eighth*(flowdoms(nn, 1, mm)%x(i-1, j-1, k-1, 1)+&
+&             flowdoms(nn, 1, mm)%x(i, j-1, k-1, 1)+flowdoms(nn, 1, mm)%&
+&             x(i-1, j, k-1, 1)+flowdoms(nn, 1, mm)%x(i, j, k-1, 1)+&
+&             flowdoms(nn, 1, mm)%x(i-1, j-1, k, 1)+flowdoms(nn, 1, mm)%&
+&             x(i, j-1, k, 1)+flowdoms(nn, 1, mm)%x(i-1, j, k, 1)+&
+&             flowdoms(nn, 1, mm)%x(i, j, k, 1))
+            y_vcd = eighth*(flowdomsd(nn, 1, mm)%x(i-1, j-1, k-1, 2)+&
+&             flowdomsd(nn, 1, mm)%x(i, j-1, k-1, 2)+flowdomsd(nn, 1, mm&
+&             )%x(i-1, j, k-1, 2)+flowdomsd(nn, 1, mm)%x(i, j, k-1, 2)+&
+&             flowdomsd(nn, 1, mm)%x(i-1, j-1, k, 2)+flowdomsd(nn, 1, mm&
+&             )%x(i, j-1, k, 2)+flowdomsd(nn, 1, mm)%x(i-1, j, k, 2)+&
+&             flowdomsd(nn, 1, mm)%x(i, j, k, 2))
+            y_vc = eighth*(flowdoms(nn, 1, mm)%x(i-1, j-1, k-1, 2)+&
+&             flowdoms(nn, 1, mm)%x(i, j-1, k-1, 2)+flowdoms(nn, 1, mm)%&
+&             x(i-1, j, k-1, 2)+flowdoms(nn, 1, mm)%x(i, j, k-1, 2)+&
+&             flowdoms(nn, 1, mm)%x(i-1, j-1, k, 2)+flowdoms(nn, 1, mm)%&
+&             x(i, j-1, k, 2)+flowdoms(nn, 1, mm)%x(i-1, j, k, 2)+&
+&             flowdoms(nn, 1, mm)%x(i, j, k, 2))
+            z_vcd = eighth*(flowdomsd(nn, 1, mm)%x(i-1, j-1, k-1, 3)+&
+&             flowdomsd(nn, 1, mm)%x(i, j-1, k-1, 3)+flowdomsd(nn, 1, mm&
+&             )%x(i-1, j, k-1, 3)+flowdomsd(nn, 1, mm)%x(i, j, k-1, 3)+&
+&             flowdomsd(nn, 1, mm)%x(i-1, j-1, k, 3)+flowdomsd(nn, 1, mm&
+&             )%x(i, j-1, k, 3)+flowdomsd(nn, 1, mm)%x(i-1, j, k, 3)+&
+&             flowdomsd(nn, 1, mm)%x(i, j, k, 3))
+            z_vc = eighth*(flowdoms(nn, 1, mm)%x(i-1, j-1, k-1, 3)+&
+&             flowdoms(nn, 1, mm)%x(i, j-1, k-1, 3)+flowdoms(nn, 1, mm)%&
+&             x(i-1, j, k-1, 3)+flowdoms(nn, 1, mm)%x(i, j, k-1, 3)+&
+&             flowdoms(nn, 1, mm)%x(i-1, j-1, k, 3)+flowdoms(nn, 1, mm)%&
+&             x(i, j-1, k, 3)+flowdoms(nn, 1, mm)%x(i-1, j, k, 3)+&
+&             flowdoms(nn, 1, mm)%x(i, j, k, 3))
+            sd(i, j, k, 1) = sd(i, j, k, 1) + dscalard(1, sps, mm)*x_vc &
+&             + dscalar(1, sps, mm)*x_vcd
+            s(i, j, k, 1) = s(i, j, k, 1) + dscalar(1, sps, mm)*x_vc
+            sd(i, j, k, 2) = sd(i, j, k, 2) + dscalard(1, sps, mm)*y_vc &
+&             + dscalar(1, sps, mm)*y_vcd
+            s(i, j, k, 2) = s(i, j, k, 2) + dscalar(1, sps, mm)*y_vc
+            sd(i, j, k, 3) = sd(i, j, k, 3) + dscalard(1, sps, mm)*z_vc &
+&             + dscalar(1, sps, mm)*z_vcd
+            s(i, j, k, 3) = s(i, j, k, 3) + dscalar(1, sps, mm)*z_vc
+          end do
+        end do
+      end do
+    end do
+!
+!            ************************************************************
+!            *                                                          *
+!            * normal grid velocities of the faces.                     *
+!            *                                                          *
+!            ************************************************************
+!
+! sfacei=	dot(si, v)=dot(si, v_freestream + v_grid)=dot(si, v_freestream) + dot(si, v_grid)
+! sfacej, sfacek same rule!
+! dot(si, v_freestream)
+    ie_l = flowdoms(nn, 1, sps)%ie
+    je_l = flowdoms(nn, 1, sps)%je
+    ke_l = flowdoms(nn, 1, sps)%ke
+! i
+    do k=1,ke_l
+      do j=1,je_l
+        do i=0,ie_l
+          sfaceid(i, j, k) = velxgridd*si(i, j, k, 1) + velxgrid*sid(i, &
+&           j, k, 1) + velygridd*si(i, j, k, 2) + velygrid*sid(i, j, k, &
+&           2) + velzgridd*si(i, j, k, 3) + velzgrid*sid(i, j, k, 3)
+          sfacei(i, j, k) = velxgrid*si(i, j, k, 1) + velygrid*si(i, j, &
+&           k, 2) + velzgrid*si(i, j, k, 3)
+        end do
+      end do
+    end do
+! j
+    do k=1,ke_l
+      do j=0,je_l
+        do i=1,ie_l
+          sfacejd(i, j, k) = velxgridd*sj(i, j, k, 1) + velxgrid*sjd(i, &
+&           j, k, 1) + velygridd*sj(i, j, k, 2) + velygrid*sjd(i, j, k, &
+&           2) + velzgridd*sj(i, j, k, 3) + velzgrid*sjd(i, j, k, 3)
+          sfacej(i, j, k) = velxgrid*sj(i, j, k, 1) + velygrid*sj(i, j, &
+&           k, 2) + velzgrid*sj(i, j, k, 3)
+        end do
+      end do
+    end do
+! k
+    do k=0,ke_l
+      do j=1,je_l
+        do i=1,ie_l
+          sfacekd(i, j, k) = velxgridd*sk(i, j, k, 1) + velxgrid*skd(i, &
+&           j, k, 1) + velygridd*sk(i, j, k, 2) + velygrid*skd(i, j, k, &
+&           2) + velzgridd*sk(i, j, k, 3) + velzgrid*skd(i, j, k, 3)
+          sfacek(i, j, k) = velxgrid*sk(i, j, k, 1) + velygrid*sk(i, j, &
+&           k, 2) + velzgrid*sk(i, j, k, 3)
+        end do
+      end do
+    end do
+!  dot(si, v_grid)
+! loop over inner cells (also 1st layer halo of 3 surfs si, sj and sk are handled here, the left will be handled in the next sect
+!ion)
+    do mm=1,ntimeintervalsspectral
+      ie_l = flowdoms(nn, 1, mm)%ie
+      je_l = flowdoms(nn, 1, mm)%je
+      ke_l = flowdoms(nn, 1, mm)%ke
+! i
+      do k=1,ke_l
+        do j=1,je_l
+          do i=0,ie_l
+            x_fcd = fourth*(flowdomsd(nn, 1, mm)%x(i, j-1, k-1, 1)+&
+&             flowdomsd(nn, 1, mm)%x(i, j, k, 1)+flowdomsd(nn, 1, mm)%x(&
+&             i, j-1, k, 1)+flowdomsd(nn, 1, mm)%x(i, j, k-1, 1))
+            x_fc = fourth*(flowdoms(nn, 1, mm)%x(i, j-1, k-1, 1)+&
+&             flowdoms(nn, 1, mm)%x(i, j, k, 1)+flowdoms(nn, 1, mm)%x(i&
+&             , j-1, k, 1)+flowdoms(nn, 1, mm)%x(i, j, k-1, 1))
+            y_fcd = fourth*(flowdomsd(nn, 1, mm)%x(i, j-1, k-1, 2)+&
+&             flowdomsd(nn, 1, mm)%x(i, j, k, 2)+flowdomsd(nn, 1, mm)%x(&
+&             i, j-1, k, 2)+flowdomsd(nn, 1, mm)%x(i, j, k-1, 2))
+            y_fc = fourth*(flowdoms(nn, 1, mm)%x(i, j-1, k-1, 2)+&
+&             flowdoms(nn, 1, mm)%x(i, j, k, 2)+flowdoms(nn, 1, mm)%x(i&
+&             , j-1, k, 2)+flowdoms(nn, 1, mm)%x(i, j, k-1, 2))
+            z_fcd = fourth*(flowdomsd(nn, 1, mm)%x(i, j-1, k-1, 3)+&
+&             flowdomsd(nn, 1, mm)%x(i, j, k, 3)+flowdomsd(nn, 1, mm)%x(&
+&             i, j-1, k, 3)+flowdomsd(nn, 1, mm)%x(i, j, k-1, 3))
+            z_fc = fourth*(flowdoms(nn, 1, mm)%x(i, j-1, k-1, 3)+&
+&             flowdoms(nn, 1, mm)%x(i, j, k, 3)+flowdoms(nn, 1, mm)%x(i&
+&             , j-1, k, 3)+flowdoms(nn, 1, mm)%x(i, j, k-1, 3))
+            sfaceid(i, j, k) = sfaceid(i, j, k) + (dscalard(1, sps, mm)*&
+&             x_fc+dscalar(1, sps, mm)*x_fcd)*si(i, j, k, 1) + dscalar(1&
+&             , sps, mm)*x_fc*sid(i, j, k, 1) + (dscalard(1, sps, mm)*&
+&             y_fc+dscalar(1, sps, mm)*y_fcd)*si(i, j, k, 2) + dscalar(1&
+&             , sps, mm)*y_fc*sid(i, j, k, 2) + (dscalard(1, sps, mm)*&
+&             z_fc+dscalar(1, sps, mm)*z_fcd)*si(i, j, k, 3) + dscalar(1&
+&             , sps, mm)*z_fc*sid(i, j, k, 3)
+            sfacei(i, j, k) = sfacei(i, j, k) + dscalar(1, sps, mm)*x_fc&
+&             *si(i, j, k, 1) + dscalar(1, sps, mm)*y_fc*si(i, j, k, 2) &
+&             + dscalar(1, sps, mm)*z_fc*si(i, j, k, 3)
+          end do
+        end do
+      end do
+! j
+      do k=1,ke_l
+        do j=0,je_l
+          do i=1,ie_l
+            x_fcd = fourth*(flowdomsd(nn, 1, mm)%x(i-1, j, k-1, 1)+&
+&             flowdomsd(nn, 1, mm)%x(i, j, k, 1)+flowdomsd(nn, 1, mm)%x(&
+&             i-1, j, k, 1)+flowdomsd(nn, 1, mm)%x(i, j, k-1, 1))
+            x_fc = fourth*(flowdoms(nn, 1, mm)%x(i-1, j, k-1, 1)+&
+&             flowdoms(nn, 1, mm)%x(i, j, k, 1)+flowdoms(nn, 1, mm)%x(i-&
+&             1, j, k, 1)+flowdoms(nn, 1, mm)%x(i, j, k-1, 1))
+            y_fcd = fourth*(flowdomsd(nn, 1, mm)%x(i-1, j, k-1, 2)+&
+&             flowdomsd(nn, 1, mm)%x(i, j, k, 2)+flowdomsd(nn, 1, mm)%x(&
+&             i-1, j, k, 2)+flowdomsd(nn, 1, mm)%x(i, j, k-1, 2))
+            y_fc = fourth*(flowdoms(nn, 1, mm)%x(i-1, j, k-1, 2)+&
+&             flowdoms(nn, 1, mm)%x(i, j, k, 2)+flowdoms(nn, 1, mm)%x(i-&
+&             1, j, k, 2)+flowdoms(nn, 1, mm)%x(i, j, k-1, 2))
+            z_fcd = fourth*(flowdomsd(nn, 1, mm)%x(i-1, j, k-1, 3)+&
+&             flowdomsd(nn, 1, mm)%x(i, j, k, 3)+flowdomsd(nn, 1, mm)%x(&
+&             i-1, j, k, 3)+flowdomsd(nn, 1, mm)%x(i, j, k-1, 3))
+            z_fc = fourth*(flowdoms(nn, 1, mm)%x(i-1, j, k-1, 3)+&
+&             flowdoms(nn, 1, mm)%x(i, j, k, 3)+flowdoms(nn, 1, mm)%x(i-&
+&             1, j, k, 3)+flowdoms(nn, 1, mm)%x(i, j, k-1, 3))
+            sfacejd(i, j, k) = sfacejd(i, j, k) + (dscalard(1, sps, mm)*&
+&             x_fc+dscalar(1, sps, mm)*x_fcd)*sj(i, j, k, 1) + dscalar(1&
+&             , sps, mm)*x_fc*sjd(i, j, k, 1) + (dscalard(1, sps, mm)*&
+&             y_fc+dscalar(1, sps, mm)*y_fcd)*sj(i, j, k, 2) + dscalar(1&
+&             , sps, mm)*y_fc*sjd(i, j, k, 2) + (dscalard(1, sps, mm)*&
+&             z_fc+dscalar(1, sps, mm)*z_fcd)*sj(i, j, k, 3) + dscalar(1&
+&             , sps, mm)*z_fc*sjd(i, j, k, 3)
+            sfacej(i, j, k) = sfacej(i, j, k) + dscalar(1, sps, mm)*x_fc&
+&             *sj(i, j, k, 1) + dscalar(1, sps, mm)*y_fc*sj(i, j, k, 2) &
+&             + dscalar(1, sps, mm)*z_fc*sj(i, j, k, 3)
+          end do
+        end do
+      end do
+! k
+      do k=0,ke_l
+        do j=1,je_l
+          do i=1,ie_l
+            x_fcd = fourth*(flowdomsd(nn, 1, mm)%x(i-1, j-1, k, 1)+&
+&             flowdomsd(nn, 1, mm)%x(i, j, k, 1)+flowdomsd(nn, 1, mm)%x(&
+&             i, j-1, k, 1)+flowdomsd(nn, 1, mm)%x(i-1, j, k, 1))
+            x_fc = fourth*(flowdoms(nn, 1, mm)%x(i-1, j-1, k, 1)+&
+&             flowdoms(nn, 1, mm)%x(i, j, k, 1)+flowdoms(nn, 1, mm)%x(i&
+&             , j-1, k, 1)+flowdoms(nn, 1, mm)%x(i-1, j, k, 1))
+            y_fcd = fourth*(flowdomsd(nn, 1, mm)%x(i-1, j-1, k, 2)+&
+&             flowdomsd(nn, 1, mm)%x(i, j, k, 2)+flowdomsd(nn, 1, mm)%x(&
+&             i, j-1, k, 2)+flowdomsd(nn, 1, mm)%x(i-1, j, k, 2))
+            y_fc = fourth*(flowdoms(nn, 1, mm)%x(i-1, j-1, k, 2)+&
+&             flowdoms(nn, 1, mm)%x(i, j, k, 2)+flowdoms(nn, 1, mm)%x(i&
+&             , j-1, k, 2)+flowdoms(nn, 1, mm)%x(i-1, j, k, 2))
+            z_fcd = fourth*(flowdomsd(nn, 1, mm)%x(i-1, j-1, k, 3)+&
+&             flowdomsd(nn, 1, mm)%x(i, j, k, 3)+flowdomsd(nn, 1, mm)%x(&
+&             i, j-1, k, 3)+flowdomsd(nn, 1, mm)%x(i-1, j, k, 3))
+            z_fc = fourth*(flowdoms(nn, 1, mm)%x(i-1, j-1, k, 3)+&
+&             flowdoms(nn, 1, mm)%x(i, j, k, 3)+flowdoms(nn, 1, mm)%x(i&
+&             , j-1, k, 3)+flowdoms(nn, 1, mm)%x(i-1, j, k, 3))
+            sfacekd(i, j, k) = sfacekd(i, j, k) + (dscalard(1, sps, mm)*&
+&             x_fc+dscalar(1, sps, mm)*x_fcd)*sk(i, j, k, 1) + dscalar(1&
+&             , sps, mm)*x_fc*skd(i, j, k, 1) + (dscalard(1, sps, mm)*&
+&             y_fc+dscalar(1, sps, mm)*y_fcd)*sk(i, j, k, 2) + dscalar(1&
+&             , sps, mm)*y_fc*skd(i, j, k, 2) + (dscalard(1, sps, mm)*&
+&             z_fc+dscalar(1, sps, mm)*z_fcd)*sk(i, j, k, 3) + dscalar(1&
+&             , sps, mm)*z_fc*skd(i, j, k, 3)
+            sfacek(i, j, k) = sfacek(i, j, k) + dscalar(1, sps, mm)*x_fc&
+&             *sk(i, j, k, 1) + dscalar(1, sps, mm)*y_fc*sk(i, j, k, 2) &
+&             + dscalar(1, sps, mm)*z_fc*sk(i, j, k, 3)
+          end do
+        end do
+      end do
+    end do
+  end subroutine gridvelocitiesfinelevel_ts_block_d
   subroutine gridvelocitiesfinelevel_ts_block(nn, sps)
     use precision
     use constants

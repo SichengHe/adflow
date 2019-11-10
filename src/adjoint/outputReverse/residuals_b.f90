@@ -308,6 +308,396 @@ contains
       end do
     end if
   end subroutine residual_block
+!  differentiation of initres_block in reverse (adjoint) mode (with options i4 dr8 r8 noisize):
+!   gradient     of useful results: *dvector *dscalar *(flowdoms.vol)
+!                *(flowdoms.w) *dw
+!   with respect to varying inputs: *dvector *dscalar *(flowdoms.vol)
+!                *(flowdoms.w) *dw
+!   rw status of diff variables: *dvector:incr *dscalar:incr *(flowdoms.vol):incr
+!                *(flowdoms.w):incr *dw:in-out
+!   plus diff mem management of: dvector:in dscalar:in flowdoms.vol:in
+!                flowdoms.w:in dw:in
+  subroutine initres_block_b(varstart, varend, nn, sps)
+!
+!       initres initializes the given range of the residual. either to
+!       zero, steady computation, or to an unsteady term for the time
+!       spectral and unsteady modes. for the coarser grid levels the
+!       residual forcing term is taken into account.
+!
+    use blockpointers
+    use flowvarrefstate
+    use inputiteration
+    use inputphysics
+    use inputtimespectral
+    use inputunsteady
+    use iteration
+    implicit none
+!
+!      subroutine arguments.
+!
+    integer(kind=inttype), intent(in) :: varstart, varend, nn, sps
+!
+!      local variables.
+!
+    integer(kind=inttype) :: mm, ll, ii, jj, i, j, k, l, m
+    real(kind=realtype) :: oneoverdt, tmp
+    real(kind=realtype) :: tmpd
+    real(kind=realtype), dimension(:, :, :, :), pointer :: ww
+    integer :: branch
+    real(kind=realtype) :: temp0
+    real(kind=realtype) :: tempd
+    real(kind=realtype) :: tempd0
+    real(kind=realtype) :: temp
+! return immediately of no variables are in the range.
+    if (varend .ge. varstart) then
+! determine the equation mode and act accordingly.
+      select case  (equationmode) 
+      case (timespectral) 
+! time spectral computation. the time derivative of the
+! current solution is given by a linear combination of
+! all other solutions, i.e. a matrix vector product.
+! first store the section to which this block belongs
+! in jj.
+        jj = sectionid
+! determine the currently active multigrid level.
+        if (currentlevel .eq. groundlevel) then
+! loop over the number of terms which contribute
+! to the time derivative.
+timeloopfine:do mm=1,ntimeintervalsspectral
+! store the pointer for the variable to be used to
+! compute the unsteady source term and the volume.
+! also store in ii the offset needed for vector
+! quantities.
+!wsp   => flowdoms(nn,currentlevel,mm)%w
+!volsp => flowdoms(nn,currentlevel,mm)%vol
+            call pushinteger4(ii)
+            ii = 3*(mm-1)
+! loop over the number of variables to be set.
+varloopfine:do l=varstart,varend
+! test for a momentum variable.
+              if ((l .eq. ivx .or. l .eq. ivy) .or. l .eq. ivz) then
+! momentum variable. a special treatment is
+! needed because it is a vector and the velocities
+! are stored instead of the momentum. set the
+! coefficient ll, which defines the row of the
+! matrix used later on.
+                if (l .eq. ivx) then
+                  call pushinteger4(ll)
+                  ll = 3*sps - 2
+                  call pushcontrol1b(0)
+                else
+                  call pushcontrol1b(1)
+                end if
+                if (l .eq. ivy) then
+                  call pushinteger4(ll)
+                  ll = 3*sps - 1
+                  call pushcontrol1b(0)
+                else
+                  call pushcontrol1b(1)
+                end if
+                if (l .eq. ivz) then
+                  call pushinteger4(ll)
+                  ll = 3*sps
+                  call pushcontrol1b(1)
+                else
+                  call pushcontrol1b(0)
+                end if
+! loop over the owned cell centers to add the
+! contribution from wsp.
+                do k=2,kl
+                  do j=2,jl
+                    do i=2,il
+! store the matrix vector product with the
+! velocity in tmp.
+                      call pushreal8(tmp)
+                      tmp = dvector(jj, ll, ii+1)*flowdoms(nn, &
+&                       currentlevel, mm)%w(i, j, k, ivx) + dvector(jj, &
+&                       ll, ii+2)*flowdoms(nn, currentlevel, mm)%w(i, j&
+&                       , k, ivy) + dvector(jj, ll, ii+3)*flowdoms(nn, &
+&                       currentlevel, mm)%w(i, j, k, ivz)
+! update the residual. note the
+! multiplication with the density to obtain
+! the correct time derivative for the
+! momentum variable.
+                    end do
+                  end do
+                end do
+                call pushcontrol1b(1)
+              else
+                call pushcontrol1b(0)
+              end if
+            end do varloopfine
+          end do timeloopfine
+          call pushcontrol2b(1)
+        else
+          call pushcontrol2b(0)
+        end if
+      case default
+        call pushcontrol2b(2)
+      end select
+      do l=varend,varstart,-1
+        do j=jl,2,-1
+          do i=il,2,-1
+            dwd(i, j, kb, l) = 0.0_8
+            dwd(i, j, ke, l) = 0.0_8
+            dwd(i, j, 1, l) = 0.0_8
+            dwd(i, j, 0, l) = 0.0_8
+          end do
+        end do
+        do k=kb,0,-1
+          do i=il,2,-1
+            dwd(i, jb, k, l) = 0.0_8
+            dwd(i, je, k, l) = 0.0_8
+            dwd(i, 1, k, l) = 0.0_8
+            dwd(i, 0, k, l) = 0.0_8
+          end do
+        end do
+        do k=kb,0,-1
+          do j=jb,0,-1
+            dwd(ib, j, k, l) = 0.0_8
+            dwd(ie, j, k, l) = 0.0_8
+            dwd(1, j, k, l) = 0.0_8
+            dwd(0, j, k, l) = 0.0_8
+          end do
+        end do
+      end do
+      call popcontrol2b(branch)
+      if (branch .ne. 0) then
+        if (branch .eq. 1) then
+          do mm=ntimeintervalsspectral,1,-1
+            do l=varend,varstart,-1
+              call popcontrol1b(branch)
+              if (branch .eq. 0) then
+                do k=kl,2,-1
+                  do j=jl,2,-1
+                    do i=il,2,-1
+                      tempd0 = flowdoms(nn, currentlevel, mm)%w(i, j, k&
+&                       , l)*dwd(i, j, k, l)
+                      temp0 = flowdoms(nn, currentlevel, mm)%vol(i, j, k&
+&                       )
+                      dscalard(jj, sps, mm) = dscalard(jj, sps, mm) + &
+&                       temp0*tempd0
+                      flowdomsd(nn, currentlevel, mm)%vol(i, j, k) = &
+&                       flowdomsd(nn, currentlevel, mm)%vol(i, j, k) + &
+&                       dscalar(jj, sps, mm)*tempd0
+                      flowdomsd(nn, currentlevel, mm)%w(i, j, k, l) = &
+&                       flowdomsd(nn, currentlevel, mm)%w(i, j, k, l) + &
+&                       dscalar(jj, sps, mm)*temp0*dwd(i, j, k, l)
+                    end do
+                  end do
+                end do
+              else
+                do k=kl,2,-1
+                  do j=jl,2,-1
+                    do i=il,2,-1
+                      tempd = flowdoms(nn, currentlevel, mm)%w(i, j, k, &
+&                       irho)*dwd(i, j, k, l)
+                      temp = flowdoms(nn, currentlevel, mm)%vol(i, j, k)
+                      tmpd = temp*tempd
+                      flowdomsd(nn, currentlevel, mm)%vol(i, j, k) = &
+&                       flowdomsd(nn, currentlevel, mm)%vol(i, j, k) + &
+&                       tmp*tempd
+                      flowdomsd(nn, currentlevel, mm)%w(i, j, k, irho)&
+&                      = flowdomsd(nn, currentlevel, mm)%w(i, j, k, irho&
+&                       ) + tmp*temp*dwd(i, j, k, l)
+                      call popreal8(tmp)
+                      dvectord(jj, ll, ii+1) = dvectord(jj, ll, ii+1) + &
+&                       flowdoms(nn, currentlevel, mm)%w(i, j, k, ivx)*&
+&                       tmpd
+                      flowdomsd(nn, currentlevel, mm)%w(i, j, k, ivx) = &
+&                       flowdomsd(nn, currentlevel, mm)%w(i, j, k, ivx) &
+&                       + dvector(jj, ll, ii+1)*tmpd
+                      dvectord(jj, ll, ii+2) = dvectord(jj, ll, ii+2) + &
+&                       flowdoms(nn, currentlevel, mm)%w(i, j, k, ivy)*&
+&                       tmpd
+                      flowdomsd(nn, currentlevel, mm)%w(i, j, k, ivy) = &
+&                       flowdomsd(nn, currentlevel, mm)%w(i, j, k, ivy) &
+&                       + dvector(jj, ll, ii+2)*tmpd
+                      dvectord(jj, ll, ii+3) = dvectord(jj, ll, ii+3) + &
+&                       flowdoms(nn, currentlevel, mm)%w(i, j, k, ivz)*&
+&                       tmpd
+                      flowdomsd(nn, currentlevel, mm)%w(i, j, k, ivz) = &
+&                       flowdomsd(nn, currentlevel, mm)%w(i, j, k, ivz) &
+&                       + dvector(jj, ll, ii+3)*tmpd
+                    end do
+                  end do
+                end do
+                call popcontrol1b(branch)
+                if (branch .ne. 0) call popinteger4(ll)
+                call popcontrol1b(branch)
+                if (branch .eq. 0) call popinteger4(ll)
+                call popcontrol1b(branch)
+                if (branch .eq. 0) call popinteger4(ll)
+              end if
+            end do
+            call popinteger4(ii)
+          end do
+          dwd = 0.0_8
+        end if
+      end if
+    end if
+  end subroutine initres_block_b
+  subroutine initres_block(varstart, varend, nn, sps)
+!
+!       initres initializes the given range of the residual. either to
+!       zero, steady computation, or to an unsteady term for the time
+!       spectral and unsteady modes. for the coarser grid levels the
+!       residual forcing term is taken into account.
+!
+    use blockpointers
+    use flowvarrefstate
+    use inputiteration
+    use inputphysics
+    use inputtimespectral
+    use inputunsteady
+    use iteration
+    implicit none
+!
+!      subroutine arguments.
+!
+    integer(kind=inttype), intent(in) :: varstart, varend, nn, sps
+!
+!      local variables.
+!
+    integer(kind=inttype) :: mm, ll, ii, jj, i, j, k, l, m
+    real(kind=realtype) :: oneoverdt, tmp
+    real(kind=realtype), dimension(:, :, :, :), pointer :: ww
+! return immediately of no variables are in the range.
+    if (varend .lt. varstart) then
+      return
+    else
+! determine the equation mode and act accordingly.
+      select case  (equationmode) 
+      case (timespectral) 
+! time spectral computation. the time derivative of the
+! current solution is given by a linear combination of
+! all other solutions, i.e. a matrix vector product.
+! first store the section to which this block belongs
+! in jj.
+        jj = sectionid
+! determine the currently active multigrid level.
+        if (currentlevel .eq. groundlevel) then
+! finest multigrid level. the residual must be
+! initialized to the time derivative.
+! initialize it to zero.
+          do l=varstart,varend
+            do k=2,kl
+              do j=2,jl
+                do i=2,il
+                  dw(i, j, k, l) = zero
+                end do
+              end do
+            end do
+          end do
+          dw = zero
+! loop over the number of terms which contribute
+! to the time derivative.
+timeloopfine:do mm=1,ntimeintervalsspectral
+! store the pointer for the variable to be used to
+! compute the unsteady source term and the volume.
+! also store in ii the offset needed for vector
+! quantities.
+!wsp   => flowdoms(nn,currentlevel,mm)%w
+!volsp => flowdoms(nn,currentlevel,mm)%vol
+            ii = 3*(mm-1)
+! loop over the number of variables to be set.
+varloopfine:do l=varstart,varend
+! test for a momentum variable.
+              if ((l .eq. ivx .or. l .eq. ivy) .or. l .eq. ivz) then
+! momentum variable. a special treatment is
+! needed because it is a vector and the velocities
+! are stored instead of the momentum. set the
+! coefficient ll, which defines the row of the
+! matrix used later on.
+                if (l .eq. ivx) ll = 3*sps - 2
+                if (l .eq. ivy) ll = 3*sps - 1
+                if (l .eq. ivz) ll = 3*sps
+! loop over the owned cell centers to add the
+! contribution from wsp.
+                do k=2,kl
+                  do j=2,jl
+                    do i=2,il
+! store the matrix vector product with the
+! velocity in tmp.
+                      tmp = dvector(jj, ll, ii+1)*flowdoms(nn, &
+&                       currentlevel, mm)%w(i, j, k, ivx) + dvector(jj, &
+&                       ll, ii+2)*flowdoms(nn, currentlevel, mm)%w(i, j&
+&                       , k, ivy) + dvector(jj, ll, ii+3)*flowdoms(nn, &
+&                       currentlevel, mm)%w(i, j, k, ivz)
+! update the residual. note the
+! multiplication with the density to obtain
+! the correct time derivative for the
+! momentum variable.
+                      dw(i, j, k, l) = dw(i, j, k, l) + tmp*flowdoms(nn&
+&                       , currentlevel, mm)%vol(i, j, k)*flowdoms(nn, &
+&                       currentlevel, mm)%w(i, j, k, irho)
+                    end do
+                  end do
+                end do
+              else
+! scalar variable.  loop over the owned cells to
+! add the contribution of wsp to the time
+! derivative.
+                do k=2,kl
+                  do j=2,jl
+                    do i=2,il
+                      dw(i, j, k, l) = dw(i, j, k, l) + dscalar(jj, sps&
+&                       , mm)*flowdoms(nn, currentlevel, mm)%vol(i, j, k&
+&                       )*flowdoms(nn, currentlevel, mm)%w(i, j, k, l)
+                    end do
+                  end do
+                end do
+              end if
+            end do varloopfine
+          end do timeloopfine
+        end if
+      end select
+! if (nn == 1) then
+!    if (sps == 1) then
+!       if (k == 6) then
+!          if (j == 3) then
+!             if (i == 2) then
+!                print*, "pm: vol", flowdoms(nn,currentlevel,mm)%vol(i,j,k)
+!             end if
+!          end if
+!       end if
+!    end if
+! end if
+!  if (nn == 1) then
+!    if (sps == 1) then
+!       write(99,*), dw ! hack
+!    end if 
+!  end if
+! set the residual in the halo cells to zero. this is just
+! to avoid possible problems. their values do not matter.
+      do l=varstart,varend
+        do k=0,kb
+          do j=0,jb
+            dw(0, j, k, l) = zero
+            dw(1, j, k, l) = zero
+            dw(ie, j, k, l) = zero
+            dw(ib, j, k, l) = zero
+          end do
+        end do
+        do k=0,kb
+          do i=2,il
+            dw(i, 0, k, l) = zero
+            dw(i, 1, k, l) = zero
+            dw(i, je, k, l) = zero
+            dw(i, jb, k, l) = zero
+          end do
+        end do
+        do j=2,jl
+          do i=2,il
+            dw(i, j, 0, l) = zero
+            dw(i, j, 1, l) = zero
+            dw(i, j, ke, l) = zero
+            dw(i, j, kb, l) = zero
+          end do
+        end do
+      end do
+    end if
+  end subroutine initres_block
 !  differentiation of sourceterms_block in reverse (adjoint) mode (with options i4 dr8 r8 noisize):
 !   gradient     of useful results: uref pref *dw *w actuatorregions.force
 !                actuatorregions.heat plocal
