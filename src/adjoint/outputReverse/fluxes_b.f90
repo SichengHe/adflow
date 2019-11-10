@@ -11,14 +11,15 @@ module fluxes_b
 
 contains
 !  differentiation of inviscidcentralflux in reverse (adjoint) mode (with options i4 dr8 r8 noisize):
-!   gradient     of useful results: timeref *p *dw *w *vol *si
-!                *sj *sk
-!   with respect to varying inputs: timeref *p *dw *w *vol *si
-!                *sj *sk
-!   rw status of diff variables: timeref:incr *p:incr *dw:in-out
-!                *w:incr *vol:incr *si:incr *sj:incr *sk:incr
-!   plus diff mem management of: p:in dw:in w:in vol:in si:in sj:in
-!                sk:in
+!   gradient     of useful results: timeref *p *sfacei *sfacej
+!                *sfacek *dw *w *vol *si *sj *sk
+!   with respect to varying inputs: timeref *p *sfacei *sfacej
+!                *sfacek *dw *w *vol *si *sj *sk
+!   rw status of diff variables: timeref:incr *p:incr *sfacei:incr
+!                *sfacej:incr *sfacek:incr *dw:in-out *w:incr *vol:incr
+!                *si:incr *sj:incr *sk:incr
+!   plus diff mem management of: p:in sfacei:in sfacej:in sfacek:in
+!                dw:in w:in vol:in si:in sj:in sk:in
   subroutine inviscidcentralflux_b()
 !
 !       inviscidcentralflux computes the euler fluxes using a central
@@ -29,9 +30,9 @@ contains
     use constants
     use blockpointers, only : nx, il, ie, ny, jl, je, nz, kl, ke, &
 &   spectralsol, w, wd, si, sid, sj, sjd, sk, skd, dw, dwd, pori, porj, &
-&   pork, indfamilyi, indfamilyj, indfamilyk, p, pd, sfacei, sfacej, &
-&   sfacek, nbkglobal, addgridvelocities, blockismoving, vol, vold, &
-&   factfamilyi, factfamilyj, factfamilyk
+&   pork, indfamilyi, indfamilyj, indfamilyk, p, pd, sfacei, sfaceid, &
+&   sfacej, sfacejd, sfacek, sfacekd, nbkglobal, addgridvelocities, &
+&   blockismoving, vol, vold, factfamilyi, factfamilyj, factfamilyk
     use cgnsgrid, only : cgnsdoms, massflowfamilyinv
     use flowvarrefstate, only : timeref, timerefd
     use inputphysics, only : equationmode
@@ -43,7 +44,7 @@ contains
     real(kind=realtype) :: qsp, qsm, rqsp, rqsm, porvel, porflux
     real(kind=realtype) :: qspd, qsmd, rqspd, rqsmd
     real(kind=realtype) :: pa, fs, sface, vnp, vnm
-    real(kind=realtype) :: pad, fsd, vnpd, vnmd
+    real(kind=realtype) :: pad, fsd, sfaced, vnpd, vnmd
     real(kind=realtype) :: wwx, wwy, wwz, rvol
     real(kind=realtype) :: wwxd, wwyd, wwzd, rvold
     intrinsic mod
@@ -121,14 +122,21 @@ contains
     end if
     call popinteger4(j)
     call popinteger4(i)
+    sfaced = 0.0_8
     sface = zero
+    sfaced = 0.0_8
     do ii=0,nx*ny*kl-1
       i = mod(ii, nx) + 2
       j = mod(ii/nx, ny) + 2
       k = ii/(nx*ny) + 1
 ! set the dot product of the grid velocity and the
 ! normal in k-direction for a moving face.
-      if (addgridvelocities) sface = sfacek(i, j, k)
+      if (addgridvelocities) then
+        sface = sfacek(i, j, k)
+        call pushcontrol1b(0)
+      else
+        call pushcontrol1b(1)
+      end if
 ! compute the normal velocities of the left and right state.
       vnp = w(i, j, k+1, ivx)*sk(i, j, k, 1) + w(i, j, k+1, ivy)*sk(i, j&
 &       , k, 2) + w(i, j, k+1, ivz)*sk(i, j, k, 3)
@@ -209,8 +217,10 @@ contains
       qspd = qspd + w(i, j, k+1, irho)*rqspd
       vnpd = porvel*qspd + p(i, j, k+1)*tempd1
       wd(i, j, k+1, irho) = wd(i, j, k+1, irho) + qsp*rqspd
+      sfaced = sfaced - porvel*qspd - porvel*qsmd
       call popcontrol1b(branch)
       if (branch .eq. 0) then
+        sfaced = sfaced + vnpd + vnmd
         vnmd = 0.0_8
         vnpd = 0.0_8
       end if
@@ -226,6 +236,11 @@ contains
       skd(i, j, k, 2) = skd(i, j, k, 2) + w(i, j, k+1, ivy)*vnpd
       wd(i, j, k+1, ivz) = wd(i, j, k+1, ivz) + sk(i, j, k, 3)*vnpd
       skd(i, j, k, 3) = skd(i, j, k, 3) + w(i, j, k+1, ivz)*vnpd
+      call popcontrol1b(branch)
+      if (branch .eq. 0) then
+        sfacekd(i, j, k) = sfacekd(i, j, k) + sfaced
+        sfaced = 0.0_8
+      end if
     end do
     call popreal8(qsp)
     call popreal8(qsm)
@@ -235,14 +250,21 @@ contains
     call popreal8(vnm)
     call popinteger4(j)
     call popinteger4(i)
+    sfaced = 0.0_8
     sface = zero
+    sfaced = 0.0_8
     do ii=0,nx*jl*nz-1
       i = mod(ii, nx) + 2
       j = mod(ii/nx, jl) + 1
       k = ii/(nx*jl) + 2
 ! set the dot product of the grid velocity and the
 ! normal in j-direction for a moving face.
-      if (addgridvelocities) sface = sfacej(i, j, k)
+      if (addgridvelocities) then
+        sface = sfacej(i, j, k)
+        call pushcontrol1b(0)
+      else
+        call pushcontrol1b(1)
+      end if
 ! compute the normal velocities of the left and right state.
       vnp = w(i, j+1, k, ivx)*sj(i, j, k, 1) + w(i, j+1, k, ivy)*sj(i, j&
 &       , k, 2) + w(i, j+1, k, ivz)*sj(i, j, k, 3)
@@ -323,8 +345,10 @@ contains
       qspd = qspd + w(i, j+1, k, irho)*rqspd
       vnpd = porvel*qspd + p(i, j+1, k)*tempd0
       wd(i, j+1, k, irho) = wd(i, j+1, k, irho) + qsp*rqspd
+      sfaced = sfaced - porvel*qspd - porvel*qsmd
       call popcontrol1b(branch)
       if (branch .eq. 0) then
+        sfaced = sfaced + vnpd + vnmd
         vnmd = 0.0_8
         vnpd = 0.0_8
       end if
@@ -340,6 +364,11 @@ contains
       sjd(i, j, k, 2) = sjd(i, j, k, 2) + w(i, j+1, k, ivy)*vnpd
       wd(i, j+1, k, ivz) = wd(i, j+1, k, ivz) + sj(i, j, k, 3)*vnpd
       sjd(i, j, k, 3) = sjd(i, j, k, 3) + w(i, j+1, k, ivz)*vnpd
+      call popcontrol1b(branch)
+      if (branch .eq. 0) then
+        sfacejd(i, j, k) = sfacejd(i, j, k) + sfaced
+        sfaced = 0.0_8
+      end if
     end do
     call popreal8(qsp)
     call popreal8(qsm)
@@ -349,16 +378,23 @@ contains
     call popreal8(vnm)
     call popinteger4(j)
     call popinteger4(i)
+    sfaced = 0.0_8
 ! initialize sface to zero. this value will be used if the
 ! block is not moving.
     sface = zero
+    sfaced = 0.0_8
     do ii=0,il*ny*nz-1
       i = mod(ii, il) + 1
       j = mod(ii/il, ny) + 2
       k = ii/(il*ny) + 2
 ! set the dot product of the grid velocity and the
 ! normal in i-direction for a moving face.
-      if (addgridvelocities) sface = sfacei(i, j, k)
+      if (addgridvelocities) then
+        sface = sfacei(i, j, k)
+        call pushcontrol1b(0)
+      else
+        call pushcontrol1b(1)
+      end if
 ! compute the normal velocities of the left and right state.
       vnp = w(i+1, j, k, ivx)*si(i, j, k, 1) + w(i+1, j, k, ivy)*si(i, j&
 &       , k, 2) + w(i+1, j, k, ivz)*si(i, j, k, 3)
@@ -439,8 +475,10 @@ contains
       qspd = qspd + w(i+1, j, k, irho)*rqspd
       vnpd = porvel*qspd + p(i+1, j, k)*tempd
       wd(i+1, j, k, irho) = wd(i+1, j, k, irho) + qsp*rqspd
+      sfaced = sfaced - porvel*qspd - porvel*qsmd
       call popcontrol1b(branch)
       if (branch .eq. 0) then
+        sfaced = sfaced + vnpd + vnmd
         vnmd = 0.0_8
         vnpd = 0.0_8
       end if
@@ -456,6 +494,11 @@ contains
       sid(i, j, k, 2) = sid(i, j, k, 2) + w(i+1, j, k, ivy)*vnpd
       wd(i+1, j, k, ivz) = wd(i+1, j, k, ivz) + si(i, j, k, 3)*vnpd
       sid(i, j, k, 3) = sid(i, j, k, 3) + w(i+1, j, k, ivz)*vnpd
+      call popcontrol1b(branch)
+      if (branch .eq. 0) then
+        sfaceid(i, j, k) = sfaceid(i, j, k) + sfaced
+        sfaced = 0.0_8
+      end if
     end do
   end subroutine inviscidcentralflux_b
   subroutine inviscidcentralflux()
@@ -739,8 +782,8 @@ contains
     use blockpointers, only : nx, ny, nz, il, jl, kl, ie, je, ke, ib, &
 &   jb, kb, w, wd, p, pd, pori, porj, pork, fw, fwd, gamma, si, sid, sj,&
 &   sjd, sk, skd, indfamilyi, indfamilyj, indfamilyk, spectralsol, &
-&   addgridvelocities, sfacei, sfacej, sfacek, factfamilyi, factfamilyj,&
-&   factfamilyk
+&   addgridvelocities, sfacei, sfaceid, sfacej, sfacejd, sfacek, sfacekd&
+&   , factfamilyi, factfamilyj, factfamilyk
     use flowvarrefstate, only : pinfcorr, pinfcorrd
     use inputdiscretization, only : vis2, vis4
     use inputphysics, only : equations
@@ -5672,8 +5715,9 @@ contains
     use blockpointers, only : il, jl, kl, ie, je, ke, ib, jb, kb, w, &
 &   wd, p, pd, pori, porj, pork, fw, fwd, gamma, si, sid, sj, sjd, sk, &
 &   skd, indfamilyi, indfamilyj, indfamilyk, spectralsol, &
-&   addgridvelocities, sfacei, sfacej, sfacek, rotmatrixi, rotmatrixj, &
-&   rotmatrixk, factfamilyi, factfamilyj, factfamilyk
+&   addgridvelocities, sfacei, sfaceid, sfacej, sfacejd, sfacek, sfacekd&
+&   , rotmatrixi, rotmatrixj, rotmatrixk, factfamilyi, factfamilyj, &
+&   factfamilyk
     use flowvarrefstate, only : kpresent, nw, nwf, rgas, rgasd, tref, &
 &   trefd
     use inputdiscretization, only : limiter, lumpeddiss, precond, &

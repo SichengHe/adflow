@@ -307,127 +307,6 @@ contains
 
   end subroutine residual_block
 
-
-  subroutine sourceTerms_block(nn, res, iRegion, pLocal)
-
-    ! Apply the source terms for the given block. Assume that the
-    ! block pointers are already set.
-    use constants
-    use actuatorRegionData
-    use blockPointers, only : volRef, dw, w
-    use flowVarRefState, only : Pref, uRef
-    use communication
-    use iteration, only : ordersConverged
-    implicit none
-
-    ! Input
-    integer(kind=intType), intent(in) ::  nn, iRegion
-    logical, intent(in) :: res
-    real(kind=realType), intent(inout) :: pLocal
-
-    ! Working
-    integer(kind=intType) :: i, j, k, ii, iStart, iEnd
-    real(kind=realType) :: Ftmp(3), Vx, Vy, Vz, Fact(3), reDim, factor, oStart, oEnd
-
-    reDim = pRef*uRef
-
-    ! Compute the relaxation factor based on the ordersConverged
-
-    ! How far we are into the ramp:
-    if (ordersConverged < actuatorRegions(iRegion)%relaxStart) then
-       factor = zero
-    else if (ordersConverged > actuatorRegions(iRegion)%relaxEnd) then
-       factor = one
-    else ! In between
-       oStart = actuatorRegions(iRegion)%relaxStart 
-       oEnd   = actuatorRegions(iRegion)%relaxEnd
-       factor = (ordersConverged - oStart)/(oEnd - oStart)
-    end if
-
-    ! Compute the constant force factor
-    fact = factor*actuatorRegions(iRegion)%F / actuatorRegions(iRegion)%volume / pRef
-
-    ! Loop over the ranges for this block
-    iStart = actuatorRegions(iRegion)%blkPtr(nn-1) + 1
-    iEnd =  actuatorRegions(iRegion)%blkPtr(nn)
-    
-    !$AD II-LOOP
-    do ii=iStart, iEnd
-       
-       ! Extract the cell ID.
-       i = actuatorRegions(iRegion)%cellIDs(1, ii)
-       j = actuatorRegions(iRegion)%cellIDs(2, ii)
-       k = actuatorRegions(iRegion)%cellIDs(3, ii)
-       
-       ! This actually gets the force
-       FTmp = volRef(i, j, k) * fact
-       
-       Vx = w(i, j, k, iVx)
-       Vy = w(i, j, k, iVy)
-       Vz = w(i, j, k, iVz)
-       
-       if (res) then
-          ! Momentum residuals
-          dw(i, j, k, imx:imz) = dw(i, j, k, imx:imz) - Ftmp
-          
-          ! energy residuals
-          dw(i, j, k, iRhoE) = dw(i, j, k, iRhoE)  - &
-               Ftmp(1)*Vx - Ftmp(2)*Vy - Ftmp(3)*Vz
-       else
-          ! Add in the local power contribution:
-          pLocal = pLocal + (Vx*Ftmp(1) + Vy*FTmp(2) + Vz*Ftmp(3))*reDim
-       end if
-    end do
-
-  end subroutine sourceTerms_block
-
-
-  ! ----------------------------------------------------------------------
-  !                                                                      |
-  !                    No Tapenade Routine below this line               |
-  !                                                                      |
-  ! ----------------------------------------------------------------------
-
-#ifndef USE_TAPENADE
-  subroutine initres(varStart, varEnd)
-    !
-    ! Shell function to call initRes_block on all blocks
-    !
-    use blockPointers
-    use constants
-    use inputTimeSpectral
-    use iteration
-    use section
-    use utils, only : setPointers
-    !
-    !      Subroutine argument.
-    !
-    integer(kind=intType), intent(in) :: varStart, varEnd
-    !
-    !      Local variables.
-    !
-    integer(kind=intType) :: sps, nn
-
-    ! Loop over the number of spectral solutions.
-
-    spectralLoop: do sps=1,nTimeIntervalsSpectral
-
-       ! Loop over the number of blocks.
-
-       domains: do nn=1,nDom
-
-          ! Set the pointers for this block.
-
-          call setPointers(nn, currentLevel, sps)
-
-          call initres_block(varStart, varEnd, nn, sps)
-
-       end do domains
-
-    end do spectralLoop
-
-  end subroutine initRes
-
   subroutine initres_block(varStart, varEnd, nn, sps)
     !
     !       initres initializes the given range of the residual. Either to
@@ -454,8 +333,13 @@ contains
     integer(kind=intType) :: mm, ll, ii, jj, i, j, k, l, m
     real(kind=realType)   :: oneOverDt, tmp
 
-    real(kind=realType), dimension(:,:,:,:), pointer :: ww, wsp, wsp1
+    real(kind=realType), dimension(:,:,:,:), pointer :: ww
+    
+#ifndef USE_TAPENADE
+    real(kind=realType), dimension(:,:,:,:), pointer :: wsp, wsp1
     real(kind=realType), dimension(:,:,:),   pointer :: volsp
+#endif
+
 
     ! Return immediately of no variables are in the range.
 
@@ -464,6 +348,8 @@ contains
     ! Determine the equation mode and act accordingly.
 
     select case (equationMode)
+
+#ifndef USE_TAPENADE
     case (steady)
 
        ! Steady state computation.
@@ -699,7 +585,7 @@ contains
        end select
 
        !===========================================================
-
+#endif
     case (timeSpectral)
 
        ! Time spectral computation. The time derivative of the
@@ -730,6 +616,8 @@ contains
              enddo
           enddo
 
+          dw = zero
+
           ! Loop over the number of terms which contribute
           ! to the time derivative.
 
@@ -740,8 +628,8 @@ contains
              ! Also store in ii the offset needed for vector
              ! quantities.
 
-             wsp   => flowDoms(nn,currentLevel,mm)%w
-             volsp => flowDoms(nn,currentLevel,mm)%vol
+             !wsp   => flowDoms(nn,currentLevel,mm)%w
+             !volsp => flowDoms(nn,currentLevel,mm)%vol
              ii    =  3*(mm-1)
 
              ! Loop over the number of variables to be set.
@@ -772,9 +660,9 @@ contains
                             ! Store the matrix vector product with the
                             ! velocity in tmp.
 
-                            tmp = dvector(jj,ll,ii+1)*wsp(i,j,k,ivx) &
-                                 + dvector(jj,ll,ii+2)*wsp(i,j,k,ivy) &
-                                 + dvector(jj,ll,ii+3)*wsp(i,j,k,ivz)
+                            tmp = dvector(jj,ll,ii+1)*flowDoms(nn,currentLevel,mm)%w(i,j,k,ivx) &
+                                 + dvector(jj,ll,ii+2)*flowDoms(nn,currentLevel,mm)%w(i,j,k,ivy) &
+                                 + dvector(jj,ll,ii+3)*flowDoms(nn,currentLevel,mm)%w(i,j,k,ivz)
 
                             ! Update the residual. Note the
                             ! multiplication with the density to obtain
@@ -782,7 +670,8 @@ contains
                             ! momentum variable.
 
                             dw(i,j,k,l) = dw(i,j,k,l) &
-                                 + tmp*volsp(i,j,k)*wsp(i,j,k,irho)
+                                 + tmp*flowDoms(nn,currentLevel,mm)%vol(i,j,k) &
+				 * flowDoms(nn,currentLevel,mm)%w(i,j,k,irho)
 
                          enddo
                       enddo
@@ -799,7 +688,22 @@ contains
                          do i=2,il
                             dw(i,j,k,l) = dw(i,j,k,l)        &
                                  + dscalar(jj,sps,mm) &
-                                 * volsp(i,j,k)*wsp(i,j,k,l)
+                                 * flowDoms(nn,currentLevel,mm)%vol(i,j,k)&
+                  * flowDoms(nn,currentLevel,mm)%w(i,j,k,l)
+
+                           ! if (nn == 1) then
+                           !    if (sps == 1) then
+                           !       if (k == 6) then
+                           !          if (j == 3) then
+                           !             if (i == 2) then
+
+                           !                print*, "pm: vol", flowDoms(nn,currentLevel,mm)%vol(i,j,k)
+
+                           !             end if
+                           !          end if
+                           !       end if
+                           !    end if
+                           ! end if
 
                          enddo
                       enddo
@@ -810,6 +714,14 @@ contains
              enddo varLoopFine
 
           enddo timeLoopFine
+
+         !  if (nn == 1) then
+         !    if (sps == 1) then
+         !       write(99,*), dw ! HACK
+         !    end if 
+         !  end if
+
+#ifndef USE_TAPENADE
        else spectralLevelTest
 
           ! Coarse grid level. Initialize the owned cells to the
@@ -920,6 +832,8 @@ contains
              enddo varLoopCoarse
 
           enddo timeLoopCoarse
+
+#endif
        endif spectralLevelTest
 
     end select
@@ -957,6 +871,126 @@ contains
     enddo
 
   end subroutine initres_block
+
+  subroutine sourceTerms_block(nn, res, iRegion, pLocal)
+
+    ! Apply the source terms for the given block. Assume that the
+    ! block pointers are already set.
+    use constants
+    use actuatorRegionData
+    use blockPointers, only : volRef, dw, w
+    use flowVarRefState, only : Pref, uRef
+    use communication
+    use iteration, only : ordersConverged
+    implicit none
+
+    ! Input
+    integer(kind=intType), intent(in) ::  nn, iRegion
+    logical, intent(in) :: res
+    real(kind=realType), intent(inout) :: pLocal
+
+    ! Working
+    integer(kind=intType) :: i, j, k, ii, iStart, iEnd
+    real(kind=realType) :: Ftmp(3), Vx, Vy, Vz, Fact(3), reDim, factor, oStart, oEnd
+
+    reDim = pRef*uRef
+
+    ! Compute the relaxation factor based on the ordersConverged
+
+    ! How far we are into the ramp:
+    if (ordersConverged < actuatorRegions(iRegion)%relaxStart) then
+       factor = zero
+    else if (ordersConverged > actuatorRegions(iRegion)%relaxEnd) then
+       factor = one
+    else ! In between
+       oStart = actuatorRegions(iRegion)%relaxStart 
+       oEnd   = actuatorRegions(iRegion)%relaxEnd
+       factor = (ordersConverged - oStart)/(oEnd - oStart)
+    end if
+
+    ! Compute the constant force factor
+    fact = factor*actuatorRegions(iRegion)%F / actuatorRegions(iRegion)%volume / pRef
+
+    ! Loop over the ranges for this block
+    iStart = actuatorRegions(iRegion)%blkPtr(nn-1) + 1
+    iEnd =  actuatorRegions(iRegion)%blkPtr(nn)
+    
+    !$AD II-LOOP
+    do ii=iStart, iEnd
+       
+       ! Extract the cell ID.
+       i = actuatorRegions(iRegion)%cellIDs(1, ii)
+       j = actuatorRegions(iRegion)%cellIDs(2, ii)
+       k = actuatorRegions(iRegion)%cellIDs(3, ii)
+       
+       ! This actually gets the force
+       FTmp = volRef(i, j, k) * fact
+       
+       Vx = w(i, j, k, iVx)
+       Vy = w(i, j, k, iVy)
+       Vz = w(i, j, k, iVz)
+       
+       if (res) then
+          ! Momentum residuals
+          dw(i, j, k, imx:imz) = dw(i, j, k, imx:imz) - Ftmp
+          
+          ! energy residuals
+          dw(i, j, k, iRhoE) = dw(i, j, k, iRhoE)  - &
+               Ftmp(1)*Vx - Ftmp(2)*Vy - Ftmp(3)*Vz
+       else
+          ! Add in the local power contribution:
+          pLocal = pLocal + (Vx*Ftmp(1) + Vy*FTmp(2) + Vz*Ftmp(3))*reDim
+       end if
+    end do
+
+  end subroutine sourceTerms_block
+
+
+  ! ----------------------------------------------------------------------
+  !                                                                      |
+  !                    No Tapenade Routine below this line               |
+  !                                                                      |
+  ! ----------------------------------------------------------------------
+
+#ifndef USE_TAPENADE
+  subroutine initres(varStart, varEnd)
+    !
+    ! Shell function to call initRes_block on all blocks
+    !
+    use blockPointers
+    use constants
+    use inputTimeSpectral
+    use iteration
+    use section
+    use utils, only : setPointers
+    !
+    !      Subroutine argument.
+    !
+    integer(kind=intType), intent(in) :: varStart, varEnd
+    !
+    !      Local variables.
+    !
+    integer(kind=intType) :: sps, nn
+
+    ! Loop over the number of spectral solutions.
+
+    spectralLoop: do sps=1,nTimeIntervalsSpectral
+
+       ! Loop over the number of blocks.
+
+       domains: do nn=1,nDom
+
+          ! Set the pointers for this block.
+
+          call setPointers(nn, currentLevel, sps)
+
+          call initres_block(varStart, varEnd, nn, sps)
+
+       end do domains
+
+    end do spectralLoop
+
+  end subroutine initRes
 
   subroutine sourceTerms
 
