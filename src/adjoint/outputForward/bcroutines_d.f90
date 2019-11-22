@@ -1927,15 +1927,16 @@ contains
 !                *rlv1 *ww0 *ww1
 !   with respect to varying inputs: *rev0 *rev1 *rev2 *pp0 *pp1
 !                *pp2 *pp3 *rlv0 *rlv1 *rlv2 *ss *ssi *ssj *ssk
-!                *ww0 *ww1 *ww2 *(*bcdata.norm)
+!                *ww0 *ww1 *ww2 *(*bcdata.norm) *(*bcdata.rface)
 !   rw status of diff variables: *rev0:in-out *rev1:in-out *rev2:in
 !                *pp0:in-out *pp1:in-out *pp2:in *pp3:in *rlv0:in-out
 !                *rlv1:in-out *rlv2:in *ss:in *ssi:in *ssj:in *ssk:in
 !                *ww0:in-out *ww1:in-out *ww2:in *(*bcdata.norm):in
+!                *(*bcdata.rface):in
 !   plus diff mem management of: rev0:in rev1:in rev2:in pp0:in
 !                pp1:in pp2:in pp3:in rlv0:in rlv1:in rlv2:in ss:in
 !                ssi:in ssj:in ssk:in ww0:in ww1:in ww2:in bcdata:in
-!                *bcdata.norm:in
+!                *bcdata.norm:in *bcdata.rface:in
   subroutine bceulerwall_d(nn, secondhalo, correctfork)
 !  bceulerwall applies the inviscid wall boundary condition to a
 !  block. it is assumed that the bcpointers are already set to the
@@ -2180,11 +2181,11 @@ contains
 ! pointing.
       pp1d(j, k) = mydim_d(pp2(j, k), pp2d(j, k), grad(j, k), gradd(j, k&
 &       ), pp1(j, k))
-      vnd = two*(-(ww2d(j, k, ivx)*bcdata(nn)%norm(j, k, 1))-ww2(j, k, &
-&       ivx)*bcdatad(nn)%norm(j, k, 1)-ww2d(j, k, ivy)*bcdata(nn)%norm(j&
-&       , k, 2)-ww2(j, k, ivy)*bcdatad(nn)%norm(j, k, 2)-ww2d(j, k, ivz)&
-&       *bcdata(nn)%norm(j, k, 3)-ww2(j, k, ivz)*bcdatad(nn)%norm(j, k, &
-&       3))
+      vnd = two*(bcdatad(nn)%rface(j, k)-ww2d(j, k, ivx)*bcdata(nn)%norm&
+&       (j, k, 1)-ww2(j, k, ivx)*bcdatad(nn)%norm(j, k, 1)-ww2d(j, k, &
+&       ivy)*bcdata(nn)%norm(j, k, 2)-ww2(j, k, ivy)*bcdatad(nn)%norm(j&
+&       , k, 2)-ww2d(j, k, ivz)*bcdata(nn)%norm(j, k, 3)-ww2(j, k, ivz)*&
+&       bcdatad(nn)%norm(j, k, 3))
       vn = two*(bcdata(nn)%rface(j, k)-ww2(j, k, ivx)*bcdata(nn)%norm(j&
 &       , k, 1)-ww2(j, k, ivy)*bcdata(nn)%norm(j, k, 2)-ww2(j, k, ivz)*&
 &       bcdata(nn)%norm(j, k, 3))

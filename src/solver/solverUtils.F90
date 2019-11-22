@@ -1676,19 +1676,16 @@ contains
 
   end subroutine slipVelocitiesFineLevel_block
 
-
-
-
 #ifndef USE_TAPENADE
   subroutine normalVelocitiesAllLevels(sps)
     !
     ! Shell function to call normalVelocities_block on all blocks/levels
     !
     use constants
-    use blockPointers, only : nDom, flowDoms
+    use blockPointers, only : nDom, flowDoms, nBocos, BCFaceID
     use inputTimeSpectral, only : nTimeIntervalsSpectral
     use iteration, only : groundLevel
-    use utils, only : setPointers
+    use utils, only : setPointers, setBCPointers
     implicit none
     !
     !      Subroutine arguments.
@@ -1696,7 +1693,8 @@ contains
     integer(kind=intType), intent(in) :: sps
     !      Local variables.
     !
-    integer(kind=intType) :: nn, level, nLevels
+    integer(kind=intType) :: nn, level, nLevels, mm
+    real(kind=realType) :: mult
 
     nLevels = ubound(flowDoms,2)
     levelLoop: do level=groundLevel, nLevels
@@ -1705,125 +1703,78 @@ contains
           ! Set the pointers for this block.
 
           call setPointers(nn, level, sps)
+          
+          do mm=1,nBocos
 
-          call normalVelocities_block(sps)
+            ! correct for inward pointing.
+            select case (BCFaceID(mm))
+               case (iMin, jMin, kMin)
+                  mult = -one
+               case (iMax, jMax, kMax)
+                  mult = one
+            end select
+            
+            call setBCPointers(mm, .true.)
+            call normalVelocities_block_surface(mm, mult)
+          end do
 
        end do domains
     end do levelLoop
   end subroutine normalVelocitiesAllLevels
 #endif
 
-  subroutine normalVelocities_block(sps)
-    !
-    !       normalVelocitiesAllLevels computes the normal grid
-    !       velocities of some boundary faces of the moving blocks for
-    !       spectral mode sps. All grid levels from ground level to the
-    !       coarsest level are considered.
-    !
-    use constants
-    use blockPointers, only : il, jl, kl, addGridVelocities, nBocos, BCData, &
-         sfaceI, sfaceJ, sfaceK, bcFaceID, si, sj, sk
-    !use iteration
-    implicit none
-    !
-    !      Subroutine arguments.
-    !
-    integer(kind=intType), intent(in) :: sps
-    !
-    !      Local variables.
-    !
-    integer(kind=intType) :: mm
-    integer(kind=intType) :: i, j
+subroutine normalVelocities_block_surface(mm, mult)
 
-    real(kind=realType) :: weight, mult
+   use constants
+   use blockPointers, only : addGridVelocities, BCData
+   use BCPointers, only : ssi, sface, iStart, iEnd, jStart, jEnd
+   implicit none
 
-    real(kind=realType), dimension(:,:),   pointer :: sFace
-    real(kind=realType), dimension(:,:,:), pointer :: ss
+   ! block index
+   integer(kind=intType), intent(in) :: mm
 
-    ! Check for a moving block. As it is possible that in a
-    ! multidisicplinary environment additional grid velocities
-    ! are set, the test should be done on addGridVelocities
-    ! and not on blockIsMoving.
+   ! scaler to make sure the pointer pointing outwards
+   real(kind=realType), intent(in) :: mult
 
-    testMoving: if( addGridVelocities ) then
-       !
-       !             Determine the normal grid velocities of the boundaries.
-       !             As these values are based on the unit normal. A division
-       !             by the length of the normal is needed.
-       !             Furthermore the boundary unit normals are per definition
-       !             outward pointing, while on the iMin, jMin and kMin
-       !             boundaries the face normals are inward pointing. This
-       !             is taken into account by the factor mult.
-       !
-       ! Loop over the boundary subfaces.
+   integer(kind=intType) :: i, j
+   real(kind=realType) :: weight
 
-       bocoLoop: do mm=1,nBocos
+   testMoving: if( addGridVelocities ) then
 
-          ! Check whether rFace is allocated.
+      testAssoc: if( associated(BCData(mm)%rFace) ) then
 
-          testAssoc: if( associated(BCData(mm)%rFace) ) then
+         ! Loop over the faces of the subface.
 
-             ! Determine the block face on which the subface is
-             ! located and set some variables accordingly.
+         do j=jStart, jEnd
 
-             select case (BCFaceID(mm))
+            do i=iStart, iEnd
 
-             case (iMin)
-                mult = -one
-                ss => si(1,:,:,:);  sFace => sFaceI(1,:,:)
-             case (iMax)
-                mult = one
-                ss => si(il,:,:,:); sFace => sFaceI(il,:,:)
-             case (jMin)
-                mult = -one
-                ss => sj(:,1,:,:);  sFace => sFaceJ(:,1,:)
-             case (jMax)
-                mult = one
-                ss => sj(:,jl,:,:); sFace => sFaceJ(:,jl,:)
-             case (kMin)
-                mult = -one
-                ss => sk(:,:,1,:);  sFace => sFaceK(:,:,1)
-             case (kMax)
-                mult = one
-                ss => sk(:,:,kl,:); sFace => sFaceK(:,:,kl)
+               ! Compute the inverse of the length of the normal
+               ! vector and possibly correct for inward pointing.
 
-             end select
+               weight = sqrt(ssi(i,j,1)**2 + ssi(i,j,2)**2 &
+                     +      ssi(i,j,3)**2)
+               if(weight > zero) weight = mult/weight
 
-             ! Loop over the faces of the subface.
+               ! Compute the normal velocity based on the outward
+               ! pointing unit normal.
 
-             do j=BCData(mm)%jcBeg, BCData(mm)%jcEnd
-                do i=BCData(mm)%icBeg, BCData(mm)%icEnd
+               BCData(mm)%rFace(i,j) = weight*sFace(i,j)
 
-                   ! Compute the inverse of the length of the normal
-                   ! vector and possibly correct for inward pointing.
+            enddo
 
-                   weight = sqrt(ss(i,j,1)**2 + ss(i,j,2)**2 &
-                        +      ss(i,j,3)**2)
-                   if(weight > zero) weight = mult/weight
+         enddo
 
-                   ! Compute the normal velocity based on the outward
-                   ! pointing unit normal.
+      endif testAssoc
 
-                   BCData(mm)%rFace(i,j) = weight*sFace(i,j)
-                enddo
-             enddo
+   else testMoving
 
-          endif testAssoc
-       enddo bocoLoop
-
-    else testMoving
-
-       ! Block is not moving. Loop over the boundary faces and set
-       ! the normal grid velocity to zero if allocated.
-
-       do mm=1,nBocos
-          if( associated(BCData(mm)%rFace) ) &
-               BCData(mm)%rFace = zero
-       enddo
-
-    endif testMoving
-
-  end subroutine normalVelocities_block
+      if( associated(BCData(mm)%rFace) ) &
+      BCData(mm)%rFace = zero
+   
+   endif testMoving
+   
+end subroutine normalVelocities_block_surface
 
   ! ----------------------------------------------------------------------
   !                                                                      |

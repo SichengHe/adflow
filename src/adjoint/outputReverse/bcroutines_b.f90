@@ -2499,18 +2499,19 @@ contains
 !  differentiation of bceulerwall in reverse (adjoint) mode (with options i4 dr8 r8 noisize):
 !   gradient     of useful results: *rev0 *rev1 *rev2 *pp0 *pp1
 !                *pp2 *pp3 *rlv0 *rlv1 *rlv2 *ss *ssi *ssj *ssk
-!                *ww0 *ww1 *ww2 *(*bcdata.norm)
+!                *ww0 *ww1 *ww2 *(*bcdata.norm) *(*bcdata.rface)
 !   with respect to varying inputs: *rev0 *rev1 *rev2 *pp0 *pp1
 !                *pp2 *pp3 *rlv0 *rlv1 *rlv2 *ss *ssi *ssj *ssk
-!                *ww0 *ww1 *ww2 *(*bcdata.norm)
+!                *ww0 *ww1 *ww2 *(*bcdata.norm) *(*bcdata.rface)
 !   rw status of diff variables: *rev0:in-out *rev1:in-out *rev2:incr
 !                *pp0:in-out *pp1:in-out *pp2:incr *pp3:incr *rlv0:in-out
 !                *rlv1:in-out *rlv2:incr *ss:incr *ssi:incr *ssj:incr
 !                *ssk:incr *ww0:in-out *ww1:in-out *ww2:incr *(*bcdata.norm):incr
+!                *(*bcdata.rface):incr
 !   plus diff mem management of: rev0:in rev1:in rev2:in pp0:in
 !                pp1:in pp2:in pp3:in rlv0:in rlv1:in rlv2:in ss:in
 !                ssi:in ssj:in ssk:in ww0:in ww1:in ww2:in bcdata:in
-!                *bcdata.norm:in
+!                *bcdata.norm:in *bcdata.rface:in
   subroutine bceulerwall_b(nn, secondhalo, correctfork)
 !  bceulerwall applies the inviscid wall boundary condition to a
 !  block. it is assumed that the bcpointers are already set to the
@@ -2774,6 +2775,7 @@ contains
       ww2d(j, k, irho) = ww2d(j, k, irho) + ww1d(j, k, irho)
       ww1d(j, k, irho) = 0.0_8
       tempd3 = two*vnd
+      bcdatad(nn)%rface(j, k) = bcdatad(nn)%rface(j, k) + tempd3
       ww2d(j, k, ivx) = ww2d(j, k, ivx) - bcdata(nn)%norm(j, k, 1)*&
 &       tempd3
       bcdatad(nn)%norm(j, k, 1) = bcdatad(nn)%norm(j, k, 1) - ww2(j, k, &

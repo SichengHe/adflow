@@ -2039,6 +2039,17 @@ end subroutine cross_prod
   ! ----------------------------------------------------------------------
 
 #ifndef  USE_TAPENADE
+  subroutine setbcpointers_b(nn, spatialpointers)
+     use constants
+     implicit none
+     integer(kind=inttype), intent(in) :: nn
+     logical, intent(in) :: spatialpointers
+  
+     ! Alias for setbcpointers_d
+     call setbcpointers_d(nn, spatialpointers)
+  
+  end subroutine setbcpointers_b
+
   subroutine setbcpointers_d(nn, spatialpointers)
 !
 !       setbcpointers sets the pointers needed for the boundary
@@ -2055,7 +2066,7 @@ end subroutine cross_prod
 &   pp0, pp0d, pp1, pp1d, pp2, pp2d, pp3, pp3d, rlv0, rlv0d, rlv1, rlv1d&
 &   , rlv2, rlv2d, rlv3, rlv3d, rev0, rev0d, rev1, rev1d, rev2, rev2d, &
 &   rev3, rev3d, gamma0, gamma1, gamma2, gamma3, gcp, xx, xxd, ss, ssd, &
-&   ssi, ssid, ssj, ssjd, ssk, sskd, dd2wall, sface, istart, iend, &
+&   ssi, ssid, ssj, ssjd, ssk, sskd, dd2wall, sface, sfaced, istart, iend, &
 &   jstart, jend, isize, jsize
     use inputphysics, only : cpmodel, equations
     implicit none
@@ -2382,16 +2393,22 @@ end subroutine cross_prod
         select case  (bcfaceid(nn))
         case (imin)
           sface => sfacei(1, :, :)
+          sfaced => sfaceid(1, :, :)
         case (imax)
           sface => sfacei(il, :, :)
+          sfaced => sfaceid(il, :, :)
         case (jmin)
           sface => sfacej(:, 1, :)
+          sfaced => sfacejd(:, 1, :)
         case (jmax)
           sface => sfacej(:, jl, :)
+          sfaced => sfacejd(:, jl, :)
         case (kmin)
           sface => sfacek(:, :, 1)
+          sfaced => sfacekd(:, :, 1)
         case (kmax)
           sface => sfacek(:, :, kl)
+          sfaced => sfacekd(:, :, kl)
         end select
       end if
       if (equations .eq. ransequations) then

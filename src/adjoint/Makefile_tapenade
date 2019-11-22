@@ -148,8 +148,8 @@ BCRoutines%bcNSWallIsothermal(ww0, ww1, ww2, pp0, pp1, pp2, rlv0, rlv1, rlv2, re
 BCRoutines%bcFarField(ww0, ww1, ww2, pp0, pp1, pp2, rlv0, rlv1, rlv2, rev0, rev1, rev2, pInfCorr, wInf, bcData%norm) > \
                      (ww0, ww1, ww2, pp0, pp1, pp2, rlv0, rlv1, rlv2, rev0, rev1, rev2, pInfCorr, wInf, bcData%norm) \
 \
-BCRoutines%bcEulerWall(ww0, ww1, ww2, pp0, pp1, pp2, pp3, rlv0, rlv1, rlv2, rev0, rev1, rev2, bcData%norm, ssi, ssj, ssk, ss) > \
-                      (ww0, ww1, ww2, pp0, pp1, pp2, pp3, rlv0, rlv1, rlv2, rev0, rev1, rev2, bcData%norm, ssi, ssj, ssk, ss) \
+BCRoutines%bcEulerWall(ww0, ww1, ww2, pp0, pp1, pp2, pp3, rlv0, rlv1, rlv2, rev0, rev1, rev2, bcData%norm, ssi, ssj, ssk, ss, bcData%rFace) > \
+                      (ww0, ww1, ww2, pp0, pp1, pp2, pp3, rlv0, rlv1, rlv2, rev0, rev1, rev2, bcData%norm, ssi, ssj, ssk, ss, bcData%rFace) \
 \
 BCRoutines%bcSubsonicInflow(ww0, ww1, ww2, pp0, pp1, pp2, rlv0, rlv1, rlv2, rev0, rev1, rev2, bcData%norm, bcData%PtInlet, bcData%ttInlet, bcData%htInlet) > \
                            (ww0, ww1, ww2, pp0, pp1, pp2, rlv0, rlv1, rlv2, rev0, rev1, rev2, bcData%norm, bcData%PtInlet, bcData%ttInlet, bcData%htInlet) \
@@ -167,7 +167,10 @@ solverUtils%timeStep_block(w, pInfCorr, rhoInf, si, sj, sk, sfacei, sfacej, sfac
               (w, pInfCorr, rhoInf, si, sj, sk, sfacei, sfacej, sfacek, p, radi, radj, radk) \
 \
 solverutils%gridVelocitiesFineLevel_TS_block(flowDoms%x, si, sj, sk, s, sfacei, sfacej, sfacek, velDirFreestream, dscalar) > \
-                          (flowDoms%x, si, sj, sk, s, sfacei, sfacej, sfacek, velDirFreestream, dscalar) \
+                                            (flowDoms%x, si, sj, sk, s, sfacei, sfacej, sfacek, velDirFreestream, dscalar) \
+\
+solverutils%normalVelocities_block_surface(sface, ssi, BCData%rFace) > \
+                                          (sface, ssi, BCData%rFace) \
 \
 sa%saSource(w, rlv, vol, si, sj, sk, timeRef, d2wall) > \
            (w, rlv, vol, si, sj, sk, timeREf, scratch) \
@@ -243,6 +246,10 @@ oversetUtilities%fracToWeights(frac) > \
 \
 partitioning%timePeriodSpectral(omegaFourier, sections%timePeriod) > \
 	                           (omegaFourier, sections%timePeriod) \
+\
+partitioning%commonTimeSpectral(t1, t2) > \
+							   (t1, t2) \
+\
 "
 
 #applyLowSpeedPreconditioner(w, P, dw) > (w, dw, P) \

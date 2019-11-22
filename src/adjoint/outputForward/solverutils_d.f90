@@ -1806,99 +1806,93 @@ bocoloop2:do mm=1,nviscbocos
       end do bocoloop2
     end if
   end subroutine slipvelocitiesfinelevel_block
-  subroutine normalvelocities_block(sps)
-!
-!       normalvelocitiesalllevels computes the normal grid
-!       velocities of some boundary faces of the moving blocks for
-!       spectral mode sps. all grid levels from ground level to the
-!       coarsest level are considered.
-!
+!  differentiation of normalvelocities_block_surface in forward (tangent) mode (with options i4 dr8 r8):
+!   variations   of useful results: *(*bcdata.rface)
+!   with respect to varying inputs: *sface *ssi *(*bcdata.rface)
+!   rw status of diff variables: *sface:in *ssi:in *(*bcdata.rface):in-out
+!   plus diff mem management of: sface:in ssi:in bcdata:in *bcdata.rface:in
+  subroutine normalvelocities_block_surface_d(mm, mult)
     use constants
-    use blockpointers, only : il, jl, kl, addgridvelocities, nbocos, &
-&   bcdata, sfacei, sfacej, sfacek, bcfaceid, si, sj, sk
+    use blockpointers, only : addgridvelocities, bcdata, bcdatad
+    use bcpointers_d, only : ssi, ssid, sface, sfaced, istart, iend, &
+&   jstart, jend
     implicit none
-!
-!      subroutine arguments.
-!
-    integer(kind=inttype), intent(in) :: sps
-!
-!      local variables.
-!
-    integer(kind=inttype) :: mm
+! block index
+    integer(kind=inttype), intent(in) :: mm
+! scaler to make sure the pointer pointing outwards
+    real(kind=realtype), intent(in) :: mult
     integer(kind=inttype) :: i, j
-    real(kind=realtype) :: weight, mult
-    real(kind=realtype), dimension(:, :), pointer :: sface
-    real(kind=realtype), dimension(:, :, :), pointer :: ss
+    real(kind=realtype) :: weight
+    real(kind=realtype) :: weightd
     intrinsic associated
     intrinsic sqrt
     real(kind=realtype) :: arg1
-! check for a moving block. as it is possible that in a
-! multidisicplinary environment additional grid velocities
-! are set, the test should be done on addgridvelocities
-! and not on blockismoving.
+    real(kind=realtype) :: arg1d
     if (addgridvelocities) then
-!
-!             determine the normal grid velocities of the boundaries.
-!             as these values are based on the unit normal. a division
-!             by the length of the normal is needed.
-!             furthermore the boundary unit normals are per definition
-!             outward pointing, while on the imin, jmin and kmin
-!             boundaries the face normals are inward pointing. this
-!             is taken into account by the factor mult.
-!
-! loop over the boundary subfaces.
-bocoloop:do mm=1,nbocos
-! check whether rface is allocated.
-        if (associated(bcdata(mm)%rface)) then
-! determine the block face on which the subface is
-! located and set some variables accordingly.
-          select case  (bcfaceid(mm)) 
-          case (imin) 
-            mult = -one
-            ss => si(1, :, :, :)
-            sface => sfacei(1, :, :)
-          case (imax) 
-            mult = one
-            ss => si(il, :, :, :)
-            sface => sfacei(il, :, :)
-          case (jmin) 
-            mult = -one
-            ss => sj(:, 1, :, :)
-            sface => sfacej(:, 1, :)
-          case (jmax) 
-            mult = one
-            ss => sj(:, jl, :, :)
-            sface => sfacej(:, jl, :)
-          case (kmin) 
-            mult = -one
-            ss => sk(:, :, 1, :)
-            sface => sfacek(:, :, 1)
-          case (kmax) 
-            mult = one
-            ss => sk(:, :, kl, :)
-            sface => sfacek(:, :, kl)
-          end select
+      if (associated(bcdata(mm)%rface)) then
 ! loop over the faces of the subface.
-          do j=bcdata(mm)%jcbeg,bcdata(mm)%jcend
-            do i=bcdata(mm)%icbeg,bcdata(mm)%icend
+        do j=jstart,jend
+          do i=istart,iend
 ! compute the inverse of the length of the normal
 ! vector and possibly correct for inward pointing.
-              arg1 = ss(i, j, 1)**2 + ss(i, j, 2)**2 + ss(i, j, 3)**2
-              weight = sqrt(arg1)
-              if (weight .gt. zero) weight = mult/weight
+            arg1d = 2*ssi(i, j, 1)*ssid(i, j, 1) + 2*ssi(i, j, 2)*ssid(i&
+&             , j, 2) + 2*ssi(i, j, 3)*ssid(i, j, 3)
+            arg1 = ssi(i, j, 1)**2 + ssi(i, j, 2)**2 + ssi(i, j, 3)**2
+            if (arg1 .eq. 0.0_8) then
+              weightd = 0.0_8
+            else
+              weightd = arg1d/(2.0*sqrt(arg1))
+            end if
+            weight = sqrt(arg1)
+            if (weight .gt. zero) then
+              weightd = -(mult*weightd/weight**2)
+              weight = mult/weight
+            end if
 ! compute the normal velocity based on the outward
 ! pointing unit normal.
-              bcdata(mm)%rface(i, j) = weight*sface(i, j)
-            end do
+            bcdatad(mm)%rface(i, j) = weightd*sface(i, j) + weight*&
+&             sfaced(i, j)
+            bcdata(mm)%rface(i, j) = weight*sface(i, j)
           end do
-        end if
-      end do bocoloop
-    else
-! block is not moving. loop over the boundary faces and set
-! the normal grid velocity to zero if allocated.
-      do mm=1,nbocos
-        if (associated(bcdata(mm)%rface)) bcdata(mm)%rface = zero
-      end do
+        end do
+      end if
+    else if (associated(bcdata(mm)%rface)) then
+      bcdatad(mm)%rface = 0.0_8
+      bcdata(mm)%rface = zero
     end if
-  end subroutine normalvelocities_block
+  end subroutine normalvelocities_block_surface_d
+  subroutine normalvelocities_block_surface(mm, mult)
+    use constants
+    use blockpointers, only : addgridvelocities, bcdata
+    use bcpointers_d, only : ssi, sface, istart, iend, jstart, jend
+    implicit none
+! block index
+    integer(kind=inttype), intent(in) :: mm
+! scaler to make sure the pointer pointing outwards
+    real(kind=realtype), intent(in) :: mult
+    integer(kind=inttype) :: i, j
+    real(kind=realtype) :: weight
+    intrinsic associated
+    intrinsic sqrt
+    real(kind=realtype) :: arg1
+    if (addgridvelocities) then
+      if (associated(bcdata(mm)%rface)) then
+! loop over the faces of the subface.
+        do j=jstart,jend
+          do i=istart,iend
+! compute the inverse of the length of the normal
+! vector and possibly correct for inward pointing.
+            arg1 = ssi(i, j, 1)**2 + ssi(i, j, 2)**2 + ssi(i, j, 3)**2
+            weight = sqrt(arg1)
+            if (weight .gt. zero) weight = mult/weight
+! compute the normal velocity based on the outward
+! pointing unit normal.
+            bcdata(mm)%rface(i, j) = weight*sface(i, j)
+          end do
+        end do
+      end if
+    else if (associated(bcdata(mm)%rface)) then
+      bcdata(mm)%rface = zero
+    end if
+  end subroutine normalvelocities_block_surface
 end module solverutils_d
