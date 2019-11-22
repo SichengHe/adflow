@@ -1654,8 +1654,8 @@ contains
     use inputphysics, only : pointref, pointrefd, flowtype
     use flowutils_d, only : computeptot, computeptot_d, computettot, &
 &   computettot_d
-    use bcpointers_d, only : ssi, ssid, sface, ww1, ww1d, ww2, ww2d, pp1&
-&   , pp1d, pp2, pp2d, xx, xxd, gamma1, gamma2
+    use bcpointers_d, only : ssi, ssid, sface, sfaced, ww1, ww1d, ww2, &
+&   ww2d, pp1, pp1d, pp2, pp2d, xx, xxd, gamma1, gamma2
     use utils_d, only : mynorm2, mynorm2_d
     implicit none
 ! input/output variables

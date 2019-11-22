@@ -1483,98 +1483,37 @@ bocoloop2:do mm=1,nviscbocos
       end do bocoloop2
     end if
   end subroutine slipvelocitiesfinelevel_block
-  subroutine normalvelocities_block(sps)
-!
-!       normalvelocitiesalllevels computes the normal grid
-!       velocities of some boundary faces of the moving blocks for
-!       spectral mode sps. all grid levels from ground level to the
-!       coarsest level are considered.
-!
+  subroutine normalvelocities_block_surface(mm, mult)
     use constants
-    use blockpointers, only : il, jl, kl, addgridvelocities, nbocos, &
-&   bcdata, sfacei, sfacej, sfacek, bcfaceid, si, sj, sk
+    use blockpointers, only : addgridvelocities, bcdata
+    use bcpointers_fast_b, only : ssi, sface, istart, iend, jstart, jend
     implicit none
-!
-!      subroutine arguments.
-!
-    integer(kind=inttype), intent(in) :: sps
-!
-!      local variables.
-!
-    integer(kind=inttype) :: mm
+! block index
+    integer(kind=inttype), intent(in) :: mm
+! scaler to make sure the pointer pointing outwards
+    real(kind=realtype), intent(in) :: mult
     integer(kind=inttype) :: i, j
-    real(kind=realtype) :: weight, mult
-    real(kind=realtype), dimension(:, :), pointer :: sface
-    real(kind=realtype), dimension(:, :, :), pointer :: ss
+    real(kind=realtype) :: weight
     intrinsic associated
     intrinsic sqrt
-! check for a moving block. as it is possible that in a
-! multidisicplinary environment additional grid velocities
-! are set, the test should be done on addgridvelocities
-! and not on blockismoving.
     if (addgridvelocities) then
-!
-!             determine the normal grid velocities of the boundaries.
-!             as these values are based on the unit normal. a division
-!             by the length of the normal is needed.
-!             furthermore the boundary unit normals are per definition
-!             outward pointing, while on the imin, jmin and kmin
-!             boundaries the face normals are inward pointing. this
-!             is taken into account by the factor mult.
-!
-! loop over the boundary subfaces.
-bocoloop:do mm=1,nbocos
-! check whether rface is allocated.
-        if (associated(bcdata(mm)%rface)) then
-! determine the block face on which the subface is
-! located and set some variables accordingly.
-          select case  (bcfaceid(mm)) 
-          case (imin) 
-            mult = -one
-            ss => si(1, :, :, :)
-            sface => sfacei(1, :, :)
-          case (imax) 
-            mult = one
-            ss => si(il, :, :, :)
-            sface => sfacei(il, :, :)
-          case (jmin) 
-            mult = -one
-            ss => sj(:, 1, :, :)
-            sface => sfacej(:, 1, :)
-          case (jmax) 
-            mult = one
-            ss => sj(:, jl, :, :)
-            sface => sfacej(:, jl, :)
-          case (kmin) 
-            mult = -one
-            ss => sk(:, :, 1, :)
-            sface => sfacek(:, :, 1)
-          case (kmax) 
-            mult = one
-            ss => sk(:, :, kl, :)
-            sface => sfacek(:, :, kl)
-          end select
+      if (associated(bcdata(mm)%rface)) then
 ! loop over the faces of the subface.
-          do j=bcdata(mm)%jcbeg,bcdata(mm)%jcend
-            do i=bcdata(mm)%icbeg,bcdata(mm)%icend
+        do j=jstart,jend
+          do i=istart,iend
 ! compute the inverse of the length of the normal
 ! vector and possibly correct for inward pointing.
-              weight = sqrt(ss(i, j, 1)**2 + ss(i, j, 2)**2 + ss(i, j, 3&
-&               )**2)
-              if (weight .gt. zero) weight = mult/weight
+            weight = sqrt(ssi(i, j, 1)**2 + ssi(i, j, 2)**2 + ssi(i, j, &
+&             3)**2)
+            if (weight .gt. zero) weight = mult/weight
 ! compute the normal velocity based on the outward
 ! pointing unit normal.
-              bcdata(mm)%rface(i, j) = weight*sface(i, j)
-            end do
+            bcdata(mm)%rface(i, j) = weight*sface(i, j)
           end do
-        end if
-      end do bocoloop
-    else
-! block is not moving. loop over the boundary faces and set
-! the normal grid velocity to zero if allocated.
-      do mm=1,nbocos
-        if (associated(bcdata(mm)%rface)) bcdata(mm)%rface = zero
-      end do
+        end do
+      end if
+    else if (associated(bcdata(mm)%rface)) then
+      bcdata(mm)%rface = zero
     end if
-  end subroutine normalvelocities_block
+  end subroutine normalvelocities_block_surface
 end module solverutils_fast_b
