@@ -250,6 +250,70 @@ contains
 
  end subroutine timePeriodSpectral
 
+ function commonTimeSpectral(t1, t2)
+   !
+   !       The function commonTimeSpectral determines the smallest
+   !       possible common time between t1 and t2, such that
+   !       tcommon = n1*t1 = n2*t2 and n1, n2 integers.
+   !
+   use constants
+   use communication, only : myID, adflow_comm_world
+   use utils, only : terminate
+   implicit none
+   !
+   !      Function definition
+   !
+   real(kind=realType) :: commonTimeSpectral
+   !
+   !      Function arguments.
+   !
+   real(kind=realType), intent(in) :: t1, t2
+   !
+   !      Local parameters.
+   !
+   integer(kind=intType), parameter :: nMax = 100
+   real(kind=realType),   parameter :: tol  = 1.e-5_realType
+   !
+   !      Local variables.
+   !
+   integer                :: ierr
+   integer(kind=intType) :: n1, n2
+   real(kind=realType)   :: tt1, tt2, tt, ratio
+
+   ! Store the largest time in tt1 and the smallest in tt2 and
+   ! compute the ratio tt1/tt2, which is >= 1
+
+   tt1   = max(t1, t2)
+   tt2   = min(t1, t2)
+   ratio = tt1/tt2
+
+   ! Loop to find the smallest integer values of n1 and n2, such
+   ! that n1*tt1 = n2*tt2. Note that due to the previous definition
+   ! n2 >= n1.
+
+   do n1=1,nMax
+      tt = n1*ratio
+      n2 = nint(tt)
+      tt = abs(tt-n2)
+      if(tt <= tol) exit
+   enddo
+
+   ! Check if a common time was found
+#ifndef  USE_TAPENADE
+   if(n1 > nMax) then
+      if(myID == 0)                          &
+           call terminate("commonTimeSpectral", &
+           "No common time periodic time found.Problem may not be periodic")
+      call mpi_barrier(ADflow_comm_world, ierr)
+   endif
+#endif
+
+   ! Set the common time.
+
+   commonTimeSpectral = n1*tt1
+
+ end function commonTimeSpectral
+
    ! ----------------------------------------------------------------------
    !                                                                      |
    !                    No Tapenade Routine below this line               |
@@ -1091,68 +1155,6 @@ contains
 
   end subroutine initFineGridIblank
 
-  function commonTimeSpectral(t1, t2)
-    !
-    !       The function commonTimeSpectral determines the smallest
-    !       possible common time between t1 and t2, such that
-    !       tcommon = n1*t1 = n2*t2 and n1, n2 integers.
-    !
-    use communication
-    use utils, only : terminate
-    implicit none
-    !
-    !      Function definition
-    !
-    real(kind=realType) :: commonTimeSpectral
-    !
-    !      Function arguments.
-    !
-    real(kind=realType), intent(in) :: t1, t2
-    !
-    !      Local parameters.
-    !
-    integer(kind=intType), parameter :: nMax = 100
-    real(kind=realType),   parameter :: tol  = 1.e-5_realType
-    !
-    !      Local variables.
-    !
-    integer                :: ierr
-    integer(kind=intType) :: n1, n2
-    real(kind=realType)   :: tt1, tt2, tt, ratio
-
-    ! Store the largest time in tt1 and the smallest in tt2 and
-    ! compute the ratio tt1/tt2, which is >= 1
-
-    tt1   = max(t1, t2)
-    tt2   = min(t1, t2)
-    ratio = tt1/tt2
-
-    ! Loop to find the smallest integer values of n1 and n2, such
-    ! that n1*tt1 = n2*tt2. Note that due to the previous definition
-    ! n2 >= n1.
-
-    do n1=1,nMax
-       tt = n1*ratio
-       n2 = nint(tt)
-       tt = abs(tt-n2)
-       if(tt <= tol) exit
-    enddo
-
-    ! Check if a common time was found
-
-    if(n1 > nMax) then
-       if(myID == 0)                          &
-            call terminate("commonTimeSpectral", &
-            "No common time periodic time found. &
-            &Problem may not be periodic")
-       call mpi_barrier(ADflow_comm_world, ierr)
-    endif
-
-    ! Set the common time.
-
-    commonTimeSpectral = n1*tt1
-
-  end function commonTimeSpectral
   subroutine timeRotMatricesSpectral
     !
     !       timeRotMatricesSpectral determines the rotation matrices

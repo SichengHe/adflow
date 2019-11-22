@@ -23,6 +23,18 @@ contains
 
   end subroutine settimeperiod
 
+  subroutine gettimeperiod(valueOut)
+
+   use constants
+   use section, only: sections, nSections
+
+   real(kind=realType), intent(out) :: valueOut
+
+   valueOut = sections(1)%timePeriod
+
+ end subroutine gettimeperiod
+
+
   subroutine getrho(value)
 
     use constants
@@ -149,6 +161,124 @@ contains
 
   end subroutine hsc_get_iljlkl
 
+  subroutine hsc_saveResToFile(index)
+
+    use constants
+    use blockPointers, only : nDom, il, jl, kl, dw
+    use flowVarRefState, only : nw
+    use inputTimeSpectral, only : nTimeIntervalsSpectral
+    use utils, only : setPointers
+ 
+    integer(kind=intType) :: nn, sps
+    integer(kind=intType) :: i, j, k
+
+    integer(kind=intType), intent(in) :: index
+
+    character(len=50) :: fileName
+    
+    if (index < 10) then
+      write(fileName, '(a, i1, a)') 'dw', index, '.txt' 
+    else
+      write(fileName, '(a, i2, a)') 'dw', index, '.txt' 
+    end if 
+
+    open(1, file = fileName, status = 'replace')
+    do nn=1, nDom
+       do sps=1,nTimeIntervalsSpectral
+          call setPointers(nn, 1, sps)
+          do k=2, kl
+             do j=2, jl
+                do i=2, il
+                   do l=1, nw
+                     write(1,*) dw(i,j,k,l)
+                   end do
+                end do
+             end do
+          end do
+       end do
+    end do
+    close(1) 
+
+  end subroutine hsc_saveResToFile
+
+  subroutine hsc_saveFwToFile(index)
+
+   use constants
+   use blockPointers, only :il, jl, kl, dw, fw, iBlank
+   use flowVarRefState, only : nwf
+   use inputTimeSpectral, only : nTimeIntervalsSpectral
+   use blockPointers, only : nDom
+   use utils, only : setPointers
+
+   ! Local Variables
+   integer(kind=intType) :: i, j, k, l, sps, nn
+
+   character(len=50) :: fileName
+   integer(kind=intType), intent(in) :: index
+
+   if (index < 10) then
+      write(fileName, '(a, i1, a)') 'fw', index, '.txt' 
+   else
+      write(fileName, '(a, i2, a)') 'fw', index, '.txt' 
+   end if 
+
+   open(2, file = fileName, status = 'replace')
+
+   do nn=1, nDom
+      do sps=1,nTimeIntervalsSpectral
+         call setPointers(nn, 1, sps)
+
+         do l=1, nwf
+            do k=2, kl
+               do j=2, jl
+                  do i=2, il
+                     write(2,*) fw(i,j,k,l)
+                  end do
+               end do
+            end do
+         end do
+
+      end do
+   end do
+
+   close(2)
+
+   end subroutine hsc_saveFwToFile
+
+   subroutine hsc_saveFwToFile_sps(index)
+
+      use constants
+      use blockPointers, only :il, jl, kl, dw, fw
+      use flowVarRefState, only : nwf
+   
+      ! Local Variables
+      integer(kind=intType) :: i, j, k, l, sps, nn
+   
+      character(len=50) :: fileName
+      integer(kind=intType), intent(in) :: index
+   
+      if (index < 10) then
+         write(fileName, '(a, i1, a)') 'fw', index, '.txt' 
+      else
+         write(fileName, '(a, i2, a)') 'fw', index, '.txt' 
+      end if 
+   
+      open(3, file = fileName, status = 'replace')
+
+      do l=1, nwf
+         do k=2, kl
+            do j=2, jl
+               do i=2, il
+                  write(3,*) fw(i,j,k,l)
+               end do
+            end do
+         end do
+      end do
+   
+      close(3)
+   
+      end subroutine hsc_saveFwToFile_sps
+
   subroutine master(useSpatial, famLists, funcValues, forces, &
        bcDataNames, bcDataValues, bcDataFamLists)
 
@@ -160,7 +290,7 @@ contains
     use iteration, only : currentLevel
     use inputAdjoint,  only : viscPC
     use flowVarRefState, only : nwf, nw
-    use blockPointers, only : nDom, il, jl, kl
+    use blockPointers, only : nDom, il, jl, kl, nBocos, BCFaceID
     use flowVarRefState, only : viscous
     use inputPhysics , only : turbProd, equationMode, equations, turbModel
     use inputDiscretization, only : lowSpeedPreconditioner, lumpedDiss, spaceDiscr, useAPproxWallDistance
@@ -171,13 +301,13 @@ contains
     use sa, only : saSource, saViscous, saResScale, qq
     use haloExchange, only : exchangeCoor, whalo2
     use wallDistance, only : updateWallDistancesQuickly
-    use solverUtils, only : timeStep_block, gridvelocitiesfinelevel_ts_block
+    use solverUtils, only : timeStep_block, gridvelocitiesfinelevel_ts_block, normalVelocities_block_surface
     use flowUtils, only : allNodalGradients, computeLamViscosity, computePressureSimple, &
          computeSpeedOfSoundSquared, adjustInflowAngle
     use fluxes, only : inviscidDissFluxScalarApprox, inviscidDissFluxMatrixApprox, &
          inviscidUpwindFlux, inviscidDissFluxScalar, inviscidDissFluxMatrix, &
          viscousFlux, viscousFluxApprox, inviscidCentralFlux
-    use utils, only : setPointers, EChk
+    use utils, only : setPointers, EChk, setBCPointers
     use turbUtils, only : turbAdvection, computeEddyViscosity
     use residuals, only : initRes_block, sourceTerms_block
     use surfaceIntegrations, only : getSolution
@@ -202,9 +332,10 @@ contains
     real(kind=realType), intent(out), optional, dimension(:, :, :) :: forces
 
     ! Working Variables
-    integer(kind=intType) :: ierr, nn, sps, fSize, iRegion
+    integer(kind=intType) :: ierr, nn, sps, fSize, iRegion, mm
     real(kind=realType), dimension(nSections) :: t
     real(kind=realType) :: dummyReal
+    real(kind=realType) :: mult
 
     if (useSpatial) then
        call adjustInflowAngle()
@@ -254,7 +385,23 @@ contains
              call boundaryNormals
  
              if (usetsinterpolatedgridvelocity) then
+                ! spectral interpolate grid velocites
                 call gridvelocitiesfinelevel_ts_block(nn, sps)
+
+                ! update the boundary surface velocity
+                do mm=1,nBocos
+                  ! correct for inward pointing.
+                  select case (BCFaceID(mm))
+                     case (iMin, jMin, kMin)
+                        mult = -one
+                     case (iMax, jMax, kMax)
+                        mult = one
+                  end select
+                  
+                  call setBCPointers(mm, .true.)
+                  call normalVelocities_block_surface(mm, mult)
+
+                end do
              end if 
 
              if (equations == RANSEquations .and. useApproxWallDistance) then
@@ -392,14 +539,14 @@ contains
     use BCExtra_d, only : applyAllBC_Block_d
     use inputAdjoint,  only : viscPC
     use flowVarRefState, only : nw, nwf
-    use blockPointers, only : nDom, il, jl, kl, wd, xd, dw, dwd, nBocos, nViscBocos
+    use blockPointers, only : nDom, il, jl, kl, wd, xd, dw, dwd, nBocos, nViscBocos, BCFaceID
     use flowVarRefState, only : viscous, timerefd
     use inputPhysics , only : turbProd, equationMode, equations, turbModel, wallDistanceNeeded
     use inputDiscretization, only : lowSpeedPreconditioner, lumpedDiss, spaceDiscr, useAPproxWallDistance
     use inputTimeSpectral, only : nTimeIntervalsSpectral, usetsinterpolatedgridvelocity
     use section, only: sections, nSections
     use monitor, only : timeUnsteadyRestart
-    use utils, only : isWallType, setPointers, setPointers_d, EChk
+    use utils, only : isWallType, setPointers, setPointers_d, EChk, setBCPointers_d
     use sa_d, only : saSource_d, saViscous_d, saResScale_d, qq
     use turbutils_d, only : turbAdvection_d, computeEddyViscosity_d
     use fluxes_d, only :inviscidDissFluxScalarApprox_d, inviscidDissFluxMatrixApprox_d, &
@@ -412,7 +559,8 @@ contains
     use wallDistanceData, only : xSurfVec, xSurfVecd, xSurf, xSurfd, wallScatter
     use flowutils_d, only : computePressureSimple_d, computeLamViscosity_d, &
          computeSpeedOfSoundSquared_d, allNodalGradients_d, adjustInflowAngle_d
-    use solverutils_d, only : timeStep_Block_d, gridvelocitiesfinelevel_ts_block_d
+    use solverutils_d, only : timeStep_Block_d, gridvelocitiesfinelevel_ts_block_d, &
+         normalVelocities_block_surface_d
     use turbbcroutines_d, only : applyAllTurbBCthisblock_d,  bcTurbTreatment_d
     use initializeflow_d, only : referenceState_d, timespectralmatrices_d
     use surfaceIntegrations, only : getSolution_d
@@ -452,6 +600,8 @@ contains
     integer(kind=intType) :: ierr, nn, sps, mm,i,j,k, l, fSize, ii, jj, iRegion
     real(kind=realType), dimension(nSections) :: t
     real(kind=realType) :: dummyReal, dummyReald
+
+    real(kind=realType) :: mult
 
     fSize = size(forcesDot, 2)
     allocate(forces(3, fSize, nTimeIntervalsSpectral))
@@ -561,6 +711,20 @@ contains
 
           if (usetsinterpolatedgridvelocity) then
             call gridvelocitiesfinelevel_ts_block_d(nn, sps)
+
+            ! update the boundary surface velocity
+            do mm=1,nBocos
+               ! correct for inward pointing.
+               select case (BCFaceID(mm))
+                  case (iMin, jMin, kMin)
+                     mult = -one
+                  case (iMax, jMax, kMax)
+                     mult = one
+               end select
+               
+               call setBCPointers_d(mm, .true.)
+               call normalVelocities_block_surface_d(mm, mult)
+            end do
           end if
 
           if (equations == RANSEquations .and. useApproxWallDistance) then
@@ -727,19 +891,19 @@ contains
 
     use constants
     use adjointVars, only : iAlpha, iBeta, iMach, iMachGrid, iTemperature, iDensity, &
-         iPointrefX, iPointRefY, iPointRefZ, iPressure
+         iPointrefX, iPointRefY, iPointRefZ, iPressure, iomegafourier
     use communication, only : adflow_comm_world, myid
     use iteration, only : currentLevel
     use inputAdjoint,  only : viscPC
     use fluxes, only : viscousFlux
     use flowVarRefState, only : nw, nwf, viscous,pInfDimd, rhoInfDimd, TinfDimd
-    use blockPointers, only : nDom, il, jl, kl, wd, xd, dw, dwd
+    use blockPointers, only : nDom, il, jl, kl, wd, xd, dw, dwd, nBocos, BCFaceID
     use inputPhysics, only :pointRefd, alphad, betad, equations, machCoefd, &
          machd, machGridd, rgasdimd, equationMode, turbModel, wallDistanceNeeded
     use inputDiscretization, only : lowSpeedPreconditioner, lumpedDiss, spaceDiscr, useAPproxWallDistance
-    use inputTimeSpectral, only : nTimeIntervalsSpectral
+    use inputTimeSpectral, only : nTimeIntervalsSpectral, usetsinterpolatedgridvelocity, omegafourierd
     use inputAdjoint, only : frozenTurbulence
-    use utils, only : isWallType, setPointers_b, EChk
+    use utils, only : isWallType, setPointers_b, EChk, setBCPointers_b
     use adjointPETSc, only : x_like
     use haloExchange, only : whalo2_b, exchangeCoor_b, exchangeCoor, whalo2
     use wallDistanceData, only : xSurfVec, xSurfVecd, xSurf, xSurfd, wallScatter
@@ -749,13 +913,14 @@ contains
     use adjointExtra_b, only : xhalo_block_b, volume_block_b, metric_block_b, boundarynormals_b
     use flowutils_b, only : computePressureSimple_b, computeLamViscosity_b, &
          computeSpeedOfSoundSquared_b, allNodalGradients_b, adjustInflowAngle_b
-    use solverutils_b, only : timeStep_Block_b
+    use solverutils_b, only : timeStep_Block_b, gridvelocitiesfinelevel_ts_block_b, &
+                              normalVelocities_block_surface_b
     use turbbcroutines_b, only : applyAllTurbBCthisblock_b,  bcTurbTreatment_b
-    use initializeflow_b, only : referenceState_b
+    use initializeflow_b, only : referenceState_b, timespectralmatrices_b
     use wallDistance_b, only : updateWallDistancesQuickly_b
     use sa_b, only : saSource_b, saViscous_b, saResScale_b, qq
     use turbutils_b, only : turbAdvection_b, computeEddyViscosity_b
-    use residuals_b, only : sourceTerms_block_b
+    use residuals_b, only : sourceTerms_block_b, initres_block_b
     use fluxes_b, only :inviscidUpwindFlux_b, inviscidDissFluxScalar_b, &
          inviscidDissFluxMatrix_b, viscousFlux_b, inviscidCentralFlux_b
     use BCExtra_b, only : applyAllBC_Block_b
@@ -765,6 +930,7 @@ contains
     use oversetCommUtilities, only : updateOversetConnectivity_b
     use BCRoutines, only : applyAllBC_block
     use actuatorRegionData, only : nActuatorRegions
+    use partitioning_b, only : timeperiodspectral_b
 #include <petscversion.h>
 #if PETSC_VERSION_GE(3,8,0)
 #include <petsc/finclude/petsc.h>
@@ -796,6 +962,7 @@ contains
     real(kind=realType), dimension(:), allocatable :: extraLocalBar, bcDataValuesdLocal
     real(kind=realType) :: dummyReal, dummyReald
     logical ::resetToRans
+    real(kind=realType) :: mult
 
     ! extraLocalBar accumulates the seeds onto the extra variables
     allocate(extraLocalBar(size(extrabar)))
@@ -899,6 +1066,11 @@ contains
              call sourceTerms_block_b(nn, .True. , iRegion, dummyReal, dummyReald)
           end do
 
+          ! back propogate the temporal residual, pu/pt
+          if (usetsinterpolatedgridvelocity) then
+            call initres_block_b(1, nw, nn, sps)
+          end if
+
           ! Initres_b should be called here. For steady just zero:
           dwd = zero
        end do domainLoop1
@@ -965,6 +1137,26 @@ contains
              call updateWallDistancesQuickly_b(nn, 1, sps)
           end if
 
+          if (usetsinterpolatedgridvelocity) then
+             ! update the boundary surface velocity
+             do mm=1,nBocos
+               ! correct for inward pointing.
+               select case (BCFaceID(mm))
+                  case (iMin, jMin, kMin)
+                     mult = -one
+                  case (iMax, jMax, kMax)
+                     mult = one
+               end select
+               
+               call setBCPointers_b(mm, .true.)
+               call normalVelocities_block_surface_b(mm, mult)
+ 
+             end do
+
+             ! spectral interpolate grid velocites
+             call gridvelocitiesfinelevel_ts_block_b(nn, sps)
+          end if
+
           call boundaryNormals_b
           call metric_block_b
           call volume_block_b
@@ -991,6 +1183,10 @@ contains
        end if
     end do spsLoop2
 
+    ! compute spectral differentiation coeff
+    call timespectralmatrices_b
+    ! compute time period
+    call timeperiodspectral_b
 
     if (present(bcDataNames)) then
        allocate(bcDataValuesdLocal(size(bcDataValuesd)))
@@ -1044,6 +1240,7 @@ contains
     extraLocalBar(iPointRefX) = pointrefd(1)
     extraLocalBar(iPointRefY) = pointrefd(2)
     extraLocalBar(iPointRefZ) = pointrefd(3)
+    extraLocalBar(iomegafourier) = omegafourierd
 
     ! Finally put the output seeds into the provided vectors.
     ii = 0

@@ -2087,8 +2087,8 @@ contains
     use inputphysics, only : pointref, pointrefd, flowtype
     use flowutils_b, only : computeptot, computeptot_b, computettot, &
 &   computettot_b
-    use bcpointers_b, only : ssi, ssid, sface, ww1, ww1d, ww2, ww2d, pp1&
-&   , pp1d, pp2, pp2d, xx, xxd, gamma1, gamma2
+    use bcpointers_b, only : ssi, ssid, sface, sfaced, ww1, ww1d, ww2, &
+&   ww2d, pp1, pp1d, pp2, pp2d, xx, xxd, gamma1, gamma2
     use utils_b, only : mynorm2, mynorm2_b
     implicit none
 ! input/output variables
