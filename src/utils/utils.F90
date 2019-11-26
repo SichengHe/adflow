@@ -2040,13 +2040,14 @@ end subroutine cross_prod
 
 #ifndef  USE_TAPENADE
   subroutine setbcpointers_b(nn, spatialpointers)
-     use constants
-     implicit none
-     integer(kind=inttype), intent(in) :: nn
-     logical, intent(in) :: spatialpointers
-  
-     ! Alias for setbcpointers_d
-     call setbcpointers_d(nn, spatialpointers)
+    use constants
+    implicit none
+    
+    integer(kind=inttype), intent(in) :: nn
+    logical, intent(in) :: spatialpointers
+ 
+    ! Alias for setbcpointers_d
+    call setbcpointers_d(nn, spatialpointers)
   
   end subroutine setbcpointers_b
 
