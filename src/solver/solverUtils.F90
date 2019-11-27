@@ -1215,6 +1215,39 @@ contains
   end subroutine gridVelocitiesFineLevel_block
 
 #ifndef USE_TAPENADE
+  subroutine slipVelocitiesFineLevel_TS(sps)
+    !
+    ! Shell function to call slipVelocitiesFineLevel on all blocks
+    !
+    use constants
+    use blockPointers, only : nDom
+    use inputTimeSpectral, only : nTimeIntervalsSpectral
+    use iteration, only : groundLevel
+    use utils, only : setPointers
+    implicit none
+    !
+    !      Subroutine arguments.
+    !
+    integer(kind=intType), intent(in) :: sps
+    !
+    !      Local variables.
+    !
+    integer(kind=intType) :: nn
+
+    ! Loop over the number of blocks.
+
+    domains: do nn=1,nDom
+
+       ! Set the pointers for this block.
+
+       call slipVelocitiesFineLevel_TS_block(nn, sps)
+
+    end do domains
+
+  end subroutine slipVelocitiesFineLevel_TS
+#endif
+
+#ifndef USE_TAPENADE
   subroutine slipVelocitiesFineLevel(useOldCoor, t, sps)
     !
     ! Shell function to call slipVelocitiesFineLevel on all blocks
@@ -1249,6 +1282,98 @@ contains
 
   end subroutine slipVelocitiesFineLevel
 #endif
+
+  subroutine slipVelocitiesFineLevel_TS_block(nn, sps)
+   !
+   !       Compute the surface slip velocity for RANS (larminar/turbulent) wall BC's.
+   !       This is required since 5 BC's are required for RANS walls: p, E, and velocities (non-slip).
+   !       Besides aforementioned values, for turbulent equations, additional BC applied to mut.
+   !       In this function, we compute the RANS wall velocity, which is used later to enforce non-slip velocity BC's. 
+   !       This part is used for time-spectral only. (The counter part for steady/unsteady is named as:
+   !       "slipVelocitiesFineLevel_block".)
+   !
+
+   use constants
+   use blockPointers
+   use inputPhysics, only: machgrid, velDirFreestream
+   use flowVarRefState, only: gammaInf, pInf, rhoInf
+   use inputTimeSpectral, only: dscalar, nTimeIntervalsSpectral
+   use iteration, only : groundLevel
+
+   !      local variables
+   integer(kind=intType), intent(in) :: nn, sps
+   integer :: i, j, mm, sps_loc                                               ! index variables
+   real(kind=realType), dimension(3) :: xc
+   real(kind=realType) :: aInf                                                              ! sound speed
+   real(kind=realType) :: velxGrid, velyGrid, velzGrid                                      ! infinite speed
+   integer(kind=intType) :: BCFaceID_loc
+   real(kind=realType), dimension(:,:,:), pointer :: uSlip
+   real(kind=realType), dimension(:,:,:), pointer :: xFace
+
+   ! velocity is decomposed into two components: (1). main stream velocity and (2). the grid deformation induced velocity
+   ! (1). main stream velocity
+   aInf = sqrt(gammaInf*pInf/rhoInf)
+   velxGrid = (aInf*machgrid)*(-velDirFreestream(1))
+   velyGrid = (aInf*machgrid)*(-velDirFreestream(2))
+   velzGrid = (aInf*machgrid)*(-velDirFreestream(3))
+
+   ! (2). grid motion induced velocity
+   bocoLoop: do mm=1,nViscBocos
+
+      ! Set the pointer for uSlip to make the code more
+      ! readable.
+      uSlip => flowDoms(nn, 1, sps)%BCData(mm)%uSlip
+      BCFaceID_loc = flowDoms(nn, 1, 1)%BCFaceID(mm)
+
+      do j=flowDoms(nn, 1, sps)%BCData(mm)%jcBeg, flowDoms(nn, 1, sps)%BCData(mm)%jcEnd
+         do i=flowDoms(nn, 1, sps)%BCData(mm)%icBeg, flowDoms(nn, 1, sps)%BCData(mm)%icEnd
+
+            ! add the mainstream velocity
+            uSlip(i,j,1) = velxGrid
+            uSlip(i,j,2) = velyGrid
+            uSlip(i,j,3) = velzGrid
+
+            do sps_loc=1,nTimeIntervalsSpectral
+               
+               ! Determine the grid face on which the subface is located
+               ! and set some variables accordingly.
+               select case (BCFaceID_loc)
+                  case (iMin)
+                     xFace => flowDoms(nn, 1, sps_loc)%x(1,:,:,:)
+                  case (iMax)
+                     xFace => flowDoms(nn, 1, sps_loc)%x(il,:,:,:)
+                  case (jMin)
+                     xFace => flowDoms(nn, 1, sps_loc)%x(:,1,:,:)
+                  case (jMax)
+                     xFace => flowDoms(nn, 1, sps_loc)%x(:,jl,:,:)
+                  case (kMin)
+                     xFace => flowDoms(nn, 1, sps_loc)%x(:,:,1,:)
+                  case (kMax)
+                     xFace => flowDoms(nn, 1, sps_loc)%x(:,:,kl,:)
+               end select
+               
+               ! Determine the coordinates of the centroid of the
+               ! face.
+               xc(1) = fourth*(xFace(i+1,j+1,1) + xFace(i+1,j,1) &
+                  + xFace(i,  j+1,1) + xFace(i,  j,1))
+               xc(2) = fourth*(xFace(i+1,j+1,2) + xFace(i+1,j,2) &
+                  + xFace(i,  j+1,2) + xFace(i,  j,2))
+               xc(3) = fourth*(xFace(i+1,j+1,3) + xFace(i+1,j,3) &
+                  + xFace(i,  j+1,3) + xFace(i,  j,3))
+
+               ! spectral differentiation
+               uSlip(i,j,1) = uSlip(i,j,1) + dscalar(1, sps, sps_loc)*xc(1)
+               uSlip(i,j,2) = uSlip(i,j,2) + dscalar(1, sps, sps_loc)*xc(2)
+               uSlip(i,j,3) = uSlip(i,j,3) + dscalar(1, sps, sps_loc)*xc(3)
+            
+            enddo
+
+         enddo
+      enddo
+
+    enddo bocoLoop
+
+  end subroutine slipVelocitiesFineLevel_TS_block
 
   subroutine slipVelocitiesFineLevel_block(useOldCoor, t, sps)
     !

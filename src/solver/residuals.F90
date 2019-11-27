@@ -686,25 +686,24 @@ contains
                    do k=2,kl
                       do j=2,jl
                          do i=2,il
-                            dw(i,j,k,l) = dw(i,j,k,l)        &
-                                 + dscalar(jj,sps,mm) &
-                                 * flowDoms(nn,currentLevel,mm)%vol(i,j,k)&
-                  * flowDoms(nn,currentLevel,mm)%w(i,j,k,l)
-
-                           ! if (nn == 1) then
-                           !    if (sps == 1) then
-                           !       if (k == 6) then
-                           !          if (j == 3) then
-                           !             if (i == 2) then
-
-                           !                print*, "pm: vol", flowDoms(nn,currentLevel,mm)%vol(i,j,k)
-
-                           !             end if
-                           !          end if
-                           !       end if
-                           !    end if
-                           ! end if
-
+                          if (l < nt1) then
+                            ! prime variables p(var V) / pt = D(var V)
+                            dw(i,j,k,l) = dw(i,j,k,l) &
+                              + dscalar(jj,sps,mm) &
+                              * flowDoms(nn,currentLevel,mm)%vol(i,j,k) &
+                              * flowDoms(nn,currentLevel,mm)%w(i,j,k,l)
+                          else
+                            ! turbulence vars, since it is written w/o
+                            ! volume, the time derivative
+                            ! (1/V)*p(V var)/ pt = D(var) + 1/V (DV) var
+                            dw(i,j,k,l) = dw(i,j,k,l) &
+                              + dscalar(jj,sps,mm) &
+                              * flowDoms(nn,currentLevel,mm)%w(i,j,k,l) &
+                              + dscalar(jj,sps,mm) &
+                              * w(i,j,k,l) &
+                              * flowDoms(nn,currentLevel,mm)%vol(i, j, k) &
+                              / vol(i, j, k)
+                          end if
                          enddo
                       enddo
                    enddo
