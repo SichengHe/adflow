@@ -3860,7 +3860,12 @@ contains
        call gridVelocitiesCoarseLevels(mm)
        call normalVelocitiesAllLevels(mm)
 
-       call slipVelocitiesFineLevel(.false., t, mm)
+       if (.NOT. useTSInterpolatedGridVelocity) then
+          call slipVelocitiesFineLevel(.false., t, mm)
+       else
+          call slipVelocitiesFineLevel_TS(mm)
+       end if
+
        call slipVelocitiesCoarseLevels(mm)
 
     enddo
