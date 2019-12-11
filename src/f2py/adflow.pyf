@@ -828,6 +828,14 @@ python module libadflow
 
          subroutine destroypetscvars
          end subroutine destroypetscvars
+
+         subroutine zeroadseeds(nn, level, sps)
+            integer(kind=inttype) :: nn, level, sps
+            integer(kind=inttype) :: mm, i, idom
+            integer(kind=inttype) :: iboco, idata, idirichlet
+            integer(kind=inttype) :: ii, jj, kk, ll
+            integer(kind=inttype) :: nnn, mmm, kkk
+        end subroutine zeroadseeds
        end module adjointutils
 
        module zippermesh
