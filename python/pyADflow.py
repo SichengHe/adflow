@@ -393,6 +393,13 @@ class ADFLOW(AeroSolver):
 
         self.mesh.setSurfaceDefinition(pts, conn, faceSizes, cgnsBlockIDs)
 
+    def setSurfaceTransferTS(self, surfaceTransfer):
+
+        # time spectral after-design undeformed surface mesh to
+        # after-design deformed surface mesh transfer
+
+        self.surfaceTransfer = surfaceTransfer
+
     def getSolverMeshIndices(self):
         '''
         Get the list of indices to pass to the mesh object for the
@@ -3720,11 +3727,11 @@ class ADFLOW(AeroSolver):
                 # xs0dot = self.DVGeo.totalSensitivityProd(xDvDot, self.curAP.ptSetName, self.comm, config=self.curAP.name).reshape(xsdot[0].shape)
                 xs0dot = self.DVGeo.totalSensitivityProd(xDvDot, self.curAP.ptSetName, self.comm).reshape(xsdot[0].shape)
                 if self.getOption('equationMode').lower() == 'time spectral':  
-                    if 0: # airfoil case
+                    if 1: # airfoil case HACK
                         xsndot = self.surfaceTransfer.setXS_d(xs0dot)
                         for sps in xrange(nTime):
                             xsdot[sps] += xsndot[sps]
-                    if 1:
+                    if 0: # wing case HACK
                         cfdPts0 = self.getInitialSurfaceCoordinates(HSCflag=False)
                         xsndot = self.surfaceTransfer.setXS_d(cfdPts0, xs0dot)
                         for sps in xrange(nTime):
@@ -3830,7 +3837,8 @@ class ADFLOW(AeroSolver):
 
     def computeJacobianVectorProductBwd(self, resBar=None, funcsBar=None, fBar=None,
                                     wDeriv=None, xVDeriv=None, xSDeriv=None,
-                                    xDvDeriv=None, xDvDerivAero=None):
+                                    xDvDeriv=None, xDvDerivAero=None,
+                                    xsbar_external=None):
         """This the main python gateway for producing reverse mode jacobian
         vector products. It is not generally called by the user by
         rather internally or from another solver. A mesh object must
@@ -3863,6 +3871,8 @@ class ADFLOW(AeroSolver):
         xDvDerivAero : bool
             Flag to return *just* the aerodynamic derivatives. If this is True and
             xDvDeriv is False,*just* the aerodynamic derivatives are returned.
+
+        xsbar_external : there may be seeds coming from other source 
 
         Returns
         -------
@@ -3970,10 +3980,45 @@ class ADFLOW(AeroSolver):
         if xDvDeriv or xSDeriv:
             if self.mesh is not None:
 
-                self.mesh.warpDeriv(xvbar)
-                xsbar = self.mesh.getdXs()
-                xsbar = self.mapVector(xsbar, self.meshFamilyGroup,
-                                       self.designFamilyGroup, includeZipper=False)
+                if self.getOption('equationMode').lower() == 'time spectral':
+
+                    nxvbar = int(len(xvbar)/nTime)
+
+                    # get surface seed  by time instance
+                    xsbar = []
+
+                    for sps in xrange(nTime):
+
+                        # xvbar nTime*nnode*3 divide it in smaller units!
+                        # xvbar_loc = xvbar[sps*nxvbar: (sps+1)*nxvbar] # need to update this!
+                        xvbar_loc = numpy.zeros(nxvbar)
+                        self.get_xvd_dom_bwd(xvbar, nxvbar, xvbar_loc, sps, nTime)
+
+                        # deform the mesh object to match each time instance
+                        pts = self.getSurfaceCoordinates(groupName=None, includeZipper=False, TS=sps)
+
+                        self.mesh.setSurfaceCoordinates(pts)
+                        self.mesh.warpMesh()
+
+                        # get the sensitivity for each time instance
+                        self.mesh.warpDeriv(xvbar_loc)
+                        xsbar_loc = self.mesh.getdXs()
+                        xsbar_loc = self.mapVector(xsbar_loc, self.meshFamilyGroup,
+                                        self.designFamilyGroup, includeZipper=False)
+
+                        xsbar.append(xsbar_loc)
+
+                else:
+                    self.mesh.warpDeriv(xvbar)
+                    xsbar = self.mesh.getdXs()
+                    xsbar = self.mapVector(xsbar, self.meshFamilyGroup,
+                                        self.designFamilyGroup, includeZipper=False)
+
+                    xsbar = [xsbar]
+                
+                if (not xsbar_external == None):
+                    for sps in xrange(nTime):
+                        xsbar[sps] += xsbar_external[sps]
 
                 if xSDeriv:
                     returns.append(xsbar)
@@ -3992,8 +4037,19 @@ class ADFLOW(AeroSolver):
                                           # derivatives if mesh is
                                           # present
                     if self.DVGeo is not None and self.DVGeo.getNDV() > 0:
-                        xdvbar.update(self.DVGeo.totalSensitivity(
-                            xsbar, self.curAP.ptSetName, self.comm, config=self.curAP.name))
+                        if self.getOption('equationMode').lower() == 'time spectral':
+                            if 1: # airfoil case HACK
+                                xs0bar = self.surfaceTransfer.setXS_b(xsbar)
+                            if 0: # wing case HACK
+                                cfdPts0 = self.getInitialSurfaceCoordinates()
+                                xs0bar = self.surfaceTransfer.setXS_b(cfdPts0, xsbar)
+
+                            xdvbar.update(self.DVGeo.totalSensitivity(
+                                xs0bar, self.curAP.ptSetName, self.comm, config=self.curAP.name))
+
+                        else:
+                            xdvbar.update(self.DVGeo.totalSensitivity(
+                                xsbar[0], self.curAP.ptSetName, self.comm, config=self.curAP.name))
                     else:
                         if self.comm.rank == 0:
                             ADFLOWWarning("No DVGeo object is present or it has no "
