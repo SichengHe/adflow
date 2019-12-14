@@ -1394,7 +1394,7 @@ subroutine computeNodalForces_d(sps)
 
   use constants
   use blockPointers, only : nDom, nBocos, BCType, BCData, BCDatad
-  use utils, only : setPointers
+  use utils, only : setPointers, setPointers_d
   implicit none
 
   integer(kind=intType), intent(in) ::  sps
@@ -1404,7 +1404,8 @@ subroutine computeNodalForces_d(sps)
   real(kind=realType) :: qfd(3)
 
   do nn=1, nDom
-     call setPointers(nn, 1_intType, sps)
+   !   call setPointers(nn, 1_intType, sps) ! A BUG?
+     call setPointers_d(nn, 1_intType, sps)
      do mm=1, nBocos
         iBeg = BCdata(mm)%inBeg+1; iEnd=BCData(mm)%inEnd
         jBeg = BCdata(mm)%jnBeg+1; jEnd=BCData(mm)%jnEnd
@@ -1448,17 +1449,18 @@ subroutine computeNodalForces_b(sps)
         jBeg = BCdata(mm)%jnBeg+1; jEnd=BCData(mm)%jnEnd
         if(BCType(mm) == EulerWall.or.BCType(mm) == NSWallAdiabatic .or. &
              BCType(mm) == NSWallIsothermal) then
+          !  BCDatad(mm)%F = zero
            do j=jBeg, jEnd
-              do i=iBeg, iEnd                 
+              do i=iBeg, iEnd
+
                  qf_b = fourth*(BCDatad(mm)%F(i, j, :) + BCdatad(mm)%F(i-1, j, :) + &
                       BCDatad(mm)%F(i, j-1, :) + BCDatad(mm)%F(i-1, j-1, :))
-              
+
                  ! Fp and Fv are face-based values
                  BCDatad(mm)%Fp(i, j, :) = BCDatad(mm)%Fp(i, j, :) + qf_b
                  BCDatad(mm)%Fv(i, j, :) = BCDatad(mm)%Fv(i, j, :) + qf_b
               end do
            end do
-           ! this needs to be after the update to be the reverse of the forward mode.
            BCDatad(mm)%F = zero
         end if
      end do

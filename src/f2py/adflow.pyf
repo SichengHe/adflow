@@ -748,6 +748,15 @@ python module libadflow
 #endif
        end module adjointapi
        module adjointutils
+         
+         subroutine allocderivativevalues(level)
+            integer(kind=inttype) :: sps,ierr,i,j,k,l, mm, nn
+            integer(kind=inttype) :: ibeg, jbeg, istop, jstop, isizemax, jsizemax
+            integer(kind=inttype) :: inbeg, jnbeg, instop, jnstop
+            integer(kind=inttype) :: massshape(2), max_face_size
+            integer(kind=inttype) :: iboco, ndataset, idata, ndirichlet, idirichlet, narray
+            integer(kind=inttype) :: nnn, mmm, kkk
+         end subroutine allocderivativevalues
 
          subroutine initializepetsc
          end subroutine initializepetsc
