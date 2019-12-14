@@ -66,6 +66,7 @@ module NKSolver
 
   ! Variables for non-monotone line search
   real(kind=realType), dimension(:), allocatable :: NKLSFuncEvals
+  real(kind=realType), dimension(:), allocatable :: resHist
   integer(kind=intType) :: Mmax=5
   integer(kind=intType) :: iter_k
   integer(kind=intType) :: iter_m
@@ -107,6 +108,8 @@ contains
 
     if (.not. NK_solverSetup) then
        nDimW = nw * nCellsLocal(1_intTYpe) * nTimeIntervalsSpectral
+
+       allocate(resHist(NK_subspace + 1))
 
        call VecCreate(ADFLOW_COMM_WORLD, wVec, ierr)
        call EChk(ierr, __FILE__, __LINE__)
@@ -471,6 +474,8 @@ contains
 
     if (NK_solverSetup) then
 
+       deallocate(resHist)
+
        call MatDestroy(dRdw, ierr)
        call EChk(ierr, __FILE__, __LINE__)
 
@@ -529,7 +534,6 @@ contains
     real(kind=alwaysRealType) :: norm, rtol, atol
     real(kind=alwaysrealType) :: fnorm, ynorm, gnorm
     logical :: flag
-    real(kind=alwaysRealType) :: resHist(NK_subspace+1)
 
     if (firstCall) then
        call setupNKSolver()
