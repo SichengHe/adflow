@@ -2003,9 +2003,18 @@ contains
           do k=2,kl
              do j=2,jl
                 do i=2,il
-                   dw(i,j,k,ii) = dw(i,j,k,ii)              &
+                  !  dw(i,j,k,ii) = dw(i,j,k,ii)              &
+                  !       + dscalar(sectionID,sps,mm) &
+                  !       * flowDoms(nn,currentLevel,mm)%w(i,j,k,ii)
+                  
+                  ! accounts for the volume change
+                  dw(i,j,k,ii) = dw(i,j,k,ii) &
                         + dscalar(sectionID,sps,mm) &
-                        * flowDoms(nn,currentLevel,mm)%w(i,j,k,ii)
+                        * flowDoms(nn,currentLevel,mm)%w(i,j,k,ii) &
+                        + dscalar(sectionID,sps,mm) &
+                        * flowDoms(nn,currentLevel,sps)%w(i,j,k,ii) &
+                        * flowDoms(nn,currentLevel,mm)%vol(i, j, k) &
+                        / flowDoms(nn,currentLevel,sps)%vol(i, j, k)
                 enddo
              enddo
           enddo
