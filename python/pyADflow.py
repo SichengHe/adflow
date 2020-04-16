@@ -102,7 +102,7 @@ class ADFLOW(AeroSolver):
     dtype : str
         String type for float: 'd' or 'D'. Not needed to be uset by user.
         """
-    def __init__(self, comm=None, options=None, debug=False, dtype='d'):
+    def __init__(self, comm=None, options=None, debug=False, dtype='d', use_airfoil=True):
 
         startInitTime = time.time()
 
@@ -349,6 +349,8 @@ class ADFLOW(AeroSolver):
             print('|')
             print('| %-30s: %10.3f sec'%('Total Init Time',finalInitTime - startInitTime))
             print('+--------------------------------------------------+')
+
+        self.use_airfoil = use_airfoil
 
     def __del__(self):
         """
@@ -3727,11 +3729,11 @@ class ADFLOW(AeroSolver):
                 # xs0dot = self.DVGeo.totalSensitivityProd(xDvDot, self.curAP.ptSetName, self.comm, config=self.curAP.name).reshape(xsdot[0].shape)
                 xs0dot = self.DVGeo.totalSensitivityProd(xDvDot, self.curAP.ptSetName, self.comm).reshape(xsdot[0].shape)
                 if self.getOption('equationMode').lower() == 'time spectral':  
-                    if 1: # airfoil case HACK
+                    if self.use_airfoil: # airfoil case HACK
                         xsndot = self.surfaceTransfer.setXS_d(xs0dot)
                         for sps in xrange(nTime):
                             xsdot[sps] += xsndot[sps]
-                    if 0: # wing case HACK
+                    else: # wing case HACK
                         cfdPts0 = self.getInitialSurfaceCoordinates(HSCflag=False)
                         xsndot = self.surfaceTransfer.setXS_d(cfdPts0, xs0dot)
                         for sps in xrange(nTime):
@@ -4038,9 +4040,9 @@ class ADFLOW(AeroSolver):
                                           # present
                     if self.DVGeo is not None and self.DVGeo.getNDV() > 0:
                         if self.getOption('equationMode').lower() == 'time spectral':
-                            if 1: # airfoil case HACK
+                            if self.use_airfoil: # airfoil case HACK
                                 xs0bar = self.surfaceTransfer.setXS_b(xsbar)
-                            if 0: # wing case HACK
+                            else: # wing case HACK
                                 cfdPts0 = self.getInitialSurfaceCoordinates()
                                 xs0bar = self.surfaceTransfer.setXS_b(cfdPts0, xsbar)
 
@@ -4717,6 +4719,7 @@ class ADFLOW(AeroSolver):
             'alphafollowing':[bool,True],
             'tsstability': [bool, False],
             'usetsinterpolatedgridvelocity': [bool, False],
+            'usetsgcl': [bool, False],
             'useexternaldynamicmesh': [bool, False],
 
             # Convergence Paramters
@@ -5036,6 +5039,7 @@ class ADFLOW(AeroSolver):
             'alphafollowing':['stab', 'tsalphafollowing'],
             'tsstability':['stab', 'tsstability'],
             'usetsinterpolatedgridvelocity': ['ts', 'usetsinterpolatedgridvelocity'],
+            'usetsgcl': ['ts', 'usetsgcl'],
             'useexternaldynamicmesh': ['ts', 'useexternaldynamicmesh'],
 
             # Convergence Paramters

@@ -1267,6 +1267,7 @@ python module libadflow
          real(kind=realtype) allocatable,dimension(:,:,:) :: dvector
          real(kind=realtype) :: dtunsteadyrestartspectral
          logical :: usetsinterpolatedgridvelocity
+         logical :: usetsgcl
          logical :: writeunsteadyrestartspectral
          integer(kind=inttype) :: nunsteadysolspectral
          logical :: writeunsteadyvolspectral
