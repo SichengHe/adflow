@@ -78,7 +78,7 @@ class ADFLOW(AeroSolver):
         String type for float: 'd' or 'D'. Not needed to be used by user.
     """
 
-    def __init__(self, comm=None, options=None, debug=False, dtype="d"):
+    def __init__(self, comm=None, options=None, debug=False, dtype="d", use_airfoil=True):
 
         startInitTime = time.time()
 
@@ -354,6 +354,8 @@ class ADFLOW(AeroSolver):
             print("|")
             print("| %-30s: %10.3f sec" % ("Total Init Time", finalInitTime - startInitTime))
             print("+--------------------------------------------------+")
+
+        self.use_airfoil = use_airfoil
 
     def __del__(self):
         """
@@ -4124,15 +4126,13 @@ class ADFLOW(AeroSolver):
         if xDvDot is not None or xSDot is not None:
             if xDvDot is not None and self.DVGeo is not None:
                 # xs0dot = self.DVGeo.totalSensitivityProd(xDvDot, self.curAP.ptSetName, self.comm, config=self.curAP.name).reshape(xsdot[0].shape)
-                xs0dot = self.DVGeo.totalSensitivityProd(xDvDot, self.curAP.ptSetName, self.comm).reshape(
-                    xsdot[0].shape
-                )
-                if self.getOption("equationMode").lower() == "time spectral":
-                    if 1:  # airfoil case HACK
+                xs0dot = self.DVGeo.totalSensitivityProd(xDvDot, self.curAP.ptSetName, self.comm).reshape(xsdot[0].shape)
+                if self.getOption('equationMode').lower() == 'time spectral':  
+                    if self.use_airfoil: # airfoil case HACK
                         xsndot = self.surfaceTransfer.setXS_d(xs0dot)
                         for sps in range(nTime):
                             xsdot[sps] += xsndot[sps]
-                    if 0:  # wing case HACK
+                    else: # wing case HACK
                         cfdPts0 = self.getInitialSurfaceCoordinates(HSCflag=False)
                         xsndot = self.surfaceTransfer.setXS_d(cfdPts0, xs0dot)
                         for sps in range(nTime):
@@ -4519,10 +4519,10 @@ class ADFLOW(AeroSolver):
                     # derivatives if mesh is
                     # present
                     if self.DVGeo is not None and self.DVGeo.getNDV() > 0:
-                        if self.getOption("equationMode").lower() == "time spectral":
-                            if 1:  # airfoil case HACK
+                        if self.getOption('equationMode').lower() == 'time spectral':
+                            if self.use_airfoil: # airfoil case HACK
                                 xs0bar = self.surfaceTransfer.setXS_b(xsbar)
-                            if 0:  # wing case HACK
+                            else: # wing case HACK
                                 cfdPts0 = self.getInitialSurfaceCoordinates()
                                 xs0bar = self.surfaceTransfer.setXS_b(cfdPts0, xsbar)
 
@@ -5213,7 +5213,9 @@ class ADFLOW(AeroSolver):
             "alphaFollowing": [bool, True],
             "TSStability": [bool, False],
             "useTSInterpolatedGridVelocity": [bool, False],
+            "usetsgcl": [bool, False],
             "useExternalDynamicMesh": [bool, False],
+
             # Convergence Parameters
             "L2Convergence": [float, 1e-8],
             "L2ConvergenceRel": [float, 1e-16],
@@ -5574,6 +5576,8 @@ class ADFLOW(AeroSolver):
             "alphafollowing": ["stab", "tsalphafollowing"],
             "tsstability": ["stab", "tsstability"],
             "usetsinterpolatedgridvelocity": ["ts", "usetsinterpolatedgridvelocity"],
+            "usetsgcl": ['ts', 'usetsgcl'],
+
             # Convergence Parameters
             "l2convergence": ["iter", "l2conv"],
             "l2convergencerel": ["iter", "l2convrel"],

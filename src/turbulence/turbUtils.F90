@@ -1971,6 +1971,7 @@ contains
     !      Local variables.
     !
     integer(kind=intType) :: ii, mm, i, j, k
+    real(kind=realType)   :: dvdtSurf ! volume rate computed from surface
 
     ! Return immediately if not the time spectral equations are to
     ! be solved.
@@ -2008,13 +2009,38 @@ contains
                   !       * flowDoms(nn,currentLevel,mm)%w(i,j,k,ii)
                   
                   ! accounts for the volume change
-                  dw(i,j,k,ii) = dw(i,j,k,ii) &
-                        + dscalar(sectionID,sps,mm) &
-                        * flowDoms(nn,currentLevel,mm)%w(i,j,k,ii) &
-                        + dscalar(sectionID,sps,mm) &
-                        * flowDoms(nn,currentLevel,sps)%w(i,j,k,ii) &
-                        * flowDoms(nn,currentLevel,mm)%vol(i, j, k) &
-                        / flowDoms(nn,currentLevel,sps)%vol(i, j, k)
+                  if (.not. usetsgcl) then
+                     ! not using GCL
+                     dw(i,j,k,ii) = dw(i,j,k,ii) &
+                           + dscalar(sectionID,sps,mm) &
+                           * flowDoms(nn,currentLevel,mm)%w(i,j,k,ii) &
+                           + dscalar(sectionID,sps,mm) &
+                           * flowDoms(nn,currentLevel,sps)%w(i,j,k,ii) &
+                           * flowDoms(nn,currentLevel,mm)%vol(i, j, k) &
+                           / flowDoms(nn,currentLevel,sps)%vol(i, j, k)
+                  else
+                     ! using GCL
+                     ! D(w)
+                     dw(i,j,k,ii) = dw(i,j,k,ii) &
+                           + dscalar(sectionID,sps,mm) &
+                           * flowDoms(nn,currentLevel,mm)%w(i,j,k,ii)
+
+                     ! wD(V)/V
+                     ! compute D(V)
+                     if (sps == mm) then
+                        dvdtSurf = ( - flowDoms(nn,currentLevel,sps)%sFaceI(i - 1, j, k) &
+                        + flowDoms(nn,currentLevel,sps)%sFaceI(i, j, k)) &
+                        + ( - flowDoms(nn,currentLevel,sps)%sFaceJ(i, j - 1, k) &
+                        + flowDoms(nn,currentLevel,sps)%sFaceJ(i, j, k)) &
+                        + ( - flowDoms(nn,currentLevel,sps)%sFaceK(i, j, k - 1) &
+                        + flowDoms(nn,currentLevel,sps)%sFaceK(i, j, k))
+
+                        dw(i,j,k,ii) = dw(i,j,k,ii) &
+                              + flowDoms(nn,currentLevel,sps)%w(i,j,k,ii) &
+                              * dvdtSurf &
+                              / flowDoms(nn,currentLevel,sps)%vol(i, j, k)
+                     endif
+                  endif
                 enddo
              enddo
           enddo

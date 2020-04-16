@@ -675,6 +675,7 @@ module inputTimeSpectral
   real(kind=realType), dimension(:,:,:), allocatable :: &
        rotMatrixSpectral
   logical :: useTSInterpolatedGridVelocity
+  logical :: useTSGCL
 
   real(kind=realType) :: omegaFourier
 

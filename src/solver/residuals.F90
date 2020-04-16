@@ -334,6 +334,7 @@ contains
     real(kind=realType)   :: oneOverDt, tmp
 
     real(kind=realType), dimension(:,:,:,:), pointer :: ww
+    real(kind=realType)   :: dvdtSurf ! volume rate computed from surface
     
 #ifndef USE_TAPENADE
     real(kind=realType), dimension(:,:,:,:), pointer :: wsp, wsp1
@@ -657,21 +658,48 @@ contains
                       do j=2,jl
                          do i=2,il
 
-                            ! Store the matrix vector product with the
-                            ! velocity in tmp.
+                            if (.not. usetsgcl) then
+                              ! Store the matrix vector product with the
+                              ! velocity in tmp.
 
-                            tmp = dvector(jj,ll,ii+1)*flowDoms(nn,currentLevel,mm)%w(i,j,k,ivx) &
-                                 + dvector(jj,ll,ii+2)*flowDoms(nn,currentLevel,mm)%w(i,j,k,ivy) &
-                                 + dvector(jj,ll,ii+3)*flowDoms(nn,currentLevel,mm)%w(i,j,k,ivz)
+                              tmp = dvector(jj,ll,ii+1)*flowDoms(nn,currentLevel,mm)%w(i,j,k,ivx) &
+                                  + dvector(jj,ll,ii+2)*flowDoms(nn,currentLevel,mm)%w(i,j,k,ivy) &
+                                  + dvector(jj,ll,ii+3)*flowDoms(nn,currentLevel,mm)%w(i,j,k,ivz)
 
-                            ! Update the residual. Note the
-                            ! multiplication with the density to obtain
-                            ! the correct time derivative for the
-                            ! momentum variable.
+                              ! Update the residual. Note the
+                              ! multiplication with the density to obtain
+                              ! the correct time derivative for the
+                              ! momentum variable.
 
-                            dw(i,j,k,l) = dw(i,j,k,l) &
-                                 + tmp*flowDoms(nn,currentLevel,mm)%vol(i,j,k) &
-				 * flowDoms(nn,currentLevel,mm)%w(i,j,k,irho)
+                              dw(i,j,k,l) = dw(i,j,k,l) &
+                                  + tmp*flowDoms(nn,currentLevel,mm)%vol(i,j,k) &
+                                  * flowDoms(nn,currentLevel,mm)%w(i,j,k,irho)
+                            else
+                              ! VD(rho w)
+                              tmp = dvector(jj,ll,ii+1)*flowDoms(nn,currentLevel,mm)%w(i,j,k,ivx) &
+                                  + dvector(jj,ll,ii+2)*flowDoms(nn,currentLevel,mm)%w(i,j,k,ivy) &
+                                  + dvector(jj,ll,ii+3)*flowDoms(nn,currentLevel,mm)%w(i,j,k,ivz)
+
+                              dw(i,j,k,l) = dw(i,j,k,l) &
+                                  + tmp*flowDoms(nn,currentLevel,sps)%vol(i,j,k) &
+                                  * flowDoms(nn,currentLevel,mm)%w(i,j,k,irho)
+
+                              ! (rho w) D(V)
+                              if (sps == mm) then
+                                ! compute D(V)
+                                dvdtSurf = ( - flowDoms(nn,currentLevel,sps)%sFaceI(i - 1, j, k) &
+                                + flowDoms(nn,currentLevel,sps)%sFaceI(i, j, k)) &
+                                + ( - flowDoms(nn,currentLevel,sps)%sFaceJ(i, j - 1, k) &
+                                + flowDoms(nn,currentLevel,sps)%sFaceJ(i, j, k)) &
+                                + ( - flowDoms(nn,currentLevel,sps)%sFaceK(i, j, k - 1) &
+                                + flowDoms(nn,currentLevel,sps)%sFaceK(i, j, k))
+
+                                ! (rho w) D(V)
+                                dw(i,j,k,l) = dw(i,j,k,l) & 
+                                    + dvdtSurf * flowDoms(nn,currentLevel,sps)%w(i,j,k,irho) &
+                                    * flowDoms(nn,currentLevel,sps)%w(i,j,k,l)
+                              end if
+                            end if
 
                          enddo
                       enddo
@@ -687,11 +715,32 @@ contains
                       do j=2,jl
                          do i=2,il
                           if (l < nt1) then
-                            ! prime variables p(var V) / pt = D(var V)
-                            dw(i,j,k,l) = dw(i,j,k,l) &
-                              + dscalar(jj,sps,mm) &
-                              * flowDoms(nn,currentLevel,mm)%vol(i,j,k) &
-                              * flowDoms(nn,currentLevel,mm)%w(i,j,k,l)
+                            if (.not. usetsgcl) then
+                              ! prime variables p(var V) / pt = D(var V)
+                              dw(i,j,k,l) = dw(i,j,k,l) &
+                                + dscalar(jj,sps,mm) &
+                                * flowDoms(nn,currentLevel,mm)%vol(i,j,k) &
+                                * flowDoms(nn,currentLevel,mm)%w(i,j,k,l)
+                            else
+                              ! VD(w)
+                              dw(i,j,k,l) = dw(i,j,k,l) &
+                                + dscalar(jj,sps,mm) &
+                                * flowDoms(nn,currentLevel,sps)%vol(i,j,k) &
+                                * flowDoms(nn,currentLevel,mm)%w(i,j,k,l)
+                              ! wD(V)
+                              if (sps == mm) then
+                                ! compute D(V)
+                                dvdtSurf = ( - flowDoms(nn,currentLevel,sps)%sFaceI(i - 1, j, k) &
+                                + flowDoms(nn,currentLevel,sps)%sFaceI(i, j, k)) &
+                                + ( - flowDoms(nn,currentLevel,sps)%sFaceJ(i, j - 1, k) &
+                                + flowDoms(nn,currentLevel,sps)%sFaceJ(i, j, k)) &
+                                + ( - flowDoms(nn,currentLevel,sps)%sFaceK(i, j, k - 1) &
+                                + flowDoms(nn,currentLevel,sps)%sFaceK(i, j, k))
+                                
+                                dw(i,j,k,l) = dw(i,j,k,l) &
+                                  + dvdtSurf * flowDoms(nn,currentLevel,sps)%w(i,j,k,l)
+                              end if
+                            end if
                           else
                             ! turbulence vars, since it is written w/o
                             ! volume, the time derivative

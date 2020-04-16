@@ -346,6 +346,8 @@ contains
     real(kind=realtype) :: oneoverdt, tmp
     real(kind=realtype) :: tmpd
     real(kind=realtype), dimension(:, :, :, :), pointer :: ww
+! volume rate computed from surface
+    real(kind=realtype) :: dvdtsurf
 ! return immediately of no variables are in the range.
     if (varend .lt. varstart) then
       return
@@ -404,37 +406,91 @@ varloopfine:do l=varstart,varend
                 do k=2,kl
                   do j=2,jl
                     do i=2,il
+                      if (.not.usetsgcl) then
 ! store the matrix vector product with the
 ! velocity in tmp.
-                      tmpd = dvectord(jj, ll, ii+1)*flowdoms(nn, &
-&                       currentlevel, mm)%w(i, j, k, ivx) + dvector(jj, &
-&                       ll, ii+1)*flowdomsd(nn, currentlevel, mm)%w(i, j&
-&                       , k, ivx) + dvectord(jj, ll, ii+2)*flowdoms(nn, &
-&                       currentlevel, mm)%w(i, j, k, ivy) + dvector(jj, &
-&                       ll, ii+2)*flowdomsd(nn, currentlevel, mm)%w(i, j&
-&                       , k, ivy) + dvectord(jj, ll, ii+3)*flowdoms(nn, &
-&                       currentlevel, mm)%w(i, j, k, ivz) + dvector(jj, &
-&                       ll, ii+3)*flowdomsd(nn, currentlevel, mm)%w(i, j&
-&                       , k, ivz)
-                      tmp = dvector(jj, ll, ii+1)*flowdoms(nn, &
-&                       currentlevel, mm)%w(i, j, k, ivx) + dvector(jj, &
-&                       ll, ii+2)*flowdoms(nn, currentlevel, mm)%w(i, j&
-&                       , k, ivy) + dvector(jj, ll, ii+3)*flowdoms(nn, &
-&                       currentlevel, mm)%w(i, j, k, ivz)
+                        tmpd = dvectord(jj, ll, ii+1)*flowdoms(nn, &
+&                         currentlevel, mm)%w(i, j, k, ivx) + dvector(jj&
+&                         , ll, ii+1)*flowdomsd(nn, currentlevel, mm)%w(&
+&                         i, j, k, ivx) + dvectord(jj, ll, ii+2)*&
+&                         flowdoms(nn, currentlevel, mm)%w(i, j, k, ivy)&
+&                         + dvector(jj, ll, ii+2)*flowdomsd(nn, &
+&                         currentlevel, mm)%w(i, j, k, ivy) + dvectord(&
+&                         jj, ll, ii+3)*flowdoms(nn, currentlevel, mm)%w&
+&                         (i, j, k, ivz) + dvector(jj, ll, ii+3)*&
+&                         flowdomsd(nn, currentlevel, mm)%w(i, j, k, ivz&
+&                         )
+                        tmp = dvector(jj, ll, ii+1)*flowdoms(nn, &
+&                         currentlevel, mm)%w(i, j, k, ivx) + dvector(jj&
+&                         , ll, ii+2)*flowdoms(nn, currentlevel, mm)%w(i&
+&                         , j, k, ivy) + dvector(jj, ll, ii+3)*flowdoms(&
+&                         nn, currentlevel, mm)%w(i, j, k, ivz)
 ! update the residual. note the
 ! multiplication with the density to obtain
 ! the correct time derivative for the
 ! momentum variable.
-                      dwd(i, j, k, l) = dwd(i, j, k, l) + (tmpd*flowdoms&
-&                       (nn, currentlevel, mm)%vol(i, j, k)+tmp*&
-&                       flowdomsd(nn, currentlevel, mm)%vol(i, j, k))*&
-&                       flowdoms(nn, currentlevel, mm)%w(i, j, k, irho) &
-&                       + tmp*flowdoms(nn, currentlevel, mm)%vol(i, j, k&
-&                       )*flowdomsd(nn, currentlevel, mm)%w(i, j, k, &
-&                       irho)
-                      dw(i, j, k, l) = dw(i, j, k, l) + tmp*flowdoms(nn&
-&                       , currentlevel, mm)%vol(i, j, k)*flowdoms(nn, &
-&                       currentlevel, mm)%w(i, j, k, irho)
+                        dwd(i, j, k, l) = dwd(i, j, k, l) + (tmpd*&
+&                         flowdoms(nn, currentlevel, mm)%vol(i, j, k)+&
+&                         tmp*flowdomsd(nn, currentlevel, mm)%vol(i, j, &
+&                         k))*flowdoms(nn, currentlevel, mm)%w(i, j, k, &
+&                         irho) + tmp*flowdoms(nn, currentlevel, mm)%vol&
+&                         (i, j, k)*flowdomsd(nn, currentlevel, mm)%w(i&
+&                         , j, k, irho)
+                        dw(i, j, k, l) = dw(i, j, k, l) + tmp*flowdoms(&
+&                         nn, currentlevel, mm)%vol(i, j, k)*flowdoms(nn&
+&                         , currentlevel, mm)%w(i, j, k, irho)
+                      else
+! vd(rho w)
+                        tmpd = dvectord(jj, ll, ii+1)*flowdoms(nn, &
+&                         currentlevel, mm)%w(i, j, k, ivx) + dvector(jj&
+&                         , ll, ii+1)*flowdomsd(nn, currentlevel, mm)%w(&
+&                         i, j, k, ivx) + dvectord(jj, ll, ii+2)*&
+&                         flowdoms(nn, currentlevel, mm)%w(i, j, k, ivy)&
+&                         + dvector(jj, ll, ii+2)*flowdomsd(nn, &
+&                         currentlevel, mm)%w(i, j, k, ivy) + dvectord(&
+&                         jj, ll, ii+3)*flowdoms(nn, currentlevel, mm)%w&
+&                         (i, j, k, ivz) + dvector(jj, ll, ii+3)*&
+&                         flowdomsd(nn, currentlevel, mm)%w(i, j, k, ivz&
+&                         )
+                        tmp = dvector(jj, ll, ii+1)*flowdoms(nn, &
+&                         currentlevel, mm)%w(i, j, k, ivx) + dvector(jj&
+&                         , ll, ii+2)*flowdoms(nn, currentlevel, mm)%w(i&
+&                         , j, k, ivy) + dvector(jj, ll, ii+3)*flowdoms(&
+&                         nn, currentlevel, mm)%w(i, j, k, ivz)
+                        dwd(i, j, k, l) = dwd(i, j, k, l) + (tmpd*&
+&                         flowdoms(nn, currentlevel, sps)%vol(i, j, k)+&
+&                         tmp*flowdomsd(nn, currentlevel, sps)%vol(i, j&
+&                         , k))*flowdoms(nn, currentlevel, mm)%w(i, j, k&
+&                         , irho) + tmp*flowdoms(nn, currentlevel, sps)%&
+&                         vol(i, j, k)*flowdomsd(nn, currentlevel, mm)%w&
+&                         (i, j, k, irho)
+                        dw(i, j, k, l) = dw(i, j, k, l) + tmp*flowdoms(&
+&                         nn, currentlevel, sps)%vol(i, j, k)*flowdoms(&
+&                         nn, currentlevel, mm)%w(i, j, k, irho)
+! (rho w) d(v)
+                        if (sps .eq. mm) then
+! compute d(v)
+                          dvdtsurf = -flowdoms(nn, currentlevel, sps)%&
+&                           sfacei(i-1, j, k) + flowdoms(nn, &
+&                           currentlevel, sps)%sfacei(i, j, k) + (-&
+&                           flowdoms(nn, currentlevel, sps)%sfacej(i, j-&
+&                           1, k)+flowdoms(nn, currentlevel, sps)%sfacej&
+&                           (i, j, k)) + (-flowdoms(nn, currentlevel, &
+&                           sps)%sfacek(i, j, k-1)+flowdoms(nn, &
+&                           currentlevel, sps)%sfacek(i, j, k))
+! (rho w) d(v)
+                          dwd(i, j, k, l) = dwd(i, j, k, l) + dvdtsurf*(&
+&                           flowdomsd(nn, currentlevel, sps)%w(i, j, k, &
+&                           irho)*flowdoms(nn, currentlevel, sps)%w(i, j&
+&                           , k, l)+flowdoms(nn, currentlevel, sps)%w(i&
+&                           , j, k, irho)*flowdomsd(nn, currentlevel, &
+&                           sps)%w(i, j, k, l))
+                          dw(i, j, k, l) = dw(i, j, k, l) + dvdtsurf*&
+&                           flowdoms(nn, currentlevel, sps)%w(i, j, k, &
+&                           irho)*flowdoms(nn, currentlevel, sps)%w(i, j&
+&                           , k, l)
+                        end if
+                      end if
                     end do
                   end do
                 end do
@@ -446,19 +502,54 @@ varloopfine:do l=varstart,varend
                   do j=2,jl
                     do i=2,il
                       if (l .lt. nt1) then
+                        if (.not.usetsgcl) then
 ! prime variables p(var v) / pt = d(var v)
-                        dwd(i, j, k, l) = dwd(i, j, k, l) + (dscalard(jj&
-&                         , sps, mm)*flowdoms(nn, currentlevel, mm)%vol(&
-&                         i, j, k)+dscalar(jj, sps, mm)*flowdomsd(nn, &
-&                         currentlevel, mm)%vol(i, j, k))*flowdoms(nn, &
-&                         currentlevel, mm)%w(i, j, k, l) + dscalar(jj, &
-&                         sps, mm)*flowdoms(nn, currentlevel, mm)%vol(i&
-&                         , j, k)*flowdomsd(nn, currentlevel, mm)%w(i, j&
-&                         , k, l)
-                        dw(i, j, k, l) = dw(i, j, k, l) + dscalar(jj, &
-&                         sps, mm)*flowdoms(nn, currentlevel, mm)%vol(i&
-&                         , j, k)*flowdoms(nn, currentlevel, mm)%w(i, j&
-&                         , k, l)
+                          dwd(i, j, k, l) = dwd(i, j, k, l) + (dscalard(&
+&                           jj, sps, mm)*flowdoms(nn, currentlevel, mm)%&
+&                           vol(i, j, k)+dscalar(jj, sps, mm)*flowdomsd(&
+&                           nn, currentlevel, mm)%vol(i, j, k))*flowdoms&
+&                           (nn, currentlevel, mm)%w(i, j, k, l) + &
+&                           dscalar(jj, sps, mm)*flowdoms(nn, &
+&                           currentlevel, mm)%vol(i, j, k)*flowdomsd(nn&
+&                           , currentlevel, mm)%w(i, j, k, l)
+                          dw(i, j, k, l) = dw(i, j, k, l) + dscalar(jj, &
+&                           sps, mm)*flowdoms(nn, currentlevel, mm)%vol(&
+&                           i, j, k)*flowdoms(nn, currentlevel, mm)%w(i&
+&                           , j, k, l)
+                        else
+! vd(w)
+                          dwd(i, j, k, l) = dwd(i, j, k, l) + (dscalard(&
+&                           jj, sps, mm)*flowdoms(nn, currentlevel, sps)&
+&                           %vol(i, j, k)+dscalar(jj, sps, mm)*flowdomsd&
+&                           (nn, currentlevel, sps)%vol(i, j, k))*&
+&                           flowdoms(nn, currentlevel, mm)%w(i, j, k, l)&
+&                           + dscalar(jj, sps, mm)*flowdoms(nn, &
+&                           currentlevel, sps)%vol(i, j, k)*flowdomsd(nn&
+&                           , currentlevel, mm)%w(i, j, k, l)
+                          dw(i, j, k, l) = dw(i, j, k, l) + dscalar(jj, &
+&                           sps, mm)*flowdoms(nn, currentlevel, sps)%vol&
+&                           (i, j, k)*flowdoms(nn, currentlevel, mm)%w(i&
+&                           , j, k, l)
+! wd(v)
+                          if (sps .eq. mm) then
+! compute d(v)
+                            dvdtsurf = -flowdoms(nn, currentlevel, sps)%&
+&                             sfacei(i-1, j, k) + flowdoms(nn, &
+&                             currentlevel, sps)%sfacei(i, j, k) + (-&
+&                             flowdoms(nn, currentlevel, sps)%sfacej(i, &
+&                             j-1, k)+flowdoms(nn, currentlevel, sps)%&
+&                             sfacej(i, j, k)) + (-flowdoms(nn, &
+&                             currentlevel, sps)%sfacek(i, j, k-1)+&
+&                             flowdoms(nn, currentlevel, sps)%sfacek(i, &
+&                             j, k))
+                            dwd(i, j, k, l) = dwd(i, j, k, l) + dvdtsurf&
+&                             *flowdomsd(nn, currentlevel, sps)%w(i, j, &
+&                             k, l)
+                            dw(i, j, k, l) = dw(i, j, k, l) + dvdtsurf*&
+&                             flowdoms(nn, currentlevel, sps)%w(i, j, k&
+&                             , l)
+                          end if
+                        end if
                       else
 ! turbulence vars, since it is written w/o
 ! volume, the time derivative
@@ -557,6 +648,8 @@ varloopfine:do l=varstart,varend
     integer(kind=inttype) :: mm, ll, ii, jj, i, j, k, l, m
     real(kind=realtype) :: oneoverdt, tmp
     real(kind=realtype), dimension(:, :, :, :), pointer :: ww
+! volume rate computed from surface
+    real(kind=realtype) :: dvdtsurf
 ! return immediately of no variables are in the range.
     if (varend .lt. varstart) then
       return
@@ -612,20 +705,49 @@ varloopfine:do l=varstart,varend
                 do k=2,kl
                   do j=2,jl
                     do i=2,il
+                      if (.not.usetsgcl) then
 ! store the matrix vector product with the
 ! velocity in tmp.
-                      tmp = dvector(jj, ll, ii+1)*flowdoms(nn, &
-&                       currentlevel, mm)%w(i, j, k, ivx) + dvector(jj, &
-&                       ll, ii+2)*flowdoms(nn, currentlevel, mm)%w(i, j&
-&                       , k, ivy) + dvector(jj, ll, ii+3)*flowdoms(nn, &
-&                       currentlevel, mm)%w(i, j, k, ivz)
+                        tmp = dvector(jj, ll, ii+1)*flowdoms(nn, &
+&                         currentlevel, mm)%w(i, j, k, ivx) + dvector(jj&
+&                         , ll, ii+2)*flowdoms(nn, currentlevel, mm)%w(i&
+&                         , j, k, ivy) + dvector(jj, ll, ii+3)*flowdoms(&
+&                         nn, currentlevel, mm)%w(i, j, k, ivz)
 ! update the residual. note the
 ! multiplication with the density to obtain
 ! the correct time derivative for the
 ! momentum variable.
-                      dw(i, j, k, l) = dw(i, j, k, l) + tmp*flowdoms(nn&
-&                       , currentlevel, mm)%vol(i, j, k)*flowdoms(nn, &
-&                       currentlevel, mm)%w(i, j, k, irho)
+                        dw(i, j, k, l) = dw(i, j, k, l) + tmp*flowdoms(&
+&                         nn, currentlevel, mm)%vol(i, j, k)*flowdoms(nn&
+&                         , currentlevel, mm)%w(i, j, k, irho)
+                      else
+! vd(rho w)
+                        tmp = dvector(jj, ll, ii+1)*flowdoms(nn, &
+&                         currentlevel, mm)%w(i, j, k, ivx) + dvector(jj&
+&                         , ll, ii+2)*flowdoms(nn, currentlevel, mm)%w(i&
+&                         , j, k, ivy) + dvector(jj, ll, ii+3)*flowdoms(&
+&                         nn, currentlevel, mm)%w(i, j, k, ivz)
+                        dw(i, j, k, l) = dw(i, j, k, l) + tmp*flowdoms(&
+&                         nn, currentlevel, sps)%vol(i, j, k)*flowdoms(&
+&                         nn, currentlevel, mm)%w(i, j, k, irho)
+! (rho w) d(v)
+                        if (sps .eq. mm) then
+! compute d(v)
+                          dvdtsurf = -flowdoms(nn, currentlevel, sps)%&
+&                           sfacei(i-1, j, k) + flowdoms(nn, &
+&                           currentlevel, sps)%sfacei(i, j, k) + (-&
+&                           flowdoms(nn, currentlevel, sps)%sfacej(i, j-&
+&                           1, k)+flowdoms(nn, currentlevel, sps)%sfacej&
+&                           (i, j, k)) + (-flowdoms(nn, currentlevel, &
+&                           sps)%sfacek(i, j, k-1)+flowdoms(nn, &
+&                           currentlevel, sps)%sfacek(i, j, k))
+! (rho w) d(v)
+                          dw(i, j, k, l) = dw(i, j, k, l) + dvdtsurf*&
+&                           flowdoms(nn, currentlevel, sps)%w(i, j, k, &
+&                           irho)*flowdoms(nn, currentlevel, sps)%w(i, j&
+&                           , k, l)
+                        end if
+                      end if
                     end do
                   end do
                 end do
@@ -637,11 +759,35 @@ varloopfine:do l=varstart,varend
                   do j=2,jl
                     do i=2,il
                       if (l .lt. nt1) then
+                        if (.not.usetsgcl) then
 ! prime variables p(var v) / pt = d(var v)
-                        dw(i, j, k, l) = dw(i, j, k, l) + dscalar(jj, &
-&                         sps, mm)*flowdoms(nn, currentlevel, mm)%vol(i&
-&                         , j, k)*flowdoms(nn, currentlevel, mm)%w(i, j&
-&                         , k, l)
+                          dw(i, j, k, l) = dw(i, j, k, l) + dscalar(jj, &
+&                           sps, mm)*flowdoms(nn, currentlevel, mm)%vol(&
+&                           i, j, k)*flowdoms(nn, currentlevel, mm)%w(i&
+&                           , j, k, l)
+                        else
+! vd(w)
+                          dw(i, j, k, l) = dw(i, j, k, l) + dscalar(jj, &
+&                           sps, mm)*flowdoms(nn, currentlevel, sps)%vol&
+&                           (i, j, k)*flowdoms(nn, currentlevel, mm)%w(i&
+&                           , j, k, l)
+! wd(v)
+                          if (sps .eq. mm) then
+! compute d(v)
+                            dvdtsurf = -flowdoms(nn, currentlevel, sps)%&
+&                             sfacei(i-1, j, k) + flowdoms(nn, &
+&                             currentlevel, sps)%sfacei(i, j, k) + (-&
+&                             flowdoms(nn, currentlevel, sps)%sfacej(i, &
+&                             j-1, k)+flowdoms(nn, currentlevel, sps)%&
+&                             sfacej(i, j, k)) + (-flowdoms(nn, &
+&                             currentlevel, sps)%sfacek(i, j, k-1)+&
+&                             flowdoms(nn, currentlevel, sps)%sfacek(i, &
+&                             j, k))
+                            dw(i, j, k, l) = dw(i, j, k, l) + dvdtsurf*&
+&                             flowdoms(nn, currentlevel, sps)%w(i, j, k&
+&                             , l)
+                          end if
+                        end if
                       else
 ! turbulence vars, since it is written w/o
 ! volume, the time derivative
