@@ -142,7 +142,7 @@ contains
     integer(kind=intType), dimension(:, :), allocatable :: conn
     integer(kind=intType), dimension(:), allocatable :: elemFam, cgnsBlockID
 
-    if (.not. allocated(absSlices)) then
+	if (.not. allocated(absSlices)) then
        allocate(absSlices(nSliceMax, nTimeIntervalsSpectral))
     end if
 
@@ -160,11 +160,13 @@ contains
        call getSurfaceConnectivity(conn, cgnsBlockID, sizeCell, wallList, size(wallList), .True.)
        call getSurfacePoints(pts, sizeNode, sps, wallList, size(wallList), .True.)
        call getSurfaceFamily(elemFam, sizeCell, wallList, size(wallList), .True.)
-       call createSlice(pts, conn, elemFam, absSlices(nAbsSlices, sps), pt, direction, &
+	!    call createSlice(pts, conn, elemFam, absSlices(nAbsSlices, sps), pt, direction, &
+	!    		sliceName, famList)
+	   call createSlice(pts, conn, elemFam, absSlices(1, sps), pt, direction, &
             sliceName, famList)
 
        ! Clean up memory.
-       deallocate(pts, conn, elemFam)
+       deallocate(pts, conn, elemFam, cgnsBlockID)
     end do
 
   end subroutine addAbsSlice
@@ -345,7 +347,7 @@ contains
           call mpi_bcast(nSolVar, 1, adflow_integer, 0, adflow_comm_world, ierr)
           call EChk(ierr,__FILE__,__LINE__)
 
-
+		  
           ! Slices are created on walls and walls only. Retrieve the
           ! points, connectivity and familyID of all the walls.
           wallList =>  BCFamGroups(iBCGroupWalls)%famList
@@ -365,31 +367,34 @@ contains
              call destroySlice(globalSlice)
           end do
 
-          do i=1, nAbsSlices
+		!   do i=1, nAbsSlices
+          do i=1, 1
              ! 'Destroy' the slice...just dealloc the allocated data.
-             ! before we do, save the family list
-             allocate(famList(size(absSlices(i, sps)%famList)))
-             famList = absSlices(i, sps)%famList
-             call destroySlice(absSlices(i, sps))
-
+			 ! before we do, save the family list
+			 allocate(famList(size(absSlices(i, sps)%famList)))
+			 famList = absSlices(i, sps)%famList
+			 call destroySlice(absSlices(i, sps))
+			 
              ! Make new one in the same location
              call createSlice(pts, conn, elemFam, absSlices(i, sps), &
                   absSlices(i, sps)%pt, absSlices(i, sps)%dir, &
-                  absSlices(i, sps)%sliceName, famList)
-
+				  absSlices(i, sps)%sliceName, famList)
+				  
              call integrateSlice(absSlices(i, sps), globalSlice, &
                   nodalValues(:, :, sps), nSolVar, .True.)
              if (myid == 0) then
                 call writeSlice(globalSlice, file, nSolVar)
-             end if
+			 end if
              call destroySlice(globalSlice)
              deallocate(famList)
-          end do
-
+		  end do
+		  
           !Close file on root proc
           if (myid == 0) then
              close(file)
-          end if
+		  end if
+		  
+		  deallocate(pts, conn, elemFam, cgnsBlockID)
        end do
 
        if(myID == 0 .and. printIterations) then
