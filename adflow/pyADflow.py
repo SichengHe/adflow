@@ -4523,7 +4523,7 @@ class ADFLOW(AeroSolver):
                             if self.use_airfoil: # airfoil case HACK
                                 xs0bar = self.surfaceTransfer.setXS_b(xsbar)
                             else: # wing case HACK
-                                cfdPts0 = self.getInitialSurfaceCoordinates()
+                                cfdPts0 = self.getInitialSurfaceCoordinates(HSCflag = False)
                                 xs0bar = self.surfaceTransfer.setXS_b(cfdPts0, xsbar)
 
                             xdvbar.update(
@@ -4552,6 +4552,7 @@ class ADFLOW(AeroSolver):
                 # Include aero derivatives here:
                 xdvbar.update(self._processAeroDerivatives(extrabar, bcdatavaluesbar))
                 returns.append(xdvbar)
+                # print("kakasss2, pts", self.getSurfaceCoordinates(groupName=None, includeZipper=False, TS=1))
 
         # Include the aerodynamic variables if requested to do so and
         # we haven't already done so with xDvDeriv:
@@ -4559,6 +4560,7 @@ class ADFLOW(AeroSolver):
             xdvaerobar = {}
             xdvaerobar.update(self._processAeroDerivatives(extrabar, bcdatavaluesbar))
             returns.append(xdvaerobar)
+        # print("kakasss3, pts", self.getSurfaceCoordinates(groupName=None, includeZipper=False, TS=1))
 
         # Single return (most frequent) is 'clean', otherwise a tuple.
         return tuple(returns) if len(returns) > 1 else returns[0]
