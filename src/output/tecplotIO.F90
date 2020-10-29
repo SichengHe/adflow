@@ -91,9 +91,9 @@ contains
     end if
 
     ! We have to add a slice for each spectral instance.
+    nParaSlices = nParaSlices + 1
     do sps=1, nTimeIntervalsSpectral
-       nParaSlices = nParaSlices + 1
-
+       
        if (nParaSlices > nSliceMax) then
           print *,'Error: Exceeded the maximum number of slices. Increase nSliceMax'
           stop
@@ -113,7 +113,7 @@ contains
             sliceName, famList)
 
        ! Clean up memory.
-       deallocate(pts, conn, elemFam)
+       deallocate(pts, conn, elemFam, cgnsBlockID)
     end do
 
   end subroutine addParaSlice
@@ -146,9 +146,9 @@ contains
        allocate(absSlices(nSliceMax, nTimeIntervalsSpectral))
     end if
 
+    nAbsSlices = nAbsSlices + 1
     do sps=1, nTimeIntervalsSpectral
-       nAbsSlices = nAbsSlices + 1
-
+       
        if (nAbsSlices > nSliceMax) then
           print *,'Error: Exceeded the maximum number of slices. Increase nSliceMax'
           stop
@@ -160,10 +160,10 @@ contains
        call getSurfaceConnectivity(conn, cgnsBlockID, sizeCell, wallList, size(wallList), .True.)
        call getSurfacePoints(pts, sizeNode, sps, wallList, size(wallList), .True.)
        call getSurfaceFamily(elemFam, sizeCell, wallList, size(wallList), .True.)
-	!    call createSlice(pts, conn, elemFam, absSlices(nAbsSlices, sps), pt, direction, &
-	!    		sliceName, famList)
-	   call createSlice(pts, conn, elemFam, absSlices(1, sps), pt, direction, &
-            sliceName, famList)
+	    call createSlice(pts, conn, elemFam, absSlices(nAbsSlices, sps), pt, direction, &
+	   		sliceName, famList) !
+	   ! call createSlice(pts, conn, elemFam, absSlices(1, sps), pt, direction, &
+      !       sliceName, famList)
 
        ! Clean up memory.
        deallocate(pts, conn, elemFam, cgnsBlockID)
@@ -366,9 +366,8 @@ contains
              end if
              call destroySlice(globalSlice)
           end do
-
-		!   do i=1, nAbsSlices
-          do i=1, 1
+		  do i=1, nAbsSlices
+         !  do i=1, 1
              ! 'Destroy' the slice...just dealloc the allocated data.
 			 ! before we do, save the family list
 			 allocate(famList(size(absSlices(i, sps)%famList)))
