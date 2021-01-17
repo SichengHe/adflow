@@ -29,7 +29,7 @@ setup(name='adflow',
       },
       install_requires=[
             'numpy>=1.16',
-            'mdolab-baseclasses>=1.3',
+            'mdolab-baseclasses>=1.2',
             'mpi4py>=3.0',
             'petsc4py>=3.11',
 
