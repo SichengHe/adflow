@@ -163,7 +163,7 @@ class ADFLOW(AeroSolver):
 
         defSetupTime = time.time()
 
-        AeroSolver.__init__(self, name, category, defOpts, informs,
+        AeroSolver.__init__(self, name, category, defaultOptions=defOpts, informs=informs,
                             options=options)
 
         baseClassTime = time.time()
