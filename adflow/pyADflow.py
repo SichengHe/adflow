@@ -144,13 +144,12 @@ class ADFLOW(AeroSolver):
         if comm is None:
             comm = MPI.COMM_WORLD
 
-        self.comm = comm
-        self.adflow.communication.adflow_comm_world = self.comm.py2f()
+        self.adflow.communication.adflow_comm_world = comm.py2f()
         self.adflow.communication.adflow_comm_self = MPI.COMM_SELF.py2f()
-        self.adflow.communication.sendrequests = numpy.zeros(self.comm.size)
-        self.adflow.communication.recvrequests = numpy.zeros(self.comm.size)
-        self.myid = self.adflow.communication.myid = self.comm.rank
-        self.adflow.communication.nproc = self.comm.size
+        self.adflow.communication.sendrequests = numpy.zeros(comm.size)
+        self.adflow.communication.recvrequests = numpy.zeros(comm.size)
+        self.myid = self.adflow.communication.myid = comm.rank
+        self.adflow.communication.nproc = comm.size
 
         # Initialize the inherited aerosolver.
         if options is None:
@@ -163,8 +162,8 @@ class ADFLOW(AeroSolver):
 
         defSetupTime = time.time()
 
-        AeroSolver.__init__(self, name, category, defaultOptions=defOpts, informs=informs,
-                            options=options)
+        AeroSolver.__init__(self, name, category, defaultOptions=defOpts,
+                            options=options, comm=comm, informs=informs)
 
         baseClassTime = time.time()
         # Update turbresscale depending on the turbulence model specified
