@@ -38,11 +38,19 @@
 
        end type sectionType
 
+       type sectionType_d
+         real(kind=realType) :: timePeriod
+       end type sectionType_d
+
        ! nSections:           Number of different sections in the grid.
        ! sections(nSections): The info of the corresponding sections.
 
        integer(kind=intType) :: nSections
 
        type(sectionType), dimension(:), allocatable :: sections
+
+#ifndef USE_TAPENADE
+       type(sectionType_d), dimension(:), allocatable :: sectionsd
+#endif
 
        end module section
