@@ -445,17 +445,38 @@ varloopfine:do l=varstart,varend
                 do k=2,kl
                   do j=2,jl
                     do i=2,il
-                      dwd(i, j, k, l) = dwd(i, j, k, l) + (dscalard(jj, &
-&                       sps, mm)*flowdoms(nn, currentlevel, mm)%vol(i, j&
-&                       , k)+dscalar(jj, sps, mm)*flowdomsd(nn, &
-&                       currentlevel, mm)%vol(i, j, k))*flowdoms(nn, &
-&                       currentlevel, mm)%w(i, j, k, l) + dscalar(jj, &
-&                       sps, mm)*flowdoms(nn, currentlevel, mm)%vol(i, j&
-&                       , k)*flowdomsd(nn, currentlevel, mm)%w(i, j, k, &
-&                       l)
-                      dw(i, j, k, l) = dw(i, j, k, l) + dscalar(jj, sps&
-&                       , mm)*flowdoms(nn, currentlevel, mm)%vol(i, j, k&
-&                       )*flowdoms(nn, currentlevel, mm)%w(i, j, k, l)
+                      if (l .lt. nt1) then
+! prime variables p(var v) / pt = d(var v)
+                        dwd(i, j, k, l) = dwd(i, j, k, l) + (dscalard(jj&
+&                         , sps, mm)*flowdoms(nn, currentlevel, mm)%vol(&
+&                         i, j, k)+dscalar(jj, sps, mm)*flowdomsd(nn, &
+&                         currentlevel, mm)%vol(i, j, k))*flowdoms(nn, &
+&                         currentlevel, mm)%w(i, j, k, l) + dscalar(jj, &
+&                         sps, mm)*flowdoms(nn, currentlevel, mm)%vol(i&
+&                         , j, k)*flowdomsd(nn, currentlevel, mm)%w(i, j&
+&                         , k, l)
+                        dw(i, j, k, l) = dw(i, j, k, l) + dscalar(jj, &
+&                         sps, mm)*flowdoms(nn, currentlevel, mm)%vol(i&
+&                         , j, k)*flowdoms(nn, currentlevel, mm)%w(i, j&
+&                         , k, l)
+                      else
+! turbulence vars, since it is written w/o
+! volume, the time derivative
+! (1/v)*p(v var)/ pt = d(var) + 1/v (dv) var
+                        dwd(i, j, k, l) = dwd(i, j, k, l) + dscalard(jj&
+&                         , sps, mm)*flowdoms(nn, currentlevel, mm)%w(i&
+&                         , j, k, l) + dscalar(jj, sps, mm)*flowdomsd(nn&
+&                         , currentlevel, mm)%w(i, j, k, l) + w(i, j, k&
+&                         , l)*(dscalard(jj, sps, mm)*flowdoms(nn, &
+&                         currentlevel, mm)%vol(i, j, k)+dscalar(jj, sps&
+&                         , mm)*flowdomsd(nn, currentlevel, mm)%vol(i, j&
+&                         , k))/vol(i, j, k)
+                        dw(i, j, k, l) = dw(i, j, k, l) + dscalar(jj, &
+&                         sps, mm)*flowdoms(nn, currentlevel, mm)%w(i, j&
+&                         , k, l) + dscalar(jj, sps, mm)*w(i, j, k, l)*&
+&                         flowdoms(nn, currentlevel, mm)%vol(i, j, k)/&
+&                         vol(i, j, k)
+                      end if
                     end do
                   end do
                 end do
@@ -464,17 +485,6 @@ varloopfine:do l=varstart,varend
           end do timeloopfine
         end if
       end select
-! if (nn == 1) then
-!    if (sps == 1) then
-!       if (k == 6) then
-!          if (j == 3) then
-!             if (i == 2) then
-!                print*, "pm: vol", flowdoms(nn,currentlevel,mm)%vol(i,j,k)
-!             end if
-!          end if
-!       end if
-!    end if
-! end if
 !  if (nn == 1) then
 !    if (sps == 1) then
 !       write(99,*), dw ! hack
@@ -626,9 +636,22 @@ varloopfine:do l=varstart,varend
                 do k=2,kl
                   do j=2,jl
                     do i=2,il
-                      dw(i, j, k, l) = dw(i, j, k, l) + dscalar(jj, sps&
-&                       , mm)*flowdoms(nn, currentlevel, mm)%vol(i, j, k&
-&                       )*flowdoms(nn, currentlevel, mm)%w(i, j, k, l)
+                      if (l .lt. nt1) then
+! prime variables p(var v) / pt = d(var v)
+                        dw(i, j, k, l) = dw(i, j, k, l) + dscalar(jj, &
+&                         sps, mm)*flowdoms(nn, currentlevel, mm)%vol(i&
+&                         , j, k)*flowdoms(nn, currentlevel, mm)%w(i, j&
+&                         , k, l)
+                      else
+! turbulence vars, since it is written w/o
+! volume, the time derivative
+! (1/v)*p(v var)/ pt = d(var) + 1/v (dv) var
+                        dw(i, j, k, l) = dw(i, j, k, l) + dscalar(jj, &
+&                         sps, mm)*flowdoms(nn, currentlevel, mm)%w(i, j&
+&                         , k, l) + dscalar(jj, sps, mm)*w(i, j, k, l)*&
+&                         flowdoms(nn, currentlevel, mm)%vol(i, j, k)/&
+&                         vol(i, j, k)
+                      end if
                     end do
                   end do
                 end do
@@ -637,17 +660,6 @@ varloopfine:do l=varstart,varend
           end do timeloopfine
         end if
       end select
-! if (nn == 1) then
-!    if (sps == 1) then
-!       if (k == 6) then
-!          if (j == 3) then
-!             if (i == 2) then
-!                print*, "pm: vol", flowdoms(nn,currentlevel,mm)%vol(i,j,k)
-!             end if
-!          end if
-!       end if
-!    end if
-! end if
 !  if (nn == 1) then
 !    if (sps == 1) then
 !       write(99,*), dw ! hack

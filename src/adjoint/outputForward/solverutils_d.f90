@@ -1439,6 +1439,94 @@ loopdirection:do mm=1,3
       end if
     end if
   end subroutine gridvelocitiesfinelevel_block
+  subroutine slipvelocitiesfinelevel_ts_block(nn, sps)
+!
+!       compute the surface slip velocity for rans (larminar/turbulent) wall bc's.
+!       this is required since 5 bc's are required for rans walls: p, e, and velocities (non-slip).
+!       besides aforementioned values, for turbulent equations, additional bc applied to mut.
+!       in this function, we compute the rans wall velocity, which is used later to enforce non-slip velocity bc's. 
+!       this part is used for time-spectral only. (the counter part for steady/unsteady is named as:
+!       "slipvelocitiesfinelevel_block".)
+!
+    use constants
+    use blockpointers
+    use inputphysics, only : machgrid, veldirfreestream
+    use flowvarrefstate, only : gammainf, pinf, rhoinf
+    use inputtimespectral, only : dscalar, ntimeintervalsspectral
+    use iteration, only : groundlevel
+    implicit none
+!      local variables
+    integer(kind=inttype), intent(in) :: nn, sps
+! index variables
+    integer :: i, j, mm, sps_loc
+    real(kind=realtype), dimension(3) :: xc
+! sound speed
+    real(kind=realtype) :: ainf
+! infinite speed
+    real(kind=realtype) :: velxgrid, velygrid, velzgrid
+    integer(kind=inttype) :: bcfaceid_loc
+    real(kind=realtype), dimension(:, :, :), pointer :: uslip
+    real(kind=realtype), dimension(:, :, :), pointer :: xface
+    intrinsic sqrt
+    real(kind=realtype) :: arg1
+! velocity is decomposed into two components: (1). main stream velocity and (2). the grid deformation induced velocity
+! (1). main stream velocity
+    arg1 = gammainf*pinf/rhoinf
+    ainf = sqrt(arg1)
+    velxgrid = ainf*machgrid*(-veldirfreestream(1))
+    velygrid = ainf*machgrid*(-veldirfreestream(2))
+    velzgrid = ainf*machgrid*(-veldirfreestream(3))
+! (2). grid motion induced velocity
+bocoloop:do mm=1,nviscbocos
+! set the pointer for uslip to make the code more
+! readable.
+      uslip => flowdoms(nn, 1, sps)%bcdata(mm)%uslip
+      bcfaceid_loc = flowdoms(nn, 1, 1)%bcfaceid(mm)
+      do j=flowdoms(nn, 1, sps)%bcdata(mm)%jcbeg,flowdoms(nn, 1, sps)%&
+&         bcdata(mm)%jcend
+        do i=flowdoms(nn, 1, sps)%bcdata(mm)%icbeg,flowdoms(nn, 1, sps)%&
+&           bcdata(mm)%icend
+! add the mainstream velocity
+          uslip(i, j, 1) = velxgrid
+          uslip(i, j, 2) = velygrid
+          uslip(i, j, 3) = velzgrid
+          do sps_loc=1,ntimeintervalsspectral
+! determine the grid face on which the subface is located
+! and set some variables accordingly.
+            select case  (bcfaceid_loc) 
+            case (imin) 
+              xface => flowdoms(nn, 1, sps_loc)%x(1, :, :, :)
+            case (imax) 
+              xface => flowdoms(nn, 1, sps_loc)%x(il, :, :, :)
+            case (jmin) 
+              xface => flowdoms(nn, 1, sps_loc)%x(:, 1, :, :)
+            case (jmax) 
+              xface => flowdoms(nn, 1, sps_loc)%x(:, jl, :, :)
+            case (kmin) 
+              xface => flowdoms(nn, 1, sps_loc)%x(:, :, 1, :)
+            case (kmax) 
+              xface => flowdoms(nn, 1, sps_loc)%x(:, :, kl, :)
+            end select
+! determine the coordinates of the centroid of the
+! face.
+            xc(1) = fourth*(xface(i+1, j+1, 1)+xface(i+1, j, 1)+xface(i&
+&             , j+1, 1)+xface(i, j, 1))
+            xc(2) = fourth*(xface(i+1, j+1, 2)+xface(i+1, j, 2)+xface(i&
+&             , j+1, 2)+xface(i, j, 2))
+            xc(3) = fourth*(xface(i+1, j+1, 3)+xface(i+1, j, 3)+xface(i&
+&             , j+1, 3)+xface(i, j, 3))
+! spectral differentiation
+            uslip(i, j, 1) = uslip(i, j, 1) + dscalar(1, sps, sps_loc)*&
+&             xc(1)
+            uslip(i, j, 2) = uslip(i, j, 2) + dscalar(1, sps, sps_loc)*&
+&             xc(2)
+            uslip(i, j, 3) = uslip(i, j, 3) + dscalar(1, sps, sps_loc)*&
+&             xc(3)
+          end do
+        end do
+      end do
+    end do bocoloop
+  end subroutine slipvelocitiesfinelevel_ts_block
   subroutine slipvelocitiesfinelevel_block(useoldcoor, t, sps)
 !
 !       slipvelocitiesfinelevel computes the slip velocities for
