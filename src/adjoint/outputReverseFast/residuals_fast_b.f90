@@ -687,7 +687,7 @@ varloopfine:do l=varstart,varend
     use constants
     use actuatorregiondata
     use blockpointers, only : volref, dw, dwd, w, wd
-    use flowvarrefstate, only : pref, uref, lref
+    use flowvarrefstate, only : pref, uref
     use communication
     use iteration, only : ordersconverged
     implicit none
@@ -697,8 +697,8 @@ varloopfine:do l=varstart,varend
     real(kind=realtype), intent(inout) :: plocal
 ! working
     integer(kind=inttype) :: i, j, k, ii, istart, iend
-    real(kind=realtype) :: ftmp(3), vx, vy, vz, f_fact(3), q_fact, qtmp&
-&   , redim, factor, ostart, oend
+    real(kind=realtype) :: ftmp(3), vx, vy, vz, fact(3), redim, factor, &
+&   ostart, oend
     real(kind=realtype) :: vxd, vyd, vzd
 ! compute the relaxation factor based on the ordersconverged
 ! how far we are into the ramp:
@@ -714,9 +714,8 @@ varloopfine:do l=varstart,varend
       factor = (ordersconverged-ostart)/(oend-ostart)
     end if
 ! compute the constant force factor
-    f_fact = factor*actuatorregions(iregion)%force/actuatorregions(&
-&     iregion)%volume/pref
-! heat factor. this is heat added per unit volume per unit time
+    fact = factor*actuatorregions(iregion)%f/actuatorregions(iregion)%&
+&     volume/pref
 ! loop over the ranges for this block
     istart = actuatorregions(iregion)%blkptr(nn-1) + 1
     iend = actuatorregions(iregion)%blkptr(nn)
@@ -726,8 +725,7 @@ varloopfine:do l=varstart,varend
       j = actuatorregions(iregion)%cellids(2, ii)
       k = actuatorregions(iregion)%cellids(3, ii)
 ! this actually gets the force
-      ftmp = volref(i, j, k)*f_fact
-! this gets the heat addition rate
+      ftmp = volref(i, j, k)*fact
       if (res) then
         vxd = -(ftmp(1)*dwd(i, j, k, irhoe))
         vyd = -(ftmp(2)*dwd(i, j, k, irhoe))
@@ -748,7 +746,7 @@ varloopfine:do l=varstart,varend
     use constants
     use actuatorregiondata
     use blockpointers, only : volref, dw, w
-    use flowvarrefstate, only : pref, uref, lref
+    use flowvarrefstate, only : pref, uref
     use communication
     use iteration, only : ordersconverged
     implicit none
@@ -758,8 +756,8 @@ varloopfine:do l=varstart,varend
     real(kind=realtype), intent(inout) :: plocal
 ! working
     integer(kind=inttype) :: i, j, k, ii, istart, iend
-    real(kind=realtype) :: ftmp(3), vx, vy, vz, f_fact(3), q_fact, qtmp&
-&   , redim, factor, ostart, oend
+    real(kind=realtype) :: ftmp(3), vx, vy, vz, fact(3), redim, factor, &
+&   ostart, oend
     redim = pref*uref
 ! compute the relaxation factor based on the ordersconverged
 ! how far we are into the ramp:
@@ -775,11 +773,8 @@ varloopfine:do l=varstart,varend
       factor = (ordersconverged-ostart)/(oend-ostart)
     end if
 ! compute the constant force factor
-    f_fact = factor*actuatorregions(iregion)%force/actuatorregions(&
-&     iregion)%volume/pref
-! heat factor. this is heat added per unit volume per unit time
-    q_fact = factor*actuatorregions(iregion)%heat/actuatorregions(&
-&     iregion)%volume/(pref*uref*lref*lref)
+    fact = factor*actuatorregions(iregion)%f/actuatorregions(iregion)%&
+&     volume/pref
 ! loop over the ranges for this block
     istart = actuatorregions(iregion)%blkptr(nn-1) + 1
     iend = actuatorregions(iregion)%blkptr(nn)
@@ -789,18 +784,16 @@ varloopfine:do l=varstart,varend
       j = actuatorregions(iregion)%cellids(2, ii)
       k = actuatorregions(iregion)%cellids(3, ii)
 ! this actually gets the force
-      ftmp = volref(i, j, k)*f_fact
+      ftmp = volref(i, j, k)*fact
       vx = w(i, j, k, ivx)
       vy = w(i, j, k, ivy)
       vz = w(i, j, k, ivz)
-! this gets the heat addition rate
-      qtmp = volref(i, j, k)*q_fact
       if (res) then
 ! momentum residuals
         dw(i, j, k, imx:imz) = dw(i, j, k, imx:imz) - ftmp
 ! energy residuals
         dw(i, j, k, irhoe) = dw(i, j, k, irhoe) - ftmp(1)*vx - ftmp(2)*&
-&         vy - ftmp(3)*vz - qtmp
+&         vy - ftmp(3)*vz
       else
 ! add in the local power contribution:
         plocal = plocal + (vx*ftmp(1)+vy*ftmp(2)+vz*ftmp(3))*redim

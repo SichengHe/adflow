@@ -623,30 +623,24 @@ contains
   subroutine gridvelocitiesfinelevel_ts_block_b(nn, sps)
     use precision
     use constants
-!, only: ndom, ie, je, ke, x, s, sfacei, si, sfacej, sj, sfacek, sk
     use blockpointers
     use inputphysics, only : machgrid, veldirfreestream, &
 &   veldirfreestreamd
     use flowvarrefstate, only : gammainf, pinf, pinfd, rhoinf, rhoinfd
-!use partitioning, only: timeperiodspectral
     use inputtimespectral, only : dscalar, dscalard, &
 &   ntimeintervalsspectral
     implicit none
-!      local variables
     integer(kind=inttype), intent(in) :: nn, sps
-! index variables
     integer :: i, j, k, mm, ii, ie_l, je_l, ke_l
-! cell volume center coords
     real(kind=realtype) :: x_vc, y_vc, z_vc
     real(kind=realtype) :: x_vcd, y_vcd, z_vcd
-! cell face center coords
     real(kind=realtype) :: x_fc, y_fc, z_fc
     real(kind=realtype) :: x_fcd, y_fcd, z_fcd
-! sound speed
     real(kind=realtype) :: ainf
-! infinite speed
-    real(kind=realtype) :: velxgrid, velygrid, velzgrid
-    real(kind=realtype) :: velxgridd, velygridd, velzgridd
+    real(kind=realtype) :: velxfreestream, velyfreestream, &
+&   velzfreestream
+    real(kind=realtype) :: velxfreestreamd, velyfreestreamd, &
+&   velzfreestreamd
     intrinsic sqrt
     integer :: ad_to
     integer :: ad_to0
@@ -695,19 +689,11 @@ contains
     real(kind=realtype) :: tempd15
 ! get the grid free stream velocity
     ainf = sqrt(gammainf*pinf/rhoinf)
-    velxgrid = ainf*machgrid*(-veldirfreestream(1))
-    velygrid = ainf*machgrid*(-veldirfreestream(2))
-    velzgrid = ainf*machgrid*(-veldirfreestream(3))
-! get the temporal info (t ect.)
-!call timeperiodspectral
-!
-!            ************************************************************
-!            *                                                          *
-!            * grid velocities of the cell centers, including the       *
-!            * 1st level halo cells.                                    *
-!            *                                                          *
-!            ************************************************************
-!
+    velxfreestream = ainf*machgrid*(-veldirfreestream(1))
+    velyfreestream = ainf*machgrid*(-veldirfreestream(2))
+    velzfreestream = ainf*machgrid*(-veldirfreestream(3))
+! grid velocities of the cell centers, including the
+! 1st level halo cells.
 ! initialize with free stream velocity
     ie_l = flowdoms(nn, 1, sps)%ie
     je_l = flowdoms(nn, 1, sps)%je
@@ -756,15 +742,11 @@ contains
       end do
       call pushinteger4(k - 1)
     end do
-!
-!            ************************************************************
-!            *                                                          *
-!            * normal grid velocities of the faces.                     *
-!            *                                                          *
-!            ************************************************************
-!
-! sfacei=	dot(si, v)=dot(si, v_freestream + v_grid)=dot(si, v_freestream) + dot(si, v_grid)
-! sfacej, sfacek same rule!
+! normal grid velocities of the faces.
+! sfacei=	dot(si, v)
+! =dot(si, v_freestream + v_meshmotion)
+! =dot(si, v_freestream) + dot(si, v_meshmotion)
+! sfacej, sfacek follow the same rule.
 ! dot(si, v_freestream)
     ie_l = flowdoms(nn, 1, sps)%ie
     je_l = flowdoms(nn, 1, sps)%je
@@ -796,9 +778,7 @@ contains
       call pushinteger4(j - 1)
     end do
     call pushinteger4(k - 1)
-!  dot(si, v_grid)
-! loop over inner cells (also 1st layer halo of 3 surfs si, sj and sk are handled here, the left will be handled in the next sect
-!ion)
+!  dot(si, v_meshmotion)
     do mm=1,ntimeintervalsspectral
       ie_l = flowdoms(nn, 1, mm)%ie
       je_l = flowdoms(nn, 1, mm)%je
@@ -1031,21 +1011,27 @@ contains
         end do
       end do
     end do
-    velygridd = 0.0_8
-    velzgridd = 0.0_8
-    velxgridd = 0.0_8
+    velyfreestreamd = 0.0_8
+    velzfreestreamd = 0.0_8
+    velxfreestreamd = 0.0_8
     call popinteger4(ad_to13)
     do k=ad_to13,0,-1
       call popinteger4(ad_to12)
       do j=ad_to12,1,-1
         call popinteger4(ad_to11)
         do i=ad_to11,1,-1
-          velxgridd = velxgridd + sk(i, j, k, 1)*sfacekd(i, j, k)
-          skd(i, j, k, 1) = skd(i, j, k, 1) + velxgrid*sfacekd(i, j, k)
-          velygridd = velygridd + sk(i, j, k, 2)*sfacekd(i, j, k)
-          skd(i, j, k, 2) = skd(i, j, k, 2) + velygrid*sfacekd(i, j, k)
-          velzgridd = velzgridd + sk(i, j, k, 3)*sfacekd(i, j, k)
-          skd(i, j, k, 3) = skd(i, j, k, 3) + velzgrid*sfacekd(i, j, k)
+          velxfreestreamd = velxfreestreamd + sk(i, j, k, 1)*sfacekd(i, &
+&           j, k)
+          skd(i, j, k, 1) = skd(i, j, k, 1) + velxfreestream*sfacekd(i, &
+&           j, k)
+          velyfreestreamd = velyfreestreamd + sk(i, j, k, 2)*sfacekd(i, &
+&           j, k)
+          skd(i, j, k, 2) = skd(i, j, k, 2) + velyfreestream*sfacekd(i, &
+&           j, k)
+          velzfreestreamd = velzfreestreamd + sk(i, j, k, 3)*sfacekd(i, &
+&           j, k)
+          skd(i, j, k, 3) = skd(i, j, k, 3) + velzfreestream*sfacekd(i, &
+&           j, k)
           sfacekd(i, j, k) = 0.0_8
         end do
       end do
@@ -1056,12 +1042,18 @@ contains
       do j=ad_to9,0,-1
         call popinteger4(ad_to8)
         do i=ad_to8,1,-1
-          velxgridd = velxgridd + sj(i, j, k, 1)*sfacejd(i, j, k)
-          sjd(i, j, k, 1) = sjd(i, j, k, 1) + velxgrid*sfacejd(i, j, k)
-          velygridd = velygridd + sj(i, j, k, 2)*sfacejd(i, j, k)
-          sjd(i, j, k, 2) = sjd(i, j, k, 2) + velygrid*sfacejd(i, j, k)
-          velzgridd = velzgridd + sj(i, j, k, 3)*sfacejd(i, j, k)
-          sjd(i, j, k, 3) = sjd(i, j, k, 3) + velzgrid*sfacejd(i, j, k)
+          velxfreestreamd = velxfreestreamd + sj(i, j, k, 1)*sfacejd(i, &
+&           j, k)
+          sjd(i, j, k, 1) = sjd(i, j, k, 1) + velxfreestream*sfacejd(i, &
+&           j, k)
+          velyfreestreamd = velyfreestreamd + sj(i, j, k, 2)*sfacejd(i, &
+&           j, k)
+          sjd(i, j, k, 2) = sjd(i, j, k, 2) + velyfreestream*sfacejd(i, &
+&           j, k)
+          velzfreestreamd = velzfreestreamd + sj(i, j, k, 3)*sfacejd(i, &
+&           j, k)
+          sjd(i, j, k, 3) = sjd(i, j, k, 3) + velzfreestream*sfacejd(i, &
+&           j, k)
           sfacejd(i, j, k) = 0.0_8
         end do
       end do
@@ -1072,12 +1064,18 @@ contains
       do j=ad_to6,1,-1
         call popinteger4(ad_to5)
         do i=ad_to5,0,-1
-          velxgridd = velxgridd + si(i, j, k, 1)*sfaceid(i, j, k)
-          sid(i, j, k, 1) = sid(i, j, k, 1) + velxgrid*sfaceid(i, j, k)
-          velygridd = velygridd + si(i, j, k, 2)*sfaceid(i, j, k)
-          sid(i, j, k, 2) = sid(i, j, k, 2) + velygrid*sfaceid(i, j, k)
-          velzgridd = velzgridd + si(i, j, k, 3)*sfaceid(i, j, k)
-          sid(i, j, k, 3) = sid(i, j, k, 3) + velzgrid*sfaceid(i, j, k)
+          velxfreestreamd = velxfreestreamd + si(i, j, k, 1)*sfaceid(i, &
+&           j, k)
+          sid(i, j, k, 1) = sid(i, j, k, 1) + velxfreestream*sfaceid(i, &
+&           j, k)
+          velyfreestreamd = velyfreestreamd + si(i, j, k, 2)*sfaceid(i, &
+&           j, k)
+          sid(i, j, k, 2) = sid(i, j, k, 2) + velyfreestream*sfaceid(i, &
+&           j, k)
+          velzfreestreamd = velzfreestreamd + si(i, j, k, 3)*sfaceid(i, &
+&           j, k)
+          sid(i, j, k, 3) = sid(i, j, k, 3) + velzfreestream*sfaceid(i, &
+&           j, k)
           sfaceid(i, j, k) = 0.0_8
         end do
       end do
@@ -1162,21 +1160,21 @@ contains
       do j=ad_to0,1,-1
         call popinteger4(ad_to)
         do i=ad_to,1,-1
-          velzgridd = velzgridd + sd(i, j, k, 3)
+          velzfreestreamd = velzfreestreamd + sd(i, j, k, 3)
           sd(i, j, k, 3) = 0.0_8
-          velygridd = velygridd + sd(i, j, k, 2)
+          velyfreestreamd = velyfreestreamd + sd(i, j, k, 2)
           sd(i, j, k, 2) = 0.0_8
-          velxgridd = velxgridd + sd(i, j, k, 1)
+          velxfreestreamd = velxfreestreamd + sd(i, j, k, 1)
           sd(i, j, k, 1) = 0.0_8
         end do
       end do
     end do
     veldirfreestreamd(3) = veldirfreestreamd(3) - ainf*machgrid*&
-&     velzgridd
+&     velzfreestreamd
     veldirfreestreamd(2) = veldirfreestreamd(2) - ainf*machgrid*&
-&     velygridd
+&     velyfreestreamd
     veldirfreestreamd(1) = veldirfreestreamd(1) - ainf*machgrid*&
-&     velxgridd
+&     velxfreestreamd
   end subroutine gridvelocitiesfinelevel_ts_block_b
   subroutine gridvelocitiesfinelevel_ts_block(nn, sps)
     use precision

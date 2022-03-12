@@ -872,6 +872,9 @@ nadvloopspectral:do ii=1,nadv
 !
     use constants
     use blockpointers, only : nx, ny, nz, il, jl, kl, vol, vold, &
+&   sfacei, sfaceid, sfacej, sfacejd, sfacek, sfacekd, w, wd, si, sid, &
+&   sj, sjd, sk, skd, addgridvelocities, bmti1, bmti2, bmtj1, bmtj2, &
+&   bmtk1, bmtk2, scratch, scratchd
     use inputdiscretization, only : orderturb
     use iteration, only : groundlevel
     use turbmod, only : secondord

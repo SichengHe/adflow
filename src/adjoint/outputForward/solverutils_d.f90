@@ -539,51 +539,37 @@ contains
   subroutine gridvelocitiesfinelevel_ts_block_d(nn, sps)
     use precision
     use constants
-!, only: ndom, ie, je, ke, x, s, sfacei, si, sfacej, sj, sfacek, sk
     use blockpointers
     use inputphysics, only : machgrid, veldirfreestream, &
 &   veldirfreestreamd
     use flowvarrefstate, only : gammainf, pinf, pinfd, rhoinf, rhoinfd
-!use partitioning, only: timeperiodspectral
     use inputtimespectral, only : dscalar, dscalard, &
 &   ntimeintervalsspectral
     implicit none
-!      local variables
     integer(kind=inttype), intent(in) :: nn, sps
-! index variables
     integer :: i, j, k, mm, ii, ie_l, je_l, ke_l
-! cell volume center coords
     real(kind=realtype) :: x_vc, y_vc, z_vc
     real(kind=realtype) :: x_vcd, y_vcd, z_vcd
-! cell face center coords
     real(kind=realtype) :: x_fc, y_fc, z_fc
     real(kind=realtype) :: x_fcd, y_fcd, z_fcd
-! sound speed
     real(kind=realtype) :: ainf
-! infinite speed
-    real(kind=realtype) :: velxgrid, velygrid, velzgrid
-    real(kind=realtype) :: velxgridd, velygridd, velzgridd
+    real(kind=realtype) :: velxfreestream, velyfreestream, &
+&   velzfreestream
+    real(kind=realtype) :: velxfreestreamd, velyfreestreamd, &
+&   velzfreestreamd
     intrinsic sqrt
     real(kind=realtype) :: arg1
 ! get the grid free stream velocity
     arg1 = gammainf*pinf/rhoinf
     ainf = sqrt(arg1)
-    velxgridd = -(ainf*machgrid*veldirfreestreamd(1))
-    velxgrid = ainf*machgrid*(-veldirfreestream(1))
-    velygridd = -(ainf*machgrid*veldirfreestreamd(2))
-    velygrid = ainf*machgrid*(-veldirfreestream(2))
-    velzgridd = -(ainf*machgrid*veldirfreestreamd(3))
-    velzgrid = ainf*machgrid*(-veldirfreestream(3))
-! get the temporal info (t ect.)
-!call timeperiodspectral
-!
-!            ************************************************************
-!            *                                                          *
-!            * grid velocities of the cell centers, including the       *
-!            * 1st level halo cells.                                    *
-!            *                                                          *
-!            ************************************************************
-!
+    velxfreestreamd = -(ainf*machgrid*veldirfreestreamd(1))
+    velxfreestream = ainf*machgrid*(-veldirfreestream(1))
+    velyfreestreamd = -(ainf*machgrid*veldirfreestreamd(2))
+    velyfreestream = ainf*machgrid*(-veldirfreestream(2))
+    velzfreestreamd = -(ainf*machgrid*veldirfreestreamd(3))
+    velzfreestream = ainf*machgrid*(-veldirfreestream(3))
+! grid velocities of the cell centers, including the
+! 1st level halo cells.
 ! initialize with free stream velocity
     ie_l = flowdoms(nn, 1, sps)%ie
     je_l = flowdoms(nn, 1, sps)%je
@@ -591,12 +577,12 @@ contains
     do k=1,ke_l
       do j=1,je_l
         do i=1,ie_l
-          sd(i, j, k, 1) = velxgridd
-          s(i, j, k, 1) = velxgrid
-          sd(i, j, k, 2) = velygridd
-          s(i, j, k, 2) = velygrid
-          sd(i, j, k, 3) = velzgridd
-          s(i, j, k, 3) = velzgrid
+          sd(i, j, k, 1) = velxfreestreamd
+          s(i, j, k, 1) = velxfreestream
+          sd(i, j, k, 2) = velyfreestreamd
+          s(i, j, k, 2) = velyfreestream
+          sd(i, j, k, 3) = velzfreestreamd
+          s(i, j, k, 3) = velzfreestream
         end do
       end do
     end do
@@ -657,15 +643,11 @@ contains
         end do
       end do
     end do
-!
-!            ************************************************************
-!            *                                                          *
-!            * normal grid velocities of the faces.                     *
-!            *                                                          *
-!            ************************************************************
-!
-! sfacei=	dot(si, v)=dot(si, v_freestream + v_grid)=dot(si, v_freestream) + dot(si, v_grid)
-! sfacej, sfacek same rule!
+! normal grid velocities of the faces.
+! sfacei=	dot(si, v)
+! =dot(si, v_freestream + v_meshmotion)
+! =dot(si, v_freestream) + dot(si, v_meshmotion)
+! sfacej, sfacek follow the same rule.
 ! dot(si, v_freestream)
     ie_l = flowdoms(nn, 1, sps)%ie
     je_l = flowdoms(nn, 1, sps)%je
@@ -674,11 +656,13 @@ contains
     do k=1,ke_l
       do j=1,je_l
         do i=0,ie_l
-          sfaceid(i, j, k) = velxgridd*si(i, j, k, 1) + velxgrid*sid(i, &
-&           j, k, 1) + velygridd*si(i, j, k, 2) + velygrid*sid(i, j, k, &
-&           2) + velzgridd*si(i, j, k, 3) + velzgrid*sid(i, j, k, 3)
-          sfacei(i, j, k) = velxgrid*si(i, j, k, 1) + velygrid*si(i, j, &
-&           k, 2) + velzgrid*si(i, j, k, 3)
+          sfaceid(i, j, k) = velxfreestreamd*si(i, j, k, 1) + &
+&           velxfreestream*sid(i, j, k, 1) + velyfreestreamd*si(i, j, k&
+&           , 2) + velyfreestream*sid(i, j, k, 2) + velzfreestreamd*si(i&
+&           , j, k, 3) + velzfreestream*sid(i, j, k, 3)
+          sfacei(i, j, k) = velxfreestream*si(i, j, k, 1) + &
+&           velyfreestream*si(i, j, k, 2) + velzfreestream*si(i, j, k, 3&
+&           )
         end do
       end do
     end do
@@ -686,11 +670,13 @@ contains
     do k=1,ke_l
       do j=0,je_l
         do i=1,ie_l
-          sfacejd(i, j, k) = velxgridd*sj(i, j, k, 1) + velxgrid*sjd(i, &
-&           j, k, 1) + velygridd*sj(i, j, k, 2) + velygrid*sjd(i, j, k, &
-&           2) + velzgridd*sj(i, j, k, 3) + velzgrid*sjd(i, j, k, 3)
-          sfacej(i, j, k) = velxgrid*sj(i, j, k, 1) + velygrid*sj(i, j, &
-&           k, 2) + velzgrid*sj(i, j, k, 3)
+          sfacejd(i, j, k) = velxfreestreamd*sj(i, j, k, 1) + &
+&           velxfreestream*sjd(i, j, k, 1) + velyfreestreamd*sj(i, j, k&
+&           , 2) + velyfreestream*sjd(i, j, k, 2) + velzfreestreamd*sj(i&
+&           , j, k, 3) + velzfreestream*sjd(i, j, k, 3)
+          sfacej(i, j, k) = velxfreestream*sj(i, j, k, 1) + &
+&           velyfreestream*sj(i, j, k, 2) + velzfreestream*sj(i, j, k, 3&
+&           )
         end do
       end do
     end do
@@ -698,17 +684,17 @@ contains
     do k=0,ke_l
       do j=1,je_l
         do i=1,ie_l
-          sfacekd(i, j, k) = velxgridd*sk(i, j, k, 1) + velxgrid*skd(i, &
-&           j, k, 1) + velygridd*sk(i, j, k, 2) + velygrid*skd(i, j, k, &
-&           2) + velzgridd*sk(i, j, k, 3) + velzgrid*skd(i, j, k, 3)
-          sfacek(i, j, k) = velxgrid*sk(i, j, k, 1) + velygrid*sk(i, j, &
-&           k, 2) + velzgrid*sk(i, j, k, 3)
+          sfacekd(i, j, k) = velxfreestreamd*sk(i, j, k, 1) + &
+&           velxfreestream*skd(i, j, k, 1) + velyfreestreamd*sk(i, j, k&
+&           , 2) + velyfreestream*skd(i, j, k, 2) + velzfreestreamd*sk(i&
+&           , j, k, 3) + velzfreestream*skd(i, j, k, 3)
+          sfacek(i, j, k) = velxfreestream*sk(i, j, k, 1) + &
+&           velyfreestream*sk(i, j, k, 2) + velzfreestream*sk(i, j, k, 3&
+&           )
         end do
       end do
     end do
-!  dot(si, v_grid)
-! loop over inner cells (also 1st layer halo of 3 surfs si, sj and sk are handled here, the left will be handled in the next sect
-!ion)
+!  dot(si, v_meshmotion)
     do mm=1,ntimeintervalsspectral
       ie_l = flowdoms(nn, 1, mm)%ie
       je_l = flowdoms(nn, 1, mm)%je
