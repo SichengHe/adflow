@@ -9,6 +9,7 @@ dirs:=	adjoint\
 	inputParam\
 	NKSolver\
 	metis-4.0\
+	modal\
 	modules\
 	output\
 	overset\

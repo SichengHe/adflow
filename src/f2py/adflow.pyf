@@ -362,6 +362,48 @@ python module libadflow
 
        end module inputparamroutines
 
+       module lst
+
+         subroutine setuplst
+          use constants
+          use stencils, only: euler_drdw_stencil, visc_drdw_stencil, n_euler_drdw, n_visc_drdw
+          use communication, only: adflow_comm_world
+          use inputtimespectral, only: ntimeintervalsspectral
+          use flowvarrefstate, only: nw, viscous
+          use adjointvars, only: ncellslocal
+          use utils, only: echk
+          use adjointutils, only: mymatcreate, statepreallocation
+          use amg, only: setupamg
+          integer(kind=inttype) :: ierr, ndimw
+          integer(kind=inttype), dimension(:), allocatable :: nnzdiagonal, nnzoffdiag
+          integer(kind=inttype) :: n_stencil
+          integer(kind=inttype), dimension(:, :), pointer :: stencil
+          integer(kind=inttype) :: level
+
+         end subroutine setuplst
+
+         subroutine formjacobianlst
+
+          use constants
+          use utils, only: echk
+          use adjointutils, only: setupstateresidualmatrix
+          integer(kind=inttype) :: ierr
+          logical :: usead, usepc, usetranspose, useobjective, usecoarsemats
+
+         end subroutine formjacobianlst
+
+         subroutine destroylst
+
+          use constants
+          use utils, only: echk
+          use amg, only: destroyamg
+          implicit none
+          integer(kind=inttype) :: ierr
+
+         end subroutine destroylst
+
+       end module lst
+
        module nksolver
          use constants
 

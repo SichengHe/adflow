@@ -5176,6 +5176,17 @@ class ADFLOW(AeroSolver):
 
         return self.adflow.nksolver.getstates(self.getStateSize())
 
+    def setJacobian(self):
+        """Set up the Jacobian
+        """
+
+        self.adflow.lst.setuplst()
+        self.adflow.lst.formjacobianlst()
+
+    def delJacobian(self):
+
+        self.adflow.lst.destroylst()
+
     def setStates(self, states):
         """Set the states on this processor. Used in aerostructural analysis
         and for switching aeroproblems
