@@ -156,6 +156,15 @@ class ADFLOW(AeroSolver):
         )
 
         baseClassTime = time.time()
+
+        # Handle torus time spectral mode - set timeIntervals automatically
+        if self.getOption("useTorusTimeSpectral"):
+            n1 = self.getOption("nTimeIntervalsSpectral1")
+            n2 = self.getOption("nTimeIntervalsSpectral2")
+            self.setOption("timeIntervals", n1 * n2)
+            if self.myid == 0:
+                print(f"Torus Time Spectral: Setting timeIntervals = {n1} x {n2} = {n1*n2}")
+
         # Update turbresscale depending on the turbulence model specified
         self._updateTurbResScale()
 
@@ -5767,6 +5776,12 @@ class ADFLOW(AeroSolver):
             "TSStability": [bool, False],
             "useTSInterpolatedGridVelocity": [bool, False],
             "useExternalDynamicMesh": [bool, False],
+            # Torus Time Spectral Parameters
+            "useTorusTimeSpectral": [bool, False],
+            "nTimeIntervalsSpectral1": [int, 3],
+            "nTimeIntervalsSpectral2": [int, 3],
+            "omegaFourier1": [float, 1.0],
+            "omegaFourier2": [float, 1.41421356],
             # Convergence Parameters
             "L2Convergence": [float, 1e-8],
             "L2ConvergenceRel": [float, 1e-16],
@@ -5946,6 +5961,9 @@ class ADFLOW(AeroSolver):
             "timeaccuracy",
             "useale",
             "timeintervals",
+            "usetorustimespectral",
+            "ntimeintervalsspectral1",
+            "ntimeintervalsspectral2",
             "blocksplitting",
             "loadimbalance",
             "loadbalanceiter",
@@ -6166,6 +6184,12 @@ class ADFLOW(AeroSolver):
             "usegridmotion": ["motion", "gridmotionspecified"],
             # Time Spectral Parameters
             "timeintervals": ["ts", "ntimeintervalsspectral"],
+            # Torus Time Spectral Parameters
+            "usetorustimespectral": ["ts", "usetorustimespectral"],
+            "ntimeintervalsspectral1": ["ts", "ntimeintervalsspectral1"],
+            "ntimeintervalsspectral2": ["ts", "ntimeintervalsspectral2"],
+            "omegafourier1": ["ts", "omegafourier1"],
+            "omegafourier2": ["ts", "omegafourier2"],
             "alphamode": ["stab", "tsalphamode"],
             "betamode": ["stab", "tsbetamode"],
             "machmode": ["stab", "tsmachmode"],

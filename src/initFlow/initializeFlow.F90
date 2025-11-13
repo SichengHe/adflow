@@ -374,6 +374,9 @@ contains
         ! time derivatives.
         call timeSpectralMatrices
 
+        ! For torus time spectral mode, compute 2D differentiation matrices
+        call torusTimeSpectralMatrices
+
         ! Loop over the number of spectral solutions to allocate
         ! the memory for the w-variables and p on the fine grid.
         do sps = 1, nTimeIntervalsSpectral
@@ -2798,6 +2801,218 @@ contains
                            "Deallocation failure for the help variables.")
 
     end subroutine timeSpectralMatrices
+
+    subroutine torusTimeSpectralMatrices
+        !
+        !       torusTimeSpectralMatrices computes the 2D differentiation matrices
+        !       for the torus time spectral method (2-frequency quasi-periodic).
+        !       Uses FFT-based spectral differentiation on a 2D theta grid.
+        !
+        !       Matrix convention: dscalar(mm, idx, jdx)
+        !          - idx = (i2-1)*n1 + i1 is the TARGET point where derivative is computed
+        !          - jdx = (j2-1)*n1 + j1 is the SOURCE point whose value contributes
+        !          - dscalar(mm, idx, jdx) = how much source jdx contributes to d/dt at target idx
+        !
+        use constants
+        use communication, only: myID
+        use inputPhysics, only: equationMode
+        use inputTimeSpectral, only: nTimeIntervalsSpectral, nTimeIntervalsSpectral1, &
+                                     nTimeIntervalsSpectral2, useTorusTimeSpectral, &
+                                     omegaFourier1, omegaFourier2, dscalar, dvector, &
+                                     dscalar_torus, dscalar2_torus
+        use flowVarRefState, only: timeRef
+        use section, only: nSections
+        use utils, only: terminate
+        implicit none
+        !
+        !      Local variables.
+        !
+        integer :: ierr
+        integer(kind=intType) :: n1, n2, ntot, i1, i2, j1, j2, idx, jdx, mm, i
+        real(kind=realType) :: dtheta1, dtheta2, coef1, coef2
+        real(kind=realType) :: angle1, angle2
+        real(kind=realType) :: row_sum  ! For validation
+
+        ! Only used for torus time spectral mode
+        if (.not. useTorusTimeSpectral) return
+        if (equationMode /= timeSpectral) return
+
+        n1 = nTimeIntervalsSpectral1
+        n2 = nTimeIntervalsSpectral2
+        ntot = n1 * n2
+
+        ! Safety check
+        if (ntot /= nTimeIntervalsSpectral) then
+            call terminate("torusTimeSpectralMatrices", &
+                "nTimeIntervalsSpectral must equal n1*n2 for torus mode")
+        end if
+
+        ! Allocate torus-specific differentiation matrices (for debugging/analysis)
+        if (allocated(dscalar_torus)) deallocate(dscalar_torus)
+        if (allocated(dscalar2_torus)) deallocate(dscalar2_torus)
+
+        allocate(dscalar_torus(nSections, n1, n2, ntot), &
+                 dscalar2_torus(nSections, n1, n2, ntot), stat=ierr)
+        if (ierr /= 0) &
+            call terminate("torusTimeSpectralMatrices", &
+                "Memory allocation failure for torus spectral matrices")
+
+        ! Initialize to zero
+        dscalar_torus = zero
+        dscalar2_torus = zero
+
+        ! Allocate combined dscalar matrix
+        if (allocated(dscalar)) deallocate(dscalar)
+        allocate(dscalar(nSections, ntot, ntot), stat=ierr)
+        if (ierr /= 0) &
+            call terminate("torusTimeSpectralMatrices", &
+                "Memory allocation failure for combined dscalar matrix")
+        dscalar = zero
+
+        ! Compute 2D Fourier spectral differentiation matrices
+        ! Based on the formula: d/dt = omega1 * d/dtheta1 + omega2 * d/dtheta2
+        ! For theta on [0, 2*pi]^2 grid
+
+        dtheta1 = two * pi / real(n1, realType)
+        dtheta2 = two * pi / real(n2, realType)
+
+        ! Loop over sections (usually just 1 for non-rotating cases)
+        do mm = 1, nSections
+
+            ! Loop over TARGET points (where derivative is computed)
+            do i1 = 1, n1
+                do i2 = 1, n2
+                    idx = (i2 - 1) * n1 + i1  ! Flattened index for TARGET point
+
+                    ! Loop over SOURCE points (whose values contribute)
+                    do j1 = 1, n1
+                        do j2 = 1, n2
+                            jdx = (j2 - 1) * n1 + j1  ! Flattened index for SOURCE point
+
+                            ! Initialize
+                            coef1 = zero
+                            coef2 = zero
+
+                            ! Contribution from theta1 derivative (omega1 * d/dtheta1)
+                            ! Only when j2 == i2 (same theta2 coordinate)
+                            if (j2 == i2 .and. j1 /= i1) then
+                                ! Spectral differentiation formula
+                                angle1 = real(j1 - i1, realType) * dtheta1
+
+                                if (mod(n1, 2_intType) == 0) then
+                                    ! Even number of points
+                                    coef1 = half * (-one)**real(j1 - i1, realType) / tan(half * angle1)
+                                else
+                                    ! Odd number of points
+                                    coef1 = half * (-one)**real(j1 - i1, realType) / sin(half * angle1)
+                                end if
+
+                                ! Scale by frequency and time reference
+                                coef1 = coef1 * omegaFourier1 * timeRef
+                            end if
+
+                            ! Contribution from theta2 derivative (omega2 * d/dtheta2)
+                            ! Only when j1 == i1 (same theta1 coordinate)
+                            if (j1 == i1 .and. j2 /= i2) then
+                                ! Spectral differentiation formula
+                                angle2 = real(j2 - i2, realType) * dtheta2
+
+                                if (mod(n2, 2_intType) == 0) then
+                                    ! Even number of points
+                                    coef2 = half * (-one)**real(j2 - i2, realType) / tan(half * angle2)
+                                else
+                                    ! Odd number of points
+                                    coef2 = half * (-one)**real(j2 - i2, realType) / sin(half * angle2)
+                                end if
+
+                                ! Scale by frequency and time reference
+                                coef2 = coef2 * omegaFourier2 * timeRef
+                            end if
+
+                            ! Store individual contributions (for debugging/analysis)
+                            dscalar_torus(mm, i1, i2, jdx) = coef1
+                            dscalar2_torus(mm, i1, i2, jdx) = coef2
+
+                            ! Combined contribution to dscalar matrix
+                            dscalar(mm, idx, jdx) = coef1 + coef2
+
+                        end do
+                    end do
+                end do
+            end do
+
+        end do
+
+        ! Build dvector for momentum (vector) variables
+        ! For torus mode without rotation, dvector is just dscalar applied to each component
+        ! dvector(mm, 3*sps-2:3*sps, 3*mm2-2:3*mm2) contains the 3x3 block
+        ! that transforms velocity at instance mm2 to time derivative at instance sps
+
+        if (allocated(dvector)) deallocate(dvector)
+        allocate(dvector(nSections, 3*ntot, 3*ntot), stat=ierr)
+        if (ierr /= 0) &
+            call terminate("torusTimeSpectralMatrices", &
+                "Memory allocation failure for dvector matrix")
+
+        dvector = zero
+
+        ! For non-rotating torus cases, dvector is block-diagonal in velocity space
+        ! Each 3x3 block is: [dscalar(sps,mm2) * I_3x3]
+        ! This gives: d(u)/dt = dscalar * u (applied component-wise)
+
+        do mm = 1, nSections
+            do idx = 1, ntot  ! Source spectral instance
+                do jdx = 1, ntot  ! Destination spectral instance
+
+                    ! Get the scalar differentiation coefficient
+                    coef1 = dscalar(mm, idx, jdx)
+
+                    ! Fill the 3x3 velocity block
+                    ! dvector indices: 3*(idx-1)+1:3*idx correspond to (u,v,w) at instance idx
+                    do i = 1, 3
+                        dvector(mm, 3*(idx-1)+i, 3*(jdx-1)+i) = coef1
+                    end do
+
+                end do
+            end do
+        end do
+
+        ! Validation: Check that row sums are zero (derivative of constant = 0)
+        ! This is a critical property of spectral differentiation matrices
+        do mm = 1, nSections
+            do idx = 1, ntot
+                row_sum = zero
+                do jdx = 1, ntot
+                    row_sum = row_sum + dscalar(mm, idx, jdx)
+                end do
+
+                ! Row sum should be zero within machine precision
+                if (abs(row_sum) > 1.0e-10_realType) then
+                    if (myid == 0) then
+                        print *, "WARNING: Torus dscalar row sum check failed!"
+                        print *, "  Section:", mm, " Instance:", idx
+                        print *, "  Row sum:", row_sum, " (should be ~0)"
+                        print *, "  This indicates a bug in matrix construction."
+                    end if
+                    call terminate("torusTimeSpectralMatrices", &
+                        "Matrix validation failed: row sums not zero")
+                end if
+            end do
+        end do
+
+        ! Success message (only on root processor for small grids)
+        if (myid == 0 .and. n1 <= 5 .and. n2 <= 5) then
+            print *
+            print *, "Torus time spectral matrices constructed successfully:"
+            print *, "  Grid: ", n1, " x ", n2, " = ", ntot, " instances"
+            print *, "  Omega1 =", omegaFourier1, " rad/s"
+            print *, "  Omega2 =", omegaFourier2, " rad/s"
+            print *, "  Sparsity: ", n1+n2-1, " non-zeros per row (cross pattern)"
+            print *, "  Matrix validation: PASSED (row sums = 0)"
+            print *
+        end if
+
+    end subroutine torusTimeSpectralMatrices
 
     subroutine readRestartFile()
         !

@@ -4086,7 +4086,7 @@ contains
         use inputTimeSpectral
         use inputPhysics
         use communication
-        use initializeFlow, onlY: timeSpectralMatrices
+        use initializeFlow, onlY: timeSpectralMatrices, torusTimeSpectralMatrices
         use partitioning, only: fineGridSpectralCoor, timeRotMatricesSpectral, &
                                 timePeriodSpectral
         !
@@ -4103,6 +4103,7 @@ contains
             call fineGridSpectralCoor
         end if
         call timeSpectralMatrices
+        call torusTimeSpectralMatrices
 
     end subroutine updatePeriodicInfoAllLevels
     subroutine unitVectorsInAxialPlane(axis, vecR1, vecR2)
