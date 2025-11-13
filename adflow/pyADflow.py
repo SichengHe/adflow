@@ -143,6 +143,16 @@ class ADFLOW(AeroSolver):
 
         defSetupTime = time.time()
 
+        # Handle torus time spectral mode - set timeIntervals automatically BEFORE initialization
+        # This must be done before super().__init__() because timeIntervals is immutable
+        if options.get("useTorusTimeSpectral", defaultOptions.get("useTorusTimeSpectral", False)):
+            n1 = options.get("nTimeIntervalsSpectral1", defaultOptions.get("nTimeIntervalsSpectral1", 1))
+            n2 = options.get("nTimeIntervalsSpectral2", defaultOptions.get("nTimeIntervalsSpectral2", 1))
+            if "timeIntervals" not in options:
+                options["timeIntervals"] = n1 * n2
+                if self.myid == 0:
+                    print(f"Torus Time Spectral: Setting timeIntervals = {n1} x {n2} = {n1*n2}")
+
         # Initialize the inherited AeroSolver
         super().__init__(
             name,
@@ -156,14 +166,6 @@ class ADFLOW(AeroSolver):
         )
 
         baseClassTime = time.time()
-
-        # Handle torus time spectral mode - set timeIntervals automatically
-        if self.getOption("useTorusTimeSpectral"):
-            n1 = self.getOption("nTimeIntervalsSpectral1")
-            n2 = self.getOption("nTimeIntervalsSpectral2")
-            self.setOption("timeIntervals", n1 * n2)
-            if self.myid == 0:
-                print(f"Torus Time Spectral: Setting timeIntervals = {n1} x {n2} = {n1*n2}")
 
         # Update turbresscale depending on the turbulence model specified
         self._updateTurbResScale()
