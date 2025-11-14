@@ -268,13 +268,15 @@ contains
                  &volSolFileNames")
 
             ! Set the names of the files.
+            ! Strip .cgns extension, add spectral suffix, then add .cgns back
 
             do nn = 1, nTimeIntervalsSpectral
                 write (intString, "(i7)") nn
                 intString = adjustl(intString)
 
-                volSolFileNames(nn) = trim(solfile)//"&
-                     &Spectral"//trim(intString)
+                ! Remove .cgns extension (last 5 characters)
+                volSolFileNames(nn) = solfile(1:len_trim(solfile)-5)// &
+                     "_spectral"//trim(intString)//".cgns"
             end do
 
             ! Set the number of volume solution files to write.

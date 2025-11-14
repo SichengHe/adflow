@@ -255,13 +255,15 @@ contains
                  &gridFileNames")
 
             ! Set the names of the files.
+            ! Strip .cgns extension, add spectral suffix, then add .cgns back
 
             do nn = 1, nTimeIntervalsSpectral
                 write (intString, "(i7)") nn
                 intString = adjustl(intString)
 
-                gridFileNames(nn) = trim(newGridFile)//"&
-                     &Spectral"//trim(intString)
+                ! Remove .cgns extension (last 5 characters)
+                gridFileNames(nn) = newGridFile(1:len_trim(newGridFile)-5)// &
+                     "_spectral"//trim(intString)//".cgns"
             end do
 
             ! Set the number of grid files to be written.

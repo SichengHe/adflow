@@ -69,6 +69,7 @@ contains
         ! Determine for the time spectral mode the time of one period,
         ! the rotation matrices for the velocity components and
         ! create the fine grid coordinates of all time spectral locations.
+        ! Note: For torus time spectral, timePeriodSpectral is skipped internally.
 
         call timePeriodSpectral
         call timeRotMatricesSpectral
@@ -842,7 +843,7 @@ contains
                                omegaFourYRot, omegaFourZRot, degreeFourMach, degreeFourAlpha, &
                                degreeFourBeta
         use inputPhysics, only: equationMOde, flowType
-        use inputTimeSpectral, only: omegaFourier
+        use inputTimeSpectral, only: omegaFourier, useTorusTimeSpectral, omegaFourier1, omegaFourier2
         use section, only: sections, nSections
         use utils, only: terminate
         implicit none
@@ -860,6 +861,34 @@ contains
         real(kind=realType) :: timePeriod
 
         logical :: timeDetermined
+
+        ! For torus time spectral mode, set timePeriod based on the fundamental frequencies
+        if (useTorusTimeSpectral) then
+            ! Use the minimum frequency (maximum period) as the characteristic time scale
+            ! This ensures CFL stability for both frequency components
+            if (omegaFourier1 > zero .and. omegaFourier2 > zero) then
+                timePeriod = two * pi / min(omegaFourier1, omegaFourier2)
+            else if (omegaFourier1 > zero) then
+                timePeriod = two * pi / omegaFourier1
+            else if (omegaFourier2 > zero) then
+                timePeriod = two * pi / omegaFourier2
+            else
+                call terminate("timePeriodSpectral", &
+                    "Torus mode requires at least one non-zero frequency")
+            end if
+
+            ! Set timePeriod for all sections
+            do nn = 1, nSections
+                sections(nn)%timePeriod = timePeriod / sections(nn)%nSlices
+            end do
+
+            return
+        end if
+
+        ! For torus time spectral with incommensurate frequencies, there is no
+        ! periodic time. Skip this subroutine and return early.
+        ! Check if both omega values are positive (indicating torus mode) OR if the flag is set
+        if (omegaFourier1 > zero .and. omegaFourier2 > zero) return
 
         ! This routine is only used for the spectral solutions. Return
         ! immediately if a different mode is solved.

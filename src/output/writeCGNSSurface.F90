@@ -334,13 +334,15 @@ contains
 
             ! Time spectral computation. A suffix is added depending on
             ! the time instance.
+            ! Strip .cgns extension, add spectral suffix, then add .cgns back
 
             do nn = 1, nTimeIntervalsSpectral
                 write (intString, "(i7)") nn
                 intString = adjustl(intString)
 
-                surfSolFileNames(nn) = trim(surfaceSolFile)//"&
-                     &Spectral"//trim(intString)
+                ! Remove .cgns extension (last 5 characters)
+                surfSolFileNames(nn) = surfaceSolFile(1:len_trim(surfaceSolFile)-5)// &
+                     "_spectral"//trim(intString)//".cgns"
             end do
 
         end select
