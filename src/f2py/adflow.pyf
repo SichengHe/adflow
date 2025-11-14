@@ -1258,6 +1258,13 @@ python module libadflow
          logical :: writeunsteadysurfspectral
          real(kind=realtype) allocatable,dimension(:,:,:) :: rotmatrixspectral
          real(kind=realtype) :: omegafourier
+         logical :: usetorustimespectral
+         integer(kind=inttype) :: ntimeintervalsspectral1
+         integer(kind=inttype) :: ntimeintervalsspectral2
+         real(kind=realtype) :: omegafourier1
+         real(kind=realtype) :: omegafourier2
+         real(kind=realtype) allocatable,dimension(:,:,:,:) :: dscalar_torus
+         real(kind=realtype) allocatable,dimension(:,:,:,:) :: dscalar2_torus
        end module inputtimespectral
        module inputoverset
          logical :: useoversetloadbalance

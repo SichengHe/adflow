@@ -698,6 +698,19 @@ module inputTimeSpectral
 
     real(kind=realType) :: omegaFourier
 
+    ! Torus time spectral variables for two-frequency quasi-periodic motion
+    logical :: useTorusTimeSpectral
+    integer(kind=intType) :: nTimeIntervalsSpectral1
+    integer(kind=intType) :: nTimeIntervalsSpectral2
+    real(kind=realType) :: omegaFourier1
+    real(kind=realType) :: omegaFourier2
+
+    ! Differentiation matrices for torus time spectral
+    ! dscalar_torus(nSections, n1, n2, ntot): First derivative matrix for theta1
+    ! dscalar2_torus(nSections, n1, n2, ntot): First derivative matrix for theta2
+    real(kind=realType), dimension(:, :, :, :), allocatable :: dscalar_torus
+    real(kind=realType), dimension(:, :, :, :), allocatable :: dscalar2_torus
+
 end module inputTimeSpectral
 
 !      ==================================================================

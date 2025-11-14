@@ -4036,6 +4036,13 @@ contains
         ! mode restart file.
 
         dtUnsteadyRestartSpectral = -one    ! Is checked later on.
+
+        ! Torus time spectral defaults
+        useTorusTimeSpectral = .false.
+        nTimeIntervalsSpectral1 = -1
+        nTimeIntervalsSpectral2 = -1
+        omegaFourier1 = zero
+        omegaFourier2 = zero
         !
         !       Set the default values for the unsteady parameters.
         !
