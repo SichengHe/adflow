@@ -5782,8 +5782,8 @@ class ADFLOW(AeroSolver):
             "useTorusTimeSpectral": [bool, False],
             "nTimeIntervalsSpectral1": [int, 3],
             "nTimeIntervalsSpectral2": [int, 3],
-            "omegaFourier1": [float, 1.0],
-            "omegaFourier2": [float, 1.41421356],
+            "omegaFourier1": [float, 0.0],
+            "omegaFourier2": [float, 0.0],
             # Convergence Parameters
             "L2Convergence": [float, 1e-8],
             "L2ConvergenceRel": [float, 1e-16],
