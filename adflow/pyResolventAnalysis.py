@@ -82,9 +82,15 @@ class ResolventAnalysis:
         self.stateSize = CFDsolver.getStateSize()
 
         # Storage for results
-        self.sigma1 = None
-        self.u1 = None
-        self.v1 = None
+        self.sigma1 = None  # Dominant singular value (backward compatibility)
+        self.u1 = None      # Dominant response mode (backward compatibility)
+        self.v1 = None      # Dominant forcing mode (backward compatibility)
+
+        # Storage for all modes
+        self.singularValues = None  # All singular values
+        self.responseModes = None   # All response modes (U)
+        self.forcingModes = None    # All forcing modes (V)
+
         self.nModes = 1  # Number of modes to compute
 
         # Check that we have a converged solution
@@ -318,14 +324,21 @@ class ResolventAnalysis:
                 print("  Computing SVD...")
                 U_real, S_real, Vh_real = scipy.linalg.svd(R_real)
 
-            # Extract results (convert back to complex)
-            self.sigma1 = S_real[0]
-            u1_real = U_real[:, 0]
-            v1_real = Vh_real[0, :]
+            # Store all results (real form)
+            self.singularValues = S_real
+            # Convert real modes back to complex form
+            k = len(S_real)
+            n_complex = n // 2
+            self.responseModes = np.zeros((n_complex, k), dtype=complex)
+            self.forcingModes = np.zeros((n_complex, k), dtype=complex)
+            for i in range(k):
+                self.responseModes[:, i] = self._realToComplexForm(U_real[:, i])
+                self.forcingModes[:, i] = np.conj(self._realToComplexForm(Vh_real[i, :]))
 
-            # Convert to complex form
-            self.u1 = self._realToComplexForm(u1_real)
-            self.v1 = np.conj(self._realToComplexForm(v1_real))
+            # Backward compatibility: store first mode
+            self.sigma1 = S_real[0]
+            self.u1 = self.responseModes[:, 0]
+            self.v1 = self.forcingModes[:, 0]
 
         else:
             # Use complex arithmetic directly
@@ -377,10 +390,15 @@ class ResolventAnalysis:
                 print("  Computing SVD...")
                 U, S, Vh = scipy.linalg.svd(R)
 
-            # Extract results
+            # Store all results (complex form)
+            self.singularValues = S
+            self.responseModes = U
+            self.forcingModes = np.conj(Vh.T)  # V = conj(Vh^T)
+
+            # Backward compatibility: store first mode
             self.sigma1 = S[0]
             self.u1 = U[:, 0]
-            self.v1 = np.conj(Vh[0, :])
+            self.v1 = self.forcingModes[:, 0]
 
         print(f"\n  Dominant singular value: σ₁ = {self.sigma1:.6f}")
         print(f"  Maximum amplification factor: {self.sigma1:.6f}")
@@ -424,47 +442,62 @@ class ResolventAnalysis:
 
         return omega_vec, sigma1_vec
 
-    def getSingularValue(self):
+    def getSingularValue(self, idx=0):
         """
-        Get the dominant singular value from the last analysis.
+        Get a singular value from the last analysis.
+
+        Parameters
+        ----------
+        idx : int, optional
+            Index of singular value (0 = dominant), default is 0
 
         Returns
         -------
-        sigma1 : float
-            Dominant singular value
+        sigma : float
+            Singular value at index idx
         """
-        if self.sigma1 is None:
+        if self.singularValues is None:
             raise Error("No resolvent analysis has been performed yet. "
                        "Call solve() first.")
-        return self.sigma1
+        return self.singularValues[idx]
 
-    def getResponseMode(self):
+    def getResponseMode(self, idx=0):
         """
-        Get the response mode (left singular vector).
+        Get a response mode (left singular vector).
+
+        Parameters
+        ----------
+        idx : int, optional
+            Index of mode (0 = dominant), default is 0
 
         Returns
         -------
-        u1 : numpy array
-            Response mode (left singular vector)
+        u : numpy array
+            Response mode (left singular vector) at index idx
         """
-        if self.u1 is None:
+        if self.responseModes is None:
             raise Error("No resolvent analysis has been performed yet. "
                        "Call solve() first.")
-        return self.u1
+        return self.responseModes[:, idx]
 
-    def getForcingMode(self):
+    def getForcingMode(self, idx=0):
         """
-        Get the forcing mode (right singular vector).
+        Get a forcing mode (right singular vector).
+
+        Parameters
+        ----------
+        idx : int, optional
+            Index of mode (0 = dominant), default is 0
 
         Returns
         -------
-        v1 : numpy array
-            Forcing mode (right singular vector)
+        v : numpy array
+            Forcing mode (right singular vector) at index idx
         """
-        if self.v1 is None:
+        if self.forcingModes is None:
             raise Error("No resolvent analysis has been performed yet. "
                        "Call solve() first.")
-        return self.v1
+        return self.forcingModes[:, idx]
 
 
 class ResolventAnalysisMatrixFree(ResolventAnalysis):
