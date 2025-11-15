@@ -88,6 +88,11 @@ def test_matrix_free_resolvent():
         'writeVolumeSolution': False,
         'writeSurfaceSolution': False,
         'writeTecplotSurfaceSolution': False,
+
+        # CRITICAL for ILU preconditioning: Need assembled Jacobian matrix
+        # Matrix-free resolvent uses Jacobian-vector products, but ILU
+        # preconditioner needs explicit sparse matrix for factorization
+        'useMatrixFreedrdw': False,
     }
 
     print("Creating ADflow solver...")

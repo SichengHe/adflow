@@ -94,6 +94,10 @@ def test_resolvent_tutorial_wing():
         'writeVolumeSolution': False,
         'writeSurfaceSolution': False,
         'writeTecplotSurfaceSolution': False,
+
+        # CRITICAL for resolvent analysis: Need assembled Jacobian matrix
+        # (default uses matrix-free shell which doesn't support explicit extraction)
+        'useMatrixFreedrdw': False,
     }
 
     # =========================================================================
