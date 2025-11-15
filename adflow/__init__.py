@@ -6,4 +6,5 @@ from .pyADflow import ADFLOW
 from .pyADflow_C import ADFLOW_C
 from .oversetCheck import OversetCheck
 from .checkZipper import checkZipper
-from .pyResolventAnalysis import ResolventAnalysis, ResolventAnalysisMatrixFree
+from .pyResolventAnalysis import ResolventAnalysis
+from .pyResolventAnalysisMatrixFree import ResolventAnalysisMatrixFree

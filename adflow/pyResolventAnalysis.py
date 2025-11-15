@@ -288,12 +288,20 @@ class ResolventAnalysis:
                     u = lu_solve((lu, piv), f)
                     return u
 
-                R_op = LinearOperator((2*n, 2*n), matvec=matvec, dtype=float)
+                def rmatvec(f):
+                    """Apply R^T*f = (A^{-1})^T * f by solving A^T*u = f"""
+                    # For real matrix, transpose is just A^T
+                    u = lu_solve((lu, piv), f, trans=1)  # trans=1 = transpose
+                    return u
+
+                R_op = LinearOperator((2*n, 2*n), matvec=matvec, rmatvec=rmatvec, dtype=float)
 
                 # Use sparse SVD for efficiency
-                print(f"  Computing SVD using sparse methods (k={min(self.nModes, 2*n-2)} modes)...")
                 k = min(self.nModes, 2*n - 2)  # Number of modes, must be < 2n
+                print(f"  Computing SVD using sparse methods (k={k} modes)...")
+                print(f"  [SVD] Starting iterative SVD (real form, size={2*n})...")
                 U_real, S_real, Vh_real = svds(R_op, k=k, which='LM')
+                print(f"  [SVD] SVD complete!")
 
                 # Sort by descending singular values (svds returns ascending)
                 idx = np.argsort(S_real)[::-1]
@@ -338,12 +346,21 @@ class ResolventAnalysis:
                     u = lu_solve((lu, piv), f)
                     return u
 
-                R_op = LinearOperator((n, n), matvec=matvec, dtype=complex)
+                def rmatvec(f):
+                    """Apply R^H*f = (A^{-1})^H*f = (A^H)^{-1}*f"""
+                    # For complex A, A^H is the conjugate transpose
+                    # Solve A^H * u = f  -->  conj(A^T) * u = f
+                    u = lu_solve((lu, piv), f, trans=2)  # trans=2 means conjugate transpose
+                    return u
+
+                R_op = LinearOperator((n, n), matvec=matvec, rmatvec=rmatvec, dtype=complex)
 
                 # Use sparse SVD for efficiency
-                print(f"  Computing SVD using sparse methods (k={min(self.nModes, n-2)} modes)...")
                 k = min(self.nModes, n - 2)  # Number of modes, must be < n
+                print(f"  Computing SVD using sparse methods (k={k} modes)...")
+                print(f"  [SVD] Starting iterative SVD...")
                 U, S, Vh = svds(R_op, k=k, which='LM')
+                print(f"  [SVD] SVD complete!")
 
                 # Sort by descending singular values (svds returns ascending)
                 idx = np.argsort(S)[::-1]
