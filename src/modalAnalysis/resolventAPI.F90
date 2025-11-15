@@ -41,7 +41,7 @@ contains
         !     If false, include turbulence variables
         !
         use adjointUtils, only: setupStateResidualMatrix
-        use adjointVars, only: adjointPETScVarsAllocated
+        use adjointVars, only: derivVarsAllocated
         use iteration, only: currentLevel
 
         implicit none
@@ -60,9 +60,9 @@ contains
         useObjective = .False.  ! Don't need objective
         level = 1               ! Finest level
 
-        ! Check if adjoint PETSc variables are allocated
-        if (.not. adjointPETScVarsAllocated) then
-            print *, "ERROR: Adjoint PETSc variables not allocated!"
+        ! Check if adjoint derivative variables are allocated
+        if (.not. derivVarsAllocated) then
+            print *, "ERROR: Adjoint derivative variables not allocated!"
             print *, "Call setAeroProblem and ensure adjoint is initialized."
             return
         end if
@@ -96,19 +96,20 @@ contains
 
         ! Local
         PetscErrorCode :: ierr
-        MatInfo :: info
+        PetscReal :: info(MAT_INFO_SIZE)
 
         ! Get matrix dimensions
         call MatGetSize(dRdWT, nRows, nCols, ierr)
 
         ! Get matrix info (including number of non-zeros)
         call MatGetInfo(dRdWT, MAT_GLOBAL_SUM, info, ierr)
-        nnz = int(info%nz_used, kind=intType)
+        ! MAT_INFO_NZ_USED is the index for number of nonzeros
+        nnz = int(info(MAT_INFO_NZ_USED+1), kind=intType)
 
     end subroutine getResolventMatrixInfo
 
 
-    subroutine getResolventMatrixDense(J_array, n)
+    subroutine getResolventMatrixDense(n, J_array)
         !
         ! Export the Jacobian matrix as a dense array.
         !

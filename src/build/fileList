@@ -21,6 +21,8 @@ fortranFiles=	ADT/adtUtils.F90\
 		\
 		inputParam/inputParamRoutines.F90\
 		\
+		modalAnalysis/resolventAPI.F90\
+		\
 		modules/su_cgns.F90\
 		modules/constants.F90\
 		modules/killSignals.f90\

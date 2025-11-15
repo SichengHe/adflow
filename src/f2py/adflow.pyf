@@ -912,6 +912,28 @@ python module libadflow
             end subroutine computematrixfreeproductbwdfast
 #endif
        end module adjointapi
+
+       module resolventapi
+         subroutine setupresolventmatrix(frozenturb)
+           logical intent(in) :: frozenturb
+         end subroutine setupresolventmatrix
+
+         subroutine getresolventmatrixinfo(nrows,ncols,nnz)
+           integer(kind=inttype) intent(out) :: nrows
+           integer(kind=inttype) intent(out) :: ncols
+           integer(kind=inttype) intent(out) :: nnz
+         end subroutine getresolventmatrixinfo
+
+         subroutine getresolventmatrixdense(n,j_array)
+           integer(kind=inttype) intent(in) :: n
+           real(kind=realtype) dimension(n,n),intent(out),depend(n) :: j_array
+         end subroutine getresolventmatrixdense
+
+         subroutine exportresolventmatrixtofile(filename)
+           character*(*) intent(in) :: filename
+         end subroutine exportresolventmatrixtofile
+       end module resolventapi
+
        module adjointdebug
 
 #ifndef USE_COMPLEX

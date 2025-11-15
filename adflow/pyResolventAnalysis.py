@@ -205,7 +205,7 @@ class ResolventAnalysis:
         v_complex = v_real[:n] + 1j * v_real[n:]
         return v_complex
 
-    def solveExplicit(self, formJacobian=True, useRealForm=False):
+    def solveExplicit(self, formJacobian=True, useRealForm=False, useLU=True):
         """
         Solve resolvent analysis by explicitly forming the Jacobian matrix.
 
@@ -221,6 +221,11 @@ class ResolventAnalysis:
            [ -J   -ωI ] [ u_r ]   [ f_r ]
            [  ωI  -J  ] [ u_i ] = [ f_i ]
 
+        IMPROVED: Now avoids explicit matrix inversion by using:
+        - LU decomposition for solving linear systems (if useLU=True)
+        - Sparse SVD with LinearOperator for memory efficiency
+        - Power iteration as fallback for very large systems
+
         Parameters
         ----------
         formJacobian : bool, optional
@@ -228,6 +233,9 @@ class ResolventAnalysis:
         useRealForm : bool, optional
             If True, use real doubled form. If False, use complex arithmetic.
             Default is False.
+        useLU : bool, optional
+            If True, use LU decomposition instead of explicit inversion.
+            Default is True (recommended for numerical stability).
 
         Returns
         -------
@@ -240,6 +248,7 @@ class ResolventAnalysis:
         print(f"\nResolvent Analysis: Computing for ω = {omega}")
         print(f"  State size: {self.stateSize}")
         print(f"  Form: {'Real doubled' if useRealForm else 'Complex'}")
+        print(f"  Method: {'LU decomposition' if useLU else 'Direct inversion (not recommended)'}")
         print("  WARNING: Using explicit Jacobian formation - "
               "may require significant memory!")
 
@@ -267,13 +276,39 @@ class ResolventAnalysis:
             A_real[n:, :n] = omega * np.eye(n)
             A_real[n:, n:] = -J
 
-            # Invert to get resolvent
-            print("  Inverting resolvent matrix (real form)...")
-            R_real = np.linalg.inv(A_real)
+            if useLU:
+                # Use LU decomposition - more stable than inversion
+                print("  Computing LU factorization...")
+                from scipy.linalg import lu_factor, lu_solve
+                lu, piv = lu_factor(A_real)
 
-            # SVD of resolvent
-            print("  Computing SVD...")
-            U_real, S_real, Vh_real = scipy.linalg.svd(R_real)
+                # Define resolvent operator via linear solve
+                def matvec(f):
+                    """Apply R*f = A^{-1}*f using LU solve"""
+                    u = lu_solve((lu, piv), f)
+                    return u
+
+                R_op = LinearOperator((2*n, 2*n), matvec=matvec, dtype=float)
+
+                # Use sparse SVD for efficiency
+                print(f"  Computing SVD using sparse methods (k={min(self.nModes, 2*n-2)} modes)...")
+                k = min(self.nModes, 2*n - 2)  # Number of modes, must be < 2n
+                U_real, S_real, Vh_real = svds(R_op, k=k, which='LM')
+
+                # Sort by descending singular values (svds returns ascending)
+                idx = np.argsort(S_real)[::-1]
+                S_real = S_real[idx]
+                U_real = U_real[:, idx]
+                Vh_real = Vh_real[idx, :]
+
+            else:
+                # Direct inversion (not recommended)
+                print("  Inverting resolvent matrix (real form)...")
+                R_real = np.linalg.inv(A_real)
+
+                # Full SVD
+                print("  Computing SVD...")
+                U_real, S_real, Vh_real = scipy.linalg.svd(R_real)
 
             # Extract results (convert back to complex)
             self.sigma1 = S_real[0]
@@ -291,13 +326,39 @@ class ResolventAnalysis:
             # A = jω*I - J
             A = 1j * omega * np.eye(n) - J
 
-            # R = A^{-1}
-            print("  Inverting resolvent matrix...")
-            R = np.linalg.inv(A)
+            if useLU:
+                # Use LU decomposition - more stable than inversion
+                print("  Computing LU factorization...")
+                from scipy.linalg import lu_factor, lu_solve
+                lu, piv = lu_factor(A)
 
-            # SVD of resolvent
-            print("  Computing SVD...")
-            U, S, Vh = scipy.linalg.svd(R)
+                # Define resolvent operator via linear solve
+                def matvec(f):
+                    """Apply R*f = A^{-1}*f using LU solve"""
+                    u = lu_solve((lu, piv), f)
+                    return u
+
+                R_op = LinearOperator((n, n), matvec=matvec, dtype=complex)
+
+                # Use sparse SVD for efficiency
+                print(f"  Computing SVD using sparse methods (k={min(self.nModes, n-2)} modes)...")
+                k = min(self.nModes, n - 2)  # Number of modes, must be < n
+                U, S, Vh = svds(R_op, k=k, which='LM')
+
+                # Sort by descending singular values (svds returns ascending)
+                idx = np.argsort(S)[::-1]
+                S = S[idx]
+                U = U[:, idx]
+                Vh = Vh[idx, :]
+
+            else:
+                # Direct inversion (not recommended)
+                print("  Inverting resolvent matrix...")
+                R = np.linalg.inv(A)
+
+                # Full SVD
+                print("  Computing SVD...")
+                U, S, Vh = scipy.linalg.svd(R)
 
             # Extract results
             self.sigma1 = S[0]

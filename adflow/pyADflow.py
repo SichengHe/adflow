@@ -5454,8 +5454,7 @@ class ADFLOW(AeroSolver):
 
         # Setup adjoint if not already done
         if not self.adjointSetup:
-            self.adflow.adjointapi.setupadjoint()
-            self.adjointSetup = True
+            self._setupAdjoint()
 
         # Assemble the Jacobian matrix
         self.adflow.resolventapi.setupresolventmatrix(frozenTurbulence)
@@ -5497,8 +5496,8 @@ class ADFLOW(AeroSolver):
         elif outputType == "dense":
             # Get dense matrix
             n = self.getStateSize()
-            J = numpy.zeros((n, n), dtype=self.dtype)
-            self.adflow.resolventapi.getresolventmatrixdense(J, n)
+            # f2py expects n first, then returns the array
+            J = self.adflow.resolventapi.getresolventmatrixdense(n)
             return J
 
         elif outputType == "file":

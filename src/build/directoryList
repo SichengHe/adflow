@@ -7,6 +7,7 @@ dirs:=	adjoint\
 	bcdata\
 	initFlow\
 	inputParam\
+	modalAnalysis\
 	NKSolver\
 	metis-4.0\
 	modules\
