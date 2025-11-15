@@ -1,0 +1,1042 @@
+[sicheng-MS-7E12:220697] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+[sicheng-MS-7E12:220699] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+[sicheng-MS-7E12:220698] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+[sicheng-MS-7E12:220700] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+======================================================================
+RUNNING TORUS TIME SPECTRAL (3x3, omega1=100, omega2=100*sqrt(2))
+======================================================================
+
+Grid: 3 × 3 = 9 instances
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Motion: α(θ₁,θ₂) = 1.0°·sin(θ₁) + 1.0°·sin(θ₂)
+
+Initializing ADflow (torus mode)...
+======================================================================
+RUNNING TORUS TIME SPECTRAL (3x3, omega1=100, omega2=100*sqrt(2))
+======================================================================
+
+Grid: 3 × 3 = 9 instances
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Motion: α(θ₁,θ₂) = 1.0°·sin(θ₁) + 1.0°·sin(θ₂)
+
+Initializing ADflow (torus mode)...
+======================================================================
+RUNNING TORUS TIME SPECTRAL (3x3, omega1=100, omega2=100*sqrt(2))
+======================================================================
+
+Grid: 3 × 3 = 9 instances
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Motion: α(θ₁,θ₂) = 1.0°·sin(θ₁) + 1.0°·sin(θ₂)
+
+Initializing ADflow (torus mode)...
+======================================================================
+RUNNING TORUS TIME SPECTRAL (3x3, omega1=100, omega2=100*sqrt(2))
+======================================================================
+
+Grid: 3 × 3 = 9 instances
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Motion: α(θ₁,θ₂) = 1.0°·sin(θ₁) + 1.0°·sin(θ₂)
+
+Initializing ADflow (torus mode)...
+Torus Time Spectral: Setting timeIntervals = 3 x 3 = 9
+#
+# ADflow, multiblock structured flow solver
+#
+# This code solves the 3D RANS, laminar NS or Euler equations
+# on multiblock structured hexahedral grids.
+# This is a parallel executable running on 4 processors.
+# It has been compiled with the following options:
+# - Optimized mode.
+# - Size of standard integers: 4 bytes.
+# - Size of standard floating point types: 8 bytes.
+# - With cgns support
+# - With support for signals.
+#
++----------------------------------------+
+|          All ADFLOW Options:           |
++----------------------------------------+
+{'ADPC': False,
+ 'ANKADPC': False,
+ 'ANKAMGLevels': 2,
+ 'ANKAMGNSmooth': 1,
+ 'ANKASMOverlap': 1,
+ 'ANKASMOverlapCoarse': 0,
+ 'ANKCFL0': 5.0,
+ 'ANKCFLCutback': 0.5,
+ 'ANKCFLExponent': 0.5,
+ 'ANKCFLFactor': 10.0,
+ 'ANKCFLLimit': 100000.0,
+ 'ANKCFLMin': 1.0,
+ 'ANKCFLReset': True,
+ 'ANKCharTimeStepType': 'None',
+ 'ANKConstCFLStep': 0.4,
+ 'ANKCoupledSwitchTol': 1e-16,
+ 'ANKGlobalPreconditioner': 'additive Schwarz',
+ 'ANKInnerPreconIts': 1,
+ 'ANKInnerPreconItsCoarse': 1,
+ 'ANKJacobianLag': 10,
+ 'ANKLinResMax': 0.1,
+ 'ANKLinearSolveBuffer': 0.01,
+ 'ANKLinearSolveTol': 0.05,
+ 'ANKMaxIter': 40,
+ 'ANKNSubiterTurb': 1,
+ 'ANKOuterPreconIts': 1,
+ 'ANKPCILUFill': 2,
+ 'ANKPCILUFillCoarse': 0,
+ 'ANKPCUpdateCutoff': 1e-16,
+ 'ANKPCUpdateTol': 0.5,
+ 'ANKPCUpdateTolAfterCutoff': 0.0001,
+ 'ANKPhysicalLSTol': 0.2,
+ 'ANKPhysicalLSTolTurb': 0.99,
+ 'ANKSecondOrdSwitchTol': 1e-16,
+ 'ANKStepFactor': 1.0,
+ 'ANKStepMin': 0.01,
+ 'ANKSubspaceSize': -1,
+ 'ANKSwitchTol': 0.01,
+ 'ANKTurbCFLScale': 1.0,
+ 'ANKTurbKSPDebug': False,
+ 'ANKUnsteadyLSTol': 1.0,
+ 'ANKUseApproxSA': False,
+ 'ANKUseFullVisc': True,
+ 'ANKUseMatrixFree': True,
+ 'ANKUseTurbDADI': True,
+ 'ASMOverlap': 1,
+ 'ASMOverlapCoarse': 0,
+ 'CFL': 1.5,
+ 'CFLCoarse': 1.0,
+ 'CFLLimit': 1.5,
+ 'GMRESOrthogonalizationType': 'modified Gram-Schmidt',
+ 'ILUFill': 2,
+ 'ILUFillCoarse': 0,
+ 'L2Convergence': 1e-10,
+ 'L2ConvergenceCoarse': 0.01,
+ 'L2ConvergenceRel': 1e-16,
+ 'MGCycle': 'sg',
+ 'MGStartLevel': -1,
+ 'NKADPC': False,
+ 'NKAMGLevels': 2,
+ 'NKAMGNSmooth': 1,
+ 'NKASMOverlap': 1,
+ 'NKASMOverlapCoarse': 0,
+ 'NKFixedStep': 0.25,
+ 'NKGlobalPreconditioner': 'additive Schwarz',
+ 'NKInnerPreconIts': 1,
+ 'NKInnerPreconItsCoarse': 1,
+ 'NKJacobianLag': 20,
+ 'NKLS': 'cubic',
+ 'NKLinearSolveTol': 0.3,
+ 'NKOuterPreconIts': 1,
+ 'NKPCILUFill': 2,
+ 'NKPCILUFillCoarse': 0,
+ 'NKSubspaceSize': 60,
+ 'NKSwitchTol': 0.0001,
+ 'NKUseEW': True,
+ 'NKViscPC': False,
+ 'RKReset': False,
+ 'TSStability': False,
+ 'acousticScaleFactor': 1.0,
+ 'adjointAMGLevels': 2,
+ 'adjointAMGNSmooth': 1,
+ 'adjointDivTol': 100000.0,
+ 'adjointL2Convergence': 1e-06,
+ 'adjointL2ConvergenceAbs': 1e-16,
+ 'adjointL2ConvergenceRel': 1e-16,
+ 'adjointMaxIter': 500,
+ 'adjointMaxL2DeviationFactor': 1.0,
+ 'adjointMonitorStep': 10,
+ 'adjointSolver': 'GMRES',
+ 'adjointSubspaceSize': 100,
+ 'alphaFollowing': True,
+ 'alphaMode': False,
+ 'altitudeMode': False,
+ 'applyAdjointPCSubspaceSize': 20,
+ 'applyPCSubspaceSize': 10,
+ 'approxPC': True,
+ 'backgroundVolScale': 1.0,
+ 'betaMode': False,
+ 'blockSplitting': True,
+ 'cavExponent': 0,
+ 'cavSensorOffset': 0.0,
+ 'cavSensorSharpness': 10.0,
+ 'cavitationNumber': 1.4,
+ 'closedSurfaceFamilies': None,
+ 'coarseDiscretization': 'central plus scalar dissipation',
+ 'computeCavitation': False,
+ 'computeSepSensorKs': False,
+ 'coupledSolution': False,
+ 'cpMinRho': 100.0,
+ 'cutCallback': None,
+ 'debugZipper': False,
+ 'deltaT': 0.01,
+ 'designSurfaceFamily': None,
+ 'discretization': 'central plus scalar dissipation',
+ 'dissContMagnitude': 1.0,
+ 'dissContMidpoint': 3.0,
+ 'dissContSharpness': 3.0,
+ 'dissipationLumpingParameter': 6.0,
+ 'dissipationScalingExponent': 0.67,
+ 'eddyVisInfRatio': 0.009,
+ 'equationMode': 'time spectral',
+ 'equationType': 'Euler',
+ 'eulerWallTreatment': 'linear pressure extrapolation',
+ 'explicitSurfaceCallback': None,
+ 'firstRun': True,
+ 'flowType': 'external',
+ 'forcesAsTractions': True,
+ 'frozenTurbulence': False,
+ 'globalPreconditioner': 'additive Schwarz',
+ 'gridFile': '../input_files/naca64A010_euler-L2.cgns',
+ 'gridPrecision': 'double',
+ 'gridPrecisionSurface': 'single',
+ 'infChangeCorrection': True,
+ 'infChangeCorrectionTol': 1e-12,
+ 'infChangeCorrectionType': 'offset',
+ 'innerPreconIts': 1,
+ 'innerPreconItsCoarse': 1,
+ 'isoVariables': [],
+ 'isosurface': {},
+ 'liftIndex': 2,
+ 'limiter': 'van Albada',
+ 'loadBalanceIter': 10,
+ 'loadImbalance': 0.1,
+ 'localPreconditioner': 'ILU',
+ 'lowSpeedPreconditioner': False,
+ 'machMode': False,
+ 'matrixOrdering': 'RCM',
+ 'maxL2DeviationFactor': 1.0,
+ 'meshMaxSkewness': 1.0,
+ 'meshSurfaceFamily': None,
+ 'monitorVariables': ['resrho', 'cl', 'cd'],
+ 'nCycles': 10000,
+ 'nCyclesCoarse': 500,
+ 'nFloodIter': -1,
+ 'nRKReset': 5,
+ 'nRefine': 10,
+ 'nSaveSurface': 1,
+ 'nSaveVolume': 1,
+ 'nSubiter': 3,
+ 'nSubiterTurb': 3,
+ 'nTimeIntervalsSpectral1': 3,
+ 'nTimeIntervalsSpectral2': 3,
+ 'nTimeStepsCoarse': 48,
+ 'nTimeStepsFine': 400,
+ 'nearWallDist': 0.1,
+ 'numberSolutions': True,
+ 'omegaFourier1': 10.0,
+ 'omegaFourier2': 14.142135623730951,
+ 'outerPreconIts': 3,
+ 'outputDirectory': './output_compare',
+ 'outputSurfaceFamily': 'allSurfaces',
+ 'overlapFactor': 0.9,
+ 'oversetDebugPrint': False,
+ 'oversetLoadBalance': True,
+ 'oversetPriority': {},
+ 'oversetProjTol': 1e-12,
+ 'oversetUpdateMode': 'frozen',
+ 'pMode': False,
+ 'partitionLikeNProc': -1,
+ 'partitionOnly': False,
+ 'preconditionerSide': 'right',
+ 'printAllOptions': True,
+ 'printBadlySkewedCells': False,
+ 'printIntro': True,
+ 'printIterations': True,
+ 'printNegativeVolumes': False,
+ 'printTiming': True,
+ 'printWarnings': True,
+ 'qMode': False,
+ 'rMode': False,
+ 'recomputeOverlapMatrix': True,
+ 'resAveraging': 'alternate',
+ 'restartAdjoint': True,
+ 'restartFile': None,
+ 'restrictionRelaxation': 0.8,
+ 'selfZipCutoff': 120.0,
+ 'sepSensorKsOffset': 0.0,
+ 'sepSensorKsPhi': 90.0,
+ 'sepSensorKsRho': 1000.0,
+ 'sepSensorKsSharpness': 25.0,
+ 'sepSensorOffset': 0.0,
+ 'sepSensorSharpness': 10.0,
+ 'setMonitor': True,
+ 'skipAfterFailedAdjoint': True,
+ 'smoothParameter': 1.5,
+ 'smoother': 'DADI',
+ 'solutionPrecision': 'single',
+ 'solutionPrecisionSurface': 'single',
+ 'storeConvHist': True,
+ 'storeRindLayer': True,
+ 'surfaceVariables': ['cp', 'vx', 'vy', 'vz', 'mach'],
+ 'timeAccuracy': 2,
+ 'timeIntegrationScheme': 'BDF',
+ 'timeIntervals': 9,
+ 'timeLimit': -1.0,
+ 'turbResScale': 10000.0,
+ 'turbulenceModel': 'SA',
+ 'turbulenceOrder': 'first order',
+ 'turbulenceProduction': 'strain',
+ 'updateWallAssociations': False,
+ 'useALE': True,
+ 'useANKSolver': True,
+ 'useApproxWallDistance': True,
+ 'useBlockettes': True,
+ 'useDiagTSPC': True,
+ 'useDissContinuation': False,
+ 'useExternalDynamicMesh': True,
+ 'useGridMotion': False,
+ 'useLinResMonitor': False,
+ 'useMatrixFreedrdw': True,
+ 'useNKSolver': True,
+ 'useOversetWallScaling': False,
+ 'useQCR': False,
+ 'useRotationSA': False,
+ 'useSkewnessCheck': False,
+ 'useTSInterpolatedGridVelocity': True,
+ 'useTorusTimeSpectral': True,
+ 'useWallFunctions': False,
+ 'useZipperMesh': True,
+ 'useft2SA': True,
+ 'verifyExtra': True,
+ 'verifySpatial': True,
+ 'verifyState': True,
+ 'vis2': 0.25,
+ 'vis2Coarse': 0.5,
+ 'vis4': 0.0156,
+ 'viscPC': False,
+ 'viscWallTreatment': 'constant pressure extrapolation',
+ 'viscousSurfaceVelocities': True,
+ 'volumeVariables': ['resrho'],
+ 'wallDistCutoff': 1e+20,
+ 'windAxis': False,
+ 'writeSolutionDigits': 3,
+ 'writeSolutionEachIter': False,
+ 'writeSurfaceSolution': False,
+ 'writeTecplotSurfaceSolution': False,
+ 'writeVolumeSolution': False,
+ 'zipperSurfaceFamily': None}
+-> Alpha... 0.000000 
+#
+# Specified load imbalance tolerance 0.100 achieved.
+# Continuing with 0.000 load imbalance for the cells and 0.000 for the faces
+#
+#
+# Grid level: 1, Total number of cells: 1536
+#
++--------------------------------------------------+
+  CGNS Surface Families by Boundary Condition Type
++--------------------------------------------------+
+| Wall Types           : wall 
+| Inflow Types         : 
+| Outflow Types        : 
+| Symmetry Types       : sym 
+| Farfield Types       : far 
+| Overset Types        : 
++--------------------------------------------------+
+
+ Torus time spectral matrices constructed successfully:
+   Grid:            3  x            3  =            9  instances
+   Omega1 =   10.000000000000000       rad/s
+   Omega2 =   14.142135623730951       rad/s
+   Sparsity:            5  non-zeros per row (cross pattern)
+   Matrix validation: PASSED (row sums = 0)
+
++--------------------------------------------------+
+Setting up mesh...
+Setting up mesh...
+Setting up mesh...
+|
+| Initialization Times:
+|
+| Library Load Time             :      0.013 sec
+| Set Defaults Time             :      0.000 sec
+| Base Class Init Time          :      0.001 sec
+| Introductory Time             :      0.002 sec
+| Partitioning Time             :      0.001 sec
+| Preprocessing Time            :      0.017 sec
+| Family Setup Time             :      0.000 sec
+| Cut Callback Time             :      0.000 sec
+| Explicit Surface Cut Time     :      0.000 sec
+| Overset Preprocessing Time    :      0.000 sec
+| Initialize Flow Time          :      0.007 sec
+|
+| Total Init Time               :      0.041 sec
++--------------------------------------------------+
+Setting up mesh...
++----------------------------------------+
+|          All IDWarp Options:           |
++----------------------------------------+
+{'LdefFact': 1.0,
+ 'aExp': 3.0,
+ 'alpha': 0.25,
+ 'bExp': 5.0,
+ 'bucketSize': 8,
+ 'cornerAngle': 30.0,
+ 'errTol': 0.0005,
+ 'evalMode': 'fast',
+ 'fileType': 'CGNS',
+ 'gridFile': '../input_files/naca64A010_euler-L2.cgns',
+ 'restartFile': None,
+ 'specifiedSurfaces': None,
+ 'symmTol': 1e-06,
+ 'symmetryPlanes': None,
+ 'symmetrySurfaces': None,
+ 'useRotations': True,
+ 'zeroCornerRotations': True}
+  -> Reading CGNS File: ../input_files/naca64A010_euler-L2.cgns
+    -> Number of Zones:           1
+#------------------------------#
+ Total Volume Nodes :      3298 
+#------------------------------#
++-------------------- Symmetry Planes -------------------+
+|           Point                        Normal          |
+| (  0.000   0.000   0.000)    (  0.000   0.000   1.000) |
+| (  0.000   0.000   1.000)    (  0.000   0.000  -1.000) |
++--------------------------------------------------------+
+#--------------------------------#
+ Unique Surface Nodes :       192 
+#--------------------------------#
+ Computing Denominator Estimate...
+ Load Balancing...
+ Finished Mesh Initialization.
+
+Phase and alpha distribution:
+
+Phase and alpha distribution:
+
+Phase and alpha distribution:
+
+Phase and alpha distribution:
+  Instance 1 (0,0): θ₁=0.0000, θ₂=0.0000, α=  0.000°
+  Instance 4 (0,1): θ₁=0.0000, θ₂=2.0944, α=  0.866°
+  Instance 1 (0,0): θ₁=0.0000, θ₂=0.0000, α=  0.000°
+  Instance 4 (0,1): θ₁=0.0000, θ₂=2.0944, α=  0.866°
+  Instance 1 (0,0): θ₁=0.0000, θ₂=0.0000, α=  0.000°
+  Instance 4 (0,1): θ₁=0.0000, θ₂=2.0944, α=  0.866°
+  Instance 1 (0,0): θ₁=0.0000, θ₂=0.0000, α=  0.000°
+  Instance 4 (0,1): θ₁=0.0000, θ₂=2.0944, α=  0.866°
+  Instance 7 (0,2): θ₁=0.0000, θ₂=4.1888, α= -0.866°
+  Instance 7 (0,2): θ₁=0.0000, θ₂=4.1888, α= -0.866°
+  Instance 2 (1,0): θ₁=2.0944, θ₂=0.0000, α=  0.866°
+  Instance 7 (0,2): θ₁=0.0000, θ₂=4.1888, α= -0.866°
+  Instance 2 (1,0): θ₁=2.0944, θ₂=0.0000, α=  0.866°
+  Instance 7 (0,2): θ₁=0.0000, θ₂=4.1888, α= -0.866°
+  Instance 2 (1,0): θ₁=2.0944, θ₂=0.0000, α=  0.866°
+  Instance 5 (1,1): θ₁=2.0944, θ₂=2.0944, α=  1.732°
+  Instance 8 (1,2): θ₁=2.0944, θ₂=4.1888, α=  0.000°
+  Instance 2 (1,0): θ₁=2.0944, θ₂=0.0000, α=  0.866°
+  Instance 5 (1,1): θ₁=2.0944, θ₂=2.0944, α=  1.732°
+  Instance 5 (1,1): θ₁=2.0944, θ₂=2.0944, α=  1.732°
+  Instance 8 (1,2): θ₁=2.0944, θ₂=4.1888, α=  0.000°
+  Instance 5 (1,1): θ₁=2.0944, θ₂=2.0944, α=  1.732°
+  Instance 8 (1,2): θ₁=2.0944, θ₂=4.1888, α=  0.000°
+  Instance 3 (2,0): θ₁=4.1888, θ₂=0.0000, α= -0.866°
+  Instance 3 (2,0): θ₁=4.1888, θ₂=0.0000, α= -0.866°
+  Instance 6 (2,1): θ₁=4.1888, θ₂=2.0944, α=  0.000°
+  Instance 9 (2,2): θ₁=4.1888, θ₂=4.1888, α= -1.732°
+
+Deforming meshes...
+  Instance 8 (1,2): θ₁=2.0944, θ₂=4.1888, α=  0.000°
+  Instance 3 (2,0): θ₁=4.1888, θ₂=0.0000, α= -0.866°
+  Instance 6 (2,1): θ₁=4.1888, θ₂=2.0944, α=  0.000°
+  Instance 9 (2,2): θ₁=4.1888, θ₂=4.1888, α= -1.732°
+  Instance 3 (2,0): θ₁=4.1888, θ₂=0.0000, α= -0.866°
+  Instance 6 (2,1): θ₁=4.1888, θ₂=2.0944, α=  0.000°
+  Instance 9 (2,2): θ₁=4.1888, θ₂=4.1888, α= -1.732°
+
+Deforming meshes...
+  Instance 6 (2,1): θ₁=4.1888, θ₂=2.0944, α=  0.000°
+  Instance 9 (2,2): θ₁=4.1888, θ₂=4.1888, α= -1.732°
+
+Deforming meshes...
+
+Deforming meshes...
+
+Solving torus system...
+
+Solving torus system...
+
+Solving torus system...
+
+Solving torus system...
++----------------------------------------------------------------------+
+|  Switching to Aero Problem: torus_ts                                 |
++----------------------------------------------------------------------+
+
++------------------------------------------------------------------------------+
+| pyADFLOW Warning: 'zipperSurfaceFamily' option was not given. Using all wall |
+| boundary conditions for the zipper mesh.                                     |
++------------------------------------------------------------------------------+
+
+-> Alpha... 0.000000 
+
+ Torus time spectral matrices constructed successfully:
+   Grid:            3  x            3  =            9  instances
+   Omega1 =   10.000000000000000       rad/s
+   Omega2 =   14.142135623730951       rad/s
+   Sparsity:            5  non-zeros per row (cross pattern)
+   Matrix validation: PASSED (row sums = 0)
+
++----------------------------------------+
+|      All Modified ADFLOW Options:      |
++----------------------------------------+
+{'ANKSwitchTol': 0.01,
+ 'CFL': 1.5,
+ 'L2Convergence': 1e-10,
+ 'NKSwitchTol': 0.0001,
+ 'equationMode': 'time spectral',
+ 'equationType': 'Euler',
+ 'gridFile': '../input_files/naca64A010_euler-L2.cgns',
+ 'monitorVariables': ['resrho', 'cl', 'cd'],
+ 'nCycles': 10000,
+ 'nSubiter': 3,
+ 'omegaFourier1': 10.0,
+ 'omegaFourier2': 14.142135623730951,
+ 'outputDirectory': './output_compare',
+ 'timeIntervals': 9,
+ 'turbResScale': 10000.0,
+ 'useExternalDynamicMesh': True,
+ 'useNKSolver': True,
+ 'useTSInterpolatedGridVelocity': True,
+ 'useTorusTimeSpectral': True,
+ 'writeSurfaceSolution': False,
+ 'writeVolumeSolution': False}
+#
+# Grid 1: Performing 10000 iterations, unless converged earlier. Minimum required iteration before NK switch:      5. Switch to NK at totalR of:   2.92E-01
+#
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#  Grid  | Spectral | Iter | Iter |  Iter  |   CFL   | Step | Lin  |        Res rho         |         C_lift         |        C_drag          |        totalRes        |
+#  level | Solution |      | Tot  |  Type  |         |      | Res  |                        |                        |                        |                        |
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      1         1        0      0     None     ----    ----   ----   6.6803720015059884E+00   0.0000000000000000E+00   0.0000000000000000E+00   9.7065584119260654E+02 
+      1         2        0      0     None     ----    ----   ----   6.6938361792619574E+00   0.0000000000000000E+00   0.0000000000000000E+00   9.7253898002677431E+02 
+      1         3        0      0     None     ----    ----   ----   6.6950568138949524E+00   0.0000000000000000E+00   0.0000000000000000E+00   9.7271197200876691E+02 
+      1         4        0      0     None     ----    ----   ----   6.6942062221632659E+00   0.0000000000000000E+00   0.0000000000000000E+00   9.7259037924240329E+02 
+      1         5        0      0     None     ----    ----   ----   6.7382167862583442E+00   0.0000000000000000E+00   0.0000000000000000E+00   9.7874559746770421E+02 
+      1         6        0      0     None     ----    ----   ----   6.6802315490527056E+00   0.0000000000000000E+00   0.0000000000000000E+00   9.7063675419017102E+02 
+      1         7        0      0     None     ----    ----   ----   6.6946365845222076E+00   0.0000000000000000E+00   0.0000000000000000E+00   9.7265372021921837E+02 
+      1         8        0      0     None     ----    ----   ----   6.6802190337444456E+00   0.0000000000000000E+00   0.0000000000000000E+00   9.7063486756175666E+02 
+      1         9        0      0     None     ----    ----   ----   6.7353534140189462E+00   0.0000000000000000E+00   0.0000000000000000E+00   9.7835627694623008E+02 
+      1         1        1      1     DADI   1.50E+00  1.00   ----   4.4647895042711188E+00  -8.4298512324630925E-03   2.2715799796569752E-01   7.7854750366420308E+02 
+      1         2        1      1     DADI   1.50E+00  1.00   ----   4.4667303435520651E+00   1.8732125575451491E-01   2.2996555734098378E-01   7.7892591059361860E+02 
+      1         3        1      1     DADI   1.50E+00  1.00   ----   4.4691217260181322E+00  -1.9377402716290737E-01   2.3005420897521839E-01   7.7937811069922873E+02 
+      1         4        1      1     DADI   1.50E+00  1.00   ----   4.4667608731822703E+00   1.8947670493952953E-01   2.2999516416930410E-01   7.7892784638678199E+02 
+      1         5        1      1     DADI   1.50E+00  1.00   ----   4.4756341714407863E+00   3.8504617618551368E-01   2.3867487152126560E-01   7.8057648189074575E+02 
+      1         6        1      1     DADI   1.50E+00  1.00   ----   4.4645335403226989E+00   4.1319074805567513E-03   2.2715810426602454E-01   7.7852097701275500E+02 
+      1         7        1      1     DADI   1.50E+00  1.00   ----   4.4689998248165423E+00  -1.9161905319582798E-01   2.3002462081393837E-01   7.7936643937573035E+02 
+      1         8        1      1     DADI   1.50E+00  1.00   ----   4.4645127472335719E+00   4.1314331200688059E-03   2.2715796032855104E-01   7.7851743977339299E+02 
+      1         9        1      1     DADI   1.50E+00  1.00   ----   4.4795008735384760E+00  -3.7678248821655569E-01   2.3844872439349435E-01   7.8140751493523010E+02 
+      1         1        2      2     DADI   1.50E+00  1.00   ----   4.0822789887481070E+00  -6.2420734819653156E-03   2.1342281828641541E-01   6.9125312787525695E+02 
+      1         2        2      2     DADI   1.50E+00  1.00   ----   4.0884461518954645E+00   1.3662538618577869E-01   2.1552155205106571E-01   6.9182852309967723E+02 
+      1         3        2      2     DADI   1.50E+00  1.00   ----   4.0905180250243172E+00  -1.4137919943695579E-01   2.1558844877655847E-01   6.9252012085939384E+02 
+      1         4        2      2     DADI   1.50E+00  1.00   ----   4.0887111765758712E+00   1.3822546071498712E-01   2.1554454452802230E-01   6.9185890126112145E+02 
+      1         5        2      2     DADI   1.50E+00  1.00   ----   4.1093727285036827E+00   2.8100884341477333E-01   2.2204001429372702E-01   6.9427198856485359E+02 
+      1         6        2      2     DADI   1.50E+00  1.00   ----   4.0830474268406167E+00   3.0846610844879607E-03   2.1342319865369686E-01   6.9135270821117297E+02 
+      1         7        2      2     DADI   1.50E+00  1.00   ----   4.0905160740381756E+00  -1.3977906331084936E-01   2.1556549597916008E-01   6.9252359518920935E+02 
+      1         8        2      2     DADI   1.50E+00  1.00   ----   4.0830228785841989E+00   3.0845293128191065E-03   2.1342250158067766E-01   6.9134791612163144E+02 
+      1         9        2      2     DADI   1.50E+00  1.00   ----   4.1119181488804015E+00  -2.7483566473678023E-01   2.2186585485868021E-01   6.9550123344259293E+02 
+      1         1        3      3     DADI   1.50E+00  1.00   ----   3.4499488687106292E+00  -2.5633217893685639E-03   8.5544752326691287E-02   5.8004713218062261E+02 
+      1         2        3      3     DADI   1.50E+00  1.00   ----   3.4503200506087115E+00   4.5362625238251332E-02   8.6225597781207447E-02   5.8015735506844567E+02 
+      1         3        3      3     DADI   1.50E+00  1.00   ----   3.4530413245283511E+00  -4.7377687235946729E-02   8.6263906665739160E-02   5.8074506555047935E+02 
+      1         4        3      3     DADI   1.50E+00  1.00   ----   3.4503965561416949E+00   4.6007930544912284E-02   8.6236097195550684E-02   5.8016509105730267E+02 
+      1         5        3      3     DADI   1.50E+00  1.00   ----   3.4541374146443435E+00   9.3903247870439244E-02   8.8374153251976159E-02   5.8107069886762554E+02 
+      1         6        3      3     DADI   1.50E+00  1.00   ----   3.4504183772115842E+00   1.2017536118483496E-03   8.5545028743820514E-02   5.8010880752711716E+02 
+      1         7        3      3     DADI   1.50E+00  1.00   ----   3.4531306370926473E+00  -4.6730288838234893E-02   8.6253089194726545E-02   5.8075894238860610E+02 
+      1         8        3      3     DADI   1.50E+00  1.00   ----   3.4504280445973894E+00   1.2032536907292737E-03   8.5543406966922336E-02   5.8010897251317954E+02 
+      1         9        3      3     DADI   1.50E+00  1.00   ----   3.4596538171497588E+00  -9.1516181900299198E-02   8.8314661765782648E-02   5.8230218828665022E+02 
+      1         1        4      4     DADI   1.50E+00  1.00   ----   3.6479252224059446E+00  -4.9408925254280506E-03   7.5590437519165166E-02   6.0146622164354778E+02 
+      1         2        4      4     DADI   1.50E+00  1.00   ----   3.6449975576967550E+00   1.0975188721971733E-01   7.7187654009046702E-02   6.0062547212306640E+02 
+      1         3        4      4     DADI   1.50E+00  1.00   ----   3.6593309927279289E+00  -1.1331001671338595E-01   7.7235186016606838E-02   6.0342698856980405E+02 
+      1         4        4      4     DADI   1.50E+00  1.00   ----   3.6450800236408942E+00   1.1106363629392720E-01   7.7207080975239623E-02   6.0063742172139098E+02 
+      1         5        4      4     DADI   1.50E+00  1.00   ----   3.6517326050871324E+00   2.2561956503396291E-01   8.2151094250450196E-02   6.0107677083363319E+02 
+      1         6        4      4     DADI   1.50E+00  1.00   ----   3.6481992226809443E+00   2.7047288510346490E-03   7.5590082745135581E-02   6.0153319515935107E+02 
+      1         7        4      4     DADI   1.50E+00  1.00   ----   3.6593021148338298E+00  -1.1199784979007466E-01   7.7215012811595651E-02   6.0343041770096033E+02 
+      1         8        4      4     DADI   1.50E+00  1.00   ----   3.6482802384642210E+00   2.7047396943581936E-03   7.5586931458297452E-02   6.0154725513575113E+02 
+      1         9        4      4     DADI   1.50E+00  1.00   ----   3.6742589535658450E+00  -2.2024234147477906E-01   8.2006113435710376E-02   6.0563696558492120E+02 
+      1         1        5      5     DADI   1.50E+00  1.00   ----   4.0093920235652991E+00  -6.2357542631993335E-03   1.1128498968148484E-01   6.6978665093064524E+02 
+      1         2        5      5     DADI   1.50E+00  1.00   ----   4.0063229909846365E+00   1.5559191091896657E-01   1.1364553770708857E-01   6.6896901605203493E+02 
+      1         3        5      5     DADI   1.50E+00  1.00   ----   4.0129023571901437E+00  -1.5936434220448312E-01   1.1363891756704131E-01   6.7069788306626253E+02 
+      1         4        5      5     DADI   1.50E+00  1.00   ----   4.0064646606116341E+00   1.5739614636575491E-01   1.1367342989089467E-01   6.6899147119038844E+02 
+      1         5        5      5     DADI   1.50E+00  1.00   ----   4.0038758788621225E+00   3.1910698876224541E-01   1.2089284317283666E-01   6.6828758907573751E+02 
+      1         6        5      5     DADI   1.50E+00  1.00   ----   4.0104077074883975E+00   4.2757281899349631E-03   1.1128511549205941E-01   6.6993959715437518E+02 
+      1         7        5      5     DADI   1.50E+00  1.00   ----   4.0131516564512992E+00  -1.5756139518914367E-01   1.1360987480223755E-01   6.7073403265394188E+02 
+      1         8        5      5     DADI   1.50E+00  1.00   ----   4.0104921142506393E+00   4.2742398769141376E-03   1.1127903912651851E-01   6.6995171684734362E+02 
+      1         9        5      5     DADI   1.50E+00  1.00   ----   4.0204018185321706E+00  -3.1058296540756436E-01   1.2055361565044573E-01   6.7225733298988598E+02 
+      1         1        6      6     DADI   1.50E+00  1.00   ----   2.5897036241412805E+00  -4.3410262530279853E-03   8.0292559254727086E-02   4.3146245387856129E+02 
+      1         2        6      6     DADI   1.50E+00  1.00   ----   2.5901682107962389E+00   8.7754912690001977E-02   8.1672010241473442E-02   4.3140429070134826E+02 
+      1         3        6      6     DADI   1.50E+00  1.00   ----   2.5952176080154006E+00  -9.0519576147888109E-02   8.1656314636397553E-02   4.3232873101336793E+02 
+      1         4        6      6     DADI   1.50E+00  1.00   ----   2.5902002665883797E+00   8.8979833832408969E-02   8.1694631079657298E-02   4.3140778677765672E+02 
+      1         5        6      6     DADI   1.50E+00  1.00   ----   2.5971192931900049E+00   1.8102174228003995E-01   8.5925547874931882E-02   4.3221652954627933E+02 
+      1         6        6      6     DADI   1.50E+00  1.00   ----   2.5896746317105994E+00   2.7996080423191433E-03   8.0294663481538103E-02   4.3146581111514746E+02 
+      1         7        6      6     DADI   1.50E+00  1.00   ----   2.5952516231585978E+00  -8.9293618060146782E-02   8.1631873242719616E-02   4.3233782674565015E+02 
+      1         8        6      6     DADI   1.50E+00  1.00   ----   2.5897570161733960E+00   2.8008366767716536E-03   8.0284453575556122E-02   4.3147624447822699E+02 
+      1         9        6      6     DADI   1.50E+00  1.00   ----   2.6114286693650568E+00  -1.7543044829291796E-01   8.5643693305487434E-02   4.3475944511098754E+02 
+      1         1        7      7     DADI   1.50E+00  1.00   ----   1.8587233866007711E+00  -4.5402400323431430E-03   4.2000197195016589E-02   2.9128772821622931E+02 
+      1         2        7      7     DADI   1.50E+00  1.00   ----   1.8602127933976411E+00   6.2835615516371984E-02   4.2897065335859207E-02   2.9164836909804404E+02 
+      1         3        7      7     DADI   1.50E+00  1.00   ----   1.8612855870833771E+00  -6.7000669141325492E-02   4.2973844031013592E-02   2.9167437335379049E+02 
+      1         4        7      7     DADI   1.50E+00  1.00   ----   1.8603322302497174E+00   6.3852238477598050E-02   4.2917236092839810E-02   2.9166199145940243E+02 
+      1         5        7      7     DADI   1.50E+00  1.00   ----   1.8662862869434445E+00   1.3113899558021566E-01   4.5768830181287135E-02   2.9281968091830907E+02 
+      1         6        7      7     DADI   1.50E+00  1.00   ----   1.8592600809220468E+00   1.3880660582515914E-03   4.2003640488636362E-02   2.9135133728027904E+02 
+      1         7        7      7     DADI   1.50E+00  1.00   ----   1.8613385511158960E+00  -6.5982104511776454E-02   4.2950735664685130E-02   2.9168111047283276E+02 
+      1         8        7      7     DADI   1.50E+00  1.00   ----   1.8592639811739564E+00   1.3903557056715310E-03   4.1989866255334823E-02   2.9135095617387867E+02 
+      1         9        7      7     DADI   1.50E+00  1.00   ----   1.8653196509002550E+00  -1.2835362007459664E-01   4.5687882620727288E-02   2.9251314226912058E+02 
+      1         1        8      8     DADI   1.50E+00  1.00   ----   2.3463295375846704E+00  -6.0366483406217863E-03   5.4237086084420245E-02   3.6393672727540161E+02 
+      1         2        8      8     DADI   1.50E+00  1.00   ----   2.3335540926831895E+00   1.1325090208768762E-01   5.5850185772000897E-02   3.6205892476463021E+02 
+      1         3        8      8     DADI   1.50E+00  1.00   ----   2.3594976346596934E+00  -1.1783038913010357E-01   5.5933982900799914E-02   3.6601611184669542E+02 
+      1         4        8      8     DADI   1.50E+00  1.00   ----   2.3337405340568100E+00   1.1480360069421094E-01   5.5878750287557732E-02   3.6208651056267377E+02 
+      1         5        8      8     DADI   1.50E+00  1.00   ----   2.3210958635004881E+00   2.3397383179249931E-01   6.0930648354409325E-02   3.6034520556427435E+02 
+      1         6        8      8     DADI   1.50E+00  1.00   ----   2.3470310997497434E+00   3.0075964700381208E-03   5.4239886634339513E-02   3.6404512601162281E+02 
+      1         7        8      8     DADI   1.50E+00  1.00   ----   2.3595338555707759E+00  -1.1627895916002627E-01   5.5900973278397048E-02   3.6602199283726856E+02 
+      1         8        8      8     DADI   1.50E+00  1.00   ----   2.3469877266345471E+00   3.0061305849216485E-03   5.4223434912277046E-02   3.6403478095279928E+02 
+      1         9        8      8     DADI   1.50E+00  1.00   ----   2.3730254424646500E+00  -2.2796273279171159E-01   6.0741445046545543E-02   3.6830301014884571E+02 
+      1         1        9      9     DADI   1.50E+00  1.00   ----   1.6868336392672190E+00  -5.3351406394369083E-03   6.3414241463613186E-02   2.7597111907249257E+02 
+      1         2        9      9     DADI   1.50E+00  1.00   ----   1.6818136336045137E+00   1.1013725827369786E-01   6.5039234545022029E-02   2.7519336413374089E+02 
+      1         3        9      9     DADI   1.50E+00  1.00   ----   1.6961623803530719E+00  -1.1285617931858716E-01   6.5046161315432977E-02   2.7735579584915058E+02 
+      1         4        9      9     DADI   1.50E+00  1.00   ----   1.6819467930371514E+00   1.1178393677188686E-01   6.5071350900473890E-02   2.7521378258458645E+02 
+      1         5        9      9     DADI   1.50E+00  1.00   ----   1.6796615265060235E+00   2.2722170476728346E-01   7.0108577279148016E-02   2.7477950856821491E+02 
+      1         6        9      9     DADI   1.50E+00  1.00   ----   1.6872871848837796E+00   4.2533755934510975E-03   6.3416042839196884E-02   2.7603725905601635E+02 
+      1         7        9      9     DADI   1.50E+00  1.00   ----   1.6962560366402397E+00  -1.1121144811876726E-01   6.5008253638682831E-02   2.7736836774758137E+02 
+      1         8        9      9     DADI   1.50E+00  1.00   ----   1.6872800619344379E+00   4.2507629423393228E-03   6.3397464459058972E-02   2.7603251311996479E+02 
+      1         9        9      9     DADI   1.50E+00  1.00   ----   1.7126483192821658E+00  -2.1869879799062619E-01   6.9733858900079881E-02   2.7982196720127610E+02 
+      1         1       10     10     DADI   1.50E+00  1.00   ----   1.1482022434634764E+00  -4.5329952210968749E-03   4.0785508131985782E-02   1.7911689357938928E+02 
+      1         2       10     10     DADI   1.50E+00  1.00   ----   1.1490602396742398E+00   6.4154666763765078E-02   4.1715384118098470E-02   1.7947515948428378E+02 
+      1         3       10     10     DADI   1.50E+00  1.00   ----   1.1515963285922362E+00  -6.6763872645084724E-02   4.1692203458414040E-02   1.7956138237346411E+02 
+      1         4       10     10     DADI   1.50E+00  1.00   ----   1.1491016955500017E+00   6.5490660511224902E-02   4.1743314507052084E-02   1.7947789079209403E+02 
+      1         5       10     10     DADI   1.50E+00  1.00   ----   1.1553388507909890E+00   1.3415269081904077E-01   4.4639324909221428E-02   1.8071043663906579E+02 
+      1         6       10     10     DADI   1.50E+00  1.00   ----   1.1483620848007772E+00   3.2480178084160899E-03   4.0784644823839498E-02   1.7912493157199498E+02 
+      1         7       10     10     DADI   1.50E+00  1.00   ----   1.1515694378120949E+00  -6.5428041885814789E-02   4.1657764752687981E-02   1.7955855501011311E+02 
+      1         8       10     10     DADI   1.50E+00  1.00   ----   1.1483544859589654E+00   3.2473215885123197E-03   4.0765730183443247E-02   1.7912221623302966E+02 
+      1         9       10     10     DADI   1.50E+00  1.00   ----   1.1568995524784815E+00  -1.2762868950340869E-01   4.4304915787743489E-02   1.8065242368509098E+02 
+      1         1       11     11     DADI   1.50E+00  1.00   ----   1.4731674840102345E+00  -5.1599509848799519E-03   2.4950544565702785E-02   2.2594246459689271E+02 
+      1         2       11     11     DADI   1.50E+00  1.00   ----   1.4638489324742510E+00   7.0881201703318686E-02   2.5939241564409465E-02   2.2444357900445544E+02 
+      1         3       11     11     DADI   1.50E+00  1.00   ----   1.4821089543496910E+00  -7.4168013387142628E-02   2.5890671570522834E-02   2.2729220374006729E+02 
+      1         4       11     11     DADI   1.50E+00  1.00   ----   1.4640580512483741E+00   7.2341827482422641E-02   2.5967122302592498E-02   2.2447640396493301E+02 
+      1         5       11     11     DADI   1.50E+00  1.00   ----   1.4541335999729756E+00   1.4828472893397393E-01   2.9001424439814700E-02   2.2284752069204185E+02 
+      1         6       11     11     DADI   1.50E+00  1.00   ----   1.4738889570552789E+00   3.3389869735997169E-03   2.4946231821388259E-02   2.2605466596167881E+02 
+      1         7       11     11     DADI   1.50E+00  1.00   ----   1.4820903294682690E+00  -7.2710711247231219E-02   2.5856402368127647E-02   2.2728576980818306E+02 
+      1         8       11     11     DADI   1.50E+00  1.00   ----   1.4738478442205654E+00   3.3354049819668552E-03   2.4929322949109017E-02   2.2604616454657739E+02 
+      1         9       11     11     DADI   1.50E+00  1.00   ----   1.4876546631941245E+00  -1.4162362949386031E-01   2.8651569516319413E-02   2.2789867724675986E+02 
+      1         1       12     12     DADI   1.50E+00  1.00   ----   1.2944376426430428E+00  -5.1307200942587172E-03   2.5241522219686140E-02   2.1075584359368156E+02 
+      1         2       12     12     DADI   1.50E+00  1.00   ----   1.2886677238979432E+00   9.6170953673918341E-02   2.6629662245685703E-02   2.0977390485728290E+02 
+      1         3       12     12     DADI   1.50E+00  1.00   ----   1.3009505032428175E+00  -9.7780746795025464E-02   2.6531504896206322E-02   2.1170959047113766E+02 
+      1         4       12     12     DADI   1.50E+00  1.00   ----   1.2887584892140957E+00   9.7972187419780199E-02   2.6662242565101087E-02   2.0979113804650578E+02 
+      1         5       12     12     DADI   1.50E+00  1.00   ----   1.2818589448291435E+00   1.9920157097773847E-01   3.0883679390382314E-02   2.0854467133091680E+02 
+      1         6       12     12     DADI   1.50E+00  1.00   ----   1.2947528734641669E+00   5.3369089329295960E-03   2.5237627695853242E-02   2.1080627614605825E+02 
+      1         7       12     12     DADI   1.50E+00  1.00   ----   1.3009992942326050E+00  -9.5988856942906237E-02   2.6493786854663942E-02   2.1171207432971346E+02 
+      1         8       12     12     DADI   1.50E+00  1.00   ----   1.2946994325700416E+00   5.3271074087055670E-03   2.5223928486748315E-02   2.1079516516976736E+02 
+      1         9       12     12     DADI   1.50E+00  1.00   ----   1.3103955892014127E+00  -1.8857694945005898E-01   3.0335830394064865E-02   2.1290228531101837E+02 
+      1         1       13     13     DADI   1.50E+00  1.00   ----   8.7893056072371012E-01  -5.0021195717986910E-03   1.8044079913832722E-02   1.4164658107717344E+02 
+      1         2       13     13     DADI   1.50E+00  1.00   ----   8.8463289884260299E-01   7.5829843159007565E-02   1.9125261806409510E-02   1.4253128675470904E+02 
+      1         3       13     13     DADI   1.50E+00  1.00   ----   8.8085871597624243E-01  -7.7192900331930686E-02   1.9068973641499287E-02   1.4183401333678859E+02 
+      1         4       13     13     DADI   1.50E+00  1.00   ----   8.8459581716601920E-01   7.7623983510780287E-02   1.9158683416543885E-02   1.4252454207795137E+02 
+      1         5       13     13     DADI   1.50E+00  1.00   ----   8.9725948259664812E-01   1.5846833954714096E-01   2.2527727915829694E-02   1.4434327171846655E+02 
+      1         6       13     13     DADI   1.50E+00  1.00   ----   8.7866655864080012E-01   5.4189992813320209E-03   1.8044144981828145E-02   1.4160008425293896E+02 
+      1         7       13     13     DADI   1.50E+00  1.00   ----   8.8081776494563246E-01  -7.5410396554285275E-02   1.9032731820337608E-02   1.4182731970348166E+02 
+      1         8       13     13     DADI   1.50E+00  1.00   ----   8.7860480561775622E-01   5.4062957030883430E-03   1.8034387665201379E-02   1.4158862260340936E+02 
+      1         9       13     13     DADI   1.50E+00  1.00   ----   8.9251841385310182E-01  -1.4759954983204299E-01   2.1986137415338891E-02   1.4350235576896100E+02 
+      1         1       14     14     DADI   1.50E+00  1.00   ----   8.0654297049981960E-01  -6.3624327146276638E-03   9.0332030184367522E-03   1.2207860357239271E+02 
+      1         2       14     14     DADI   1.50E+00  1.00   ----   8.0065779376885926E-01   5.4266107526802276E-02   9.6730011598644382E-03   1.2139501308898879E+02 
+      1         3       14     14     DADI   1.50E+00  1.00   ----   8.1126511047338923E-01  -5.8640331964089604E-02   9.7817932682315589E-03   1.2277320964775782E+02 
+      1         4       14     14     DADI   1.50E+00  1.00   ----   8.0077590903186480E-01   5.5995981829862679E-02   9.7059149387310160E-03   1.2141012070213544E+02 
+      1         5       14     14     DADI   1.50E+00  1.00   ----   7.9401599884394947E-01   1.1663472962062940E-01   1.1924606223405999E-02   1.2078489088243772E+02 
+      1         6       14     14     DADI   1.50E+00  1.00   ----   8.0695545010767877E-01   3.6800225149632992E-03   9.0385478491587356E-03   1.2213233327085842E+02 
+      1         7       14     14     DADI   1.50E+00  1.00   ----   8.1124393295416330E-01  -5.6924423706124827E-02   9.7496011804651828E-03   1.2276970677297847E+02 
+      1         8       14     14     DADI   1.50E+00  1.00   ----   8.0692746117425951E-01   3.6645287305823171E-03   9.0334566716213267E-03   1.2212689328056175E+02 
+      1         9       14     14     DADI   1.50E+00  1.00   ----   8.1243117272985887E-01  -1.0916401289704356E-01   1.1683837491324973E-02   1.2314998140218599E+02 
+      1         1       15     15     DADI   1.50E+00  1.00   ----   8.3733456238803139E-01  -7.4031436596150024E-03   1.2335868231085016E-02   1.3027420672963922E+02 
+      1         2       15     15     DADI   1.50E+00  1.00   ----   8.2887310547650239E-01   6.8226136060949849E-02   1.3073198823749681E-02   1.2884914665791169E+02 
+      1         3       15     15     DADI   1.50E+00  1.00   ----   8.4455663681056314E-01  -7.3703551194377548E-02   1.3299814858567738E-02   1.3149427993135185E+02 
+      1         4       15     15     DADI   1.50E+00  1.00   ----   8.2904305295841418E-01   7.0164929032872525E-02   1.3110210539268101E-02   1.2887760474777781E+02 
+      1         5       15     15     DADI   1.50E+00  1.00   ----   8.1814636149463282E-01   1.4577336415950887E-01   1.5748927038169842E-02   1.2704313368038321E+02 
+      1         6       15     15     DADI   1.50E+00  1.00   ----   8.3787602696550489E-01   3.8398884830239954E-03   1.2347148748957116E-02   1.3036934060485569E+02 
+      1         7       15     15     DADI   1.50E+00  1.00   ----   8.4458988844445471E-01  -7.1786099249202234E-02   1.3268215227751675E-02   1.3150009909785655E+02 
+      1         8       15     15     DADI   1.50E+00  1.00   ----   8.3786025589414881E-01   3.8168999019798089E-03   1.2346687992884933E-02   1.3036610739268178E+02 
+      1         9       15     15     DADI   1.50E+00  1.00   ----   8.5014118008365891E-01  -1.3801009728081112E-01   1.5708617050655231E-02   1.3238656001131616E+02 
+      1         1       16     16     DADI   1.50E+00  1.00   ----   6.6390108069781928E-01  -6.9765635692188299E-03   1.4655832182238952E-02   1.0572146698943990E+02 
+      1         2       16     16     DADI   1.50E+00  1.00   ----   6.6538139028155052E-01   7.3073116826667062E-02   1.5467050906831791E-02   1.0581295329113384E+02 
+      1         3       16     16     DADI   1.50E+00  1.00   ----   6.6653143841152096E-01  -7.6831339310716396E-02   1.5671987480275523E-02   1.0625441088932065E+02 
+      1         4       16     16     DADI   1.50E+00  1.00   ----   6.6537791615224362E-01   7.5197938983559975E-02   1.5508332714283873E-02   1.0581571483430614E+02 
+      1         5       16     16     DADI   1.50E+00  1.00   ----   6.6976595064565581E-01   1.5526579460354609E-01   1.8350829718201813E-02   1.0630039877863648E+02 
+      1         6       16     16     DADI   1.50E+00  1.00   ----   6.6392629907753087E-01   5.3307909915391027E-03   1.4671091155331085E-02   1.0573920506827768E+02 
+      1         7       16     16     DADI   1.50E+00  1.00   ----   6.6655272739402172E-01  -7.4736207638546215E-02   1.5640529983524890E-02   1.0625930694392082E+02 
+      1         8       16     16     DADI   1.50E+00  1.00   ----   6.6389780338221638E-01   5.2999926265934749E-03   1.4674664869213736E-02   1.0573413896108273E+02 
+      1         9       16     16     DADI   1.50E+00  1.00   ----   6.7395077481162102E-01  -1.4456541407370294E-01   1.8251856008748003E-02   1.0749438790059796E+02 
+      1         1       17     17     DADI   1.50E+00  1.00   ----   5.6007104328866164E-01  -7.1935305614010681E-03   6.3752885684041664E-03   8.4948132316602212E+01 
+      1         2       17     17     DADI   1.50E+00  1.00   ----   5.5931204435451609E-01   5.4519658335246829E-02   6.9590688748694561E-03   8.5000262350956831E+01 
+      1         3       17     17     DADI   1.50E+00  1.00   ----   5.6203342588366723E-01  -5.8740113624616841E-02   7.0951731899561894E-03   8.5217166489054051E+01 
+      1         4       17     17     DADI   1.50E+00  1.00   ----   5.5933276485354932E-01   5.6641394677416579E-02   7.0000440573769682E-03   8.5001400976932601E+01 
+      1         5       17     17     DADI   1.50E+00  1.00   ----   5.6057485969169074E-01   1.1837503340271952E-01   9.0819395779119291E-03   8.5463448900589228E+01 
+      1         6       17     17     DADI   1.50E+00  1.00   ----   5.6015351195609753E-01   5.0830101970061603E-03   6.3905569180995117E-03   8.4955160841241309E+01 
+      1         7       17     17     DADI   1.50E+00  1.00   ----   5.6203992415773774E-01  -5.6653901458364408E-02   7.0666026294503720E-03   8.5217991158839155E+01 
+      1         8       17     17     DADI   1.50E+00  1.00   ----   5.6016091704242787E-01   5.0471061181351640E-03   6.3979052267590167E-03   8.4954702270974366E+01 
+      1         9       17     17     DADI   1.50E+00  1.00   ----   5.6478021925675059E-01  -1.0820639296790033E-01   8.8679127138658470E-03   8.5765997012836664E+01 
+      1         1       18     18     DADI   1.50E+00  1.00   ----   6.1061943113238881E-01  -8.3446483821928985E-03  -2.7370546449313879E-04   9.2613942136422835E+01 
+      1         2       18     18     DADI   1.50E+00  1.00   ----   6.0389791746172006E-01   5.1347451056931309E-02   2.9685903854780732E-04   9.1479713100308089E+01 
+      1         3       18     18     DADI   1.50E+00  1.00   ----   6.1553085597343127E-01  -5.7652761428399452E-02   3.6773884030252097E-04   9.3397024273093365E+01 
+      1         4       18     18     DADI   1.50E+00  1.00   ----   6.0400037966132680E-01   5.3519712661856900E-02   3.3721717920784855E-04   9.1497770543650603E+01 
+      1         5       18     18     DADI   1.50E+00  1.00   ----   5.9561945515388559E-01   1.1316575916829325E-01   2.3130574705649697E-03   9.0079589220304655E+01 
+      1         6       18     18     DADI   1.50E+00  1.00   ----   6.1100626399186919E-01   4.2111711940926999E-03  -2.5978238530314016E-04   9.2677368681296372E+01 
+      1         7       18     18     DADI   1.50E+00  1.00   ----   6.1559254757265836E-01  -5.5523103679399055E-02   3.4125079923413197E-04   9.3404693674520686E+01 
+      1         8       18     18     DADI   1.50E+00  1.00   ----   6.1105806874396029E-01   4.1685439483393205E-03  -2.4889467131461451E-04   9.2683430047587066E+01 
+      1         9       18     18     DADI   1.50E+00  1.00   ----   6.1774437039805374E-01  -1.0480252536129619E-01   1.9652246634289461E-03   9.3654798937882120E+01 
+      1         1       19     19     DADI   1.50E+00  1.00   ----   5.5742891528966709E-01  -8.6017511702956573E-03  -2.6514490158748277E-04   8.7746987291779320E+01 
+      1         2       19     19     DADI   1.50E+00  1.00   ----   5.5747918864319657E-01   6.2515137524742720E-02   4.7956330254261739E-04   8.7580462405296871E+01 
+      1         3       19     19     DADI   1.50E+00  1.00   ----   5.5991554382888098E-01  -6.8590312088347205E-02   5.0672477710610132E-04   8.8206447465757705E+01 
+      1         4       19     19     DADI   1.50E+00  1.00   ----   5.5746534255347369E-01   6.4847116564048013E-02   5.2276491683347871E-04   8.7581806449313234E+01 
+      1         5       19     19     DADI   1.50E+00  1.00   ----   5.5889330259361580E-01   1.3592230859439100E-01   3.0028332615688789E-03   8.7538478340353294E+01 
+      1         6       19     19     DADI   1.50E+00  1.00   ----   5.5755927499358060E-01   4.8644729121410935E-03  -2.4940561647137163E-04   8.7775260919201401E+01 
+      1         7       19     19     DADI   1.50E+00  1.00   ----   5.6000263723572286E-01  -6.6310289566481134E-02   4.7970953399394936E-04   8.8217970634664638E+01 
+      1         8       19     19     DADI   1.50E+00  1.00   ----   5.5762128538626232E-01   4.8125619728657809E-03  -2.3558191284148416E-04   8.7782151578729795E+01 
+      1         9       19     19     DADI   1.50E+00  1.00   ----   5.6484084555843661E-01  -1.2626585374493471E-01   2.5054841887790203E-03   8.8915593087581087E+01 
+      1         1       20     20     DADI   1.50E+00  1.00   ----   4.7320528366302833E-01  -8.6272928480951583E-03  -2.6072692914731834E-03   7.2584864520973355E+01 
+      1         2       20     20     DADI   1.50E+00  1.00   ----   4.7694313890381906E-01   5.7669624561645483E-02  -1.9844489689078730E-03   7.3205035833330541E+01 
+      1         3       20     20     DADI   1.50E+00  1.00   ----   4.7339206575257109E-01  -6.3393159787438452E-02  -1.9000790298752189E-03   7.2618355630352056E+01 
+      1         4       20     20     DADI   1.50E+00  1.00   ----   4.7689587290769397E-01   6.0083084652533036E-02  -1.9378616301932326E-03   7.3196404221111735E+01 
+      1         5       20     20     DADI   1.50E+00  1.00   ----   4.8490367923493760E-01   1.2642501708309767E-01   2.6105924195430740E-04   7.4493439568677857E+01 
+      1         6       20     20     DADI   1.50E+00  1.00   ----   4.7316289474693835E-01   5.2979792589089580E-03  -2.5863755762993721E-03   7.2576405064249059E+01 
+      1         7       20     20     DADI   1.50E+00  1.00   ----   4.7346044202194498E-01  -6.1039522435259508E-02  -1.9268284430039879E-03   7.2627837988417710E+01 
+      1         8       20     20     DADI   1.50E+00  1.00   ----   4.7322386415463091E-01   5.2383559886753361E-03  -2.5700096897746877E-03   7.2583162863277124E+01 
+      1         9       20     20     DADI   1.50E+00  1.00   ----   4.7775089186900588E-01  -1.1581519933397580E-01  -1.7762206783278594E-04   7.3355937136963448E+01 
+      1         1       21     21     DADI   1.50E+00  1.00   ----   4.3898062210687971E-01  -9.5563786047141441E-03  -7.4706497540547381E-03   6.5551591009602078E+01 
+      1         2       21     21     DADI   1.50E+00  1.00   ----   4.3560848171184363E-01   4.7336454894939040E-02  -7.1063028264377022E-03   6.5122207483380947E+01 
+      1         3       21     21     DADI   1.50E+00  1.00   ----   4.4106857104232389E-01  -5.4846371288898771E-02  -6.8737373113715392E-03   6.5882051033072344E+01 
+      1         4       21     21     DADI   1.50E+00  1.00   ----   4.3568148708427235E-01   4.9763838967182561E-02  -7.0576145870422154E-03   6.5132019668054468E+01 
+      1         5       21     21     DADI   1.50E+00  1.00   ----   4.3200089667701519E-01   1.0672061816431608E-01  -5.4771854114010424E-03   6.4771884794794133E+01 
+      1         6       21     21     DADI   1.50E+00  1.00   ----   4.3923651279047515E-01   4.4363662283160576E-03  -7.4439494087571306E-03   6.5588269891924782E+01 
+      1         7       21     21     DADI   1.50E+00  1.00   ----   4.4112860812188548E-01  -5.2485831846159292E-02  -6.8985726028774775E-03   6.5890634338731388E+01 
+      1         8       21     21     DADI   1.50E+00  1.00   ----   4.3928380698748115E-01   4.3699981921326292E-03  -7.4250079397687792E-03   6.5594086237965826E+01 
+      1         9       21     21     DADI   1.50E+00  1.00   ----   4.4098584411773928E-01  -9.7795100864803031E-02  -5.6372228985449805E-03   6.5980320163355501E+01 
+      1         1       22     22     DADI   1.50E+00  1.00   ----   4.1197394024986839E-01  -1.0125678150220696E-02  -8.2304268078514133E-03   6.2478091124011989E+01 
+      1         2       22     22     DADI   1.50E+00  1.00   ----   4.0896195653026141E-01   5.2204344884059006E-02  -7.8621776938324079E-03   6.1945765594588728E+01 
+      1         3       22     22     DADI   1.50E+00  1.00   ----   4.1497816370942858E-01  -6.0537702942365212E-02  -7.5490272878071477E-03   6.3001716784625927E+01 
+      1         4       22     22     DADI   1.50E+00  1.00   ----   4.0904097003379292E-01   5.4704057952913998E-02  -7.8111777668411556E-03   6.1959048429387479E+01 
+      1         5       22     22     DADI   1.50E+00  1.00   ----   4.0576438829377665E-01   1.1704366124655285E-01  -6.1402367485043179E-03   6.1385509318674636E+01 
+      1         6       22     22     DADI   1.50E+00  1.00   ----   4.1229755120283107E-01   4.2678697866521120E-03  -8.1988099737783857E-03   6.2532505918516080E+01 
+      1         7       22     22     DADI   1.50E+00  1.00   ----   4.1504239544933852E-01  -5.8114163655916928E-02  -7.5725514027570823E-03   6.3011329311900916E+01 
+      1         8       22     22     DADI   1.50E+00  1.00   ----   4.1232479030596947E-01   4.1926226136251299E-03  -8.1773277995791181E-03   6.2535686365132840E+01 
+      1         9       22     22     DADI   1.50E+00  1.00   ----   4.1710935623125783E-01  -1.0852610657523437E-01  -6.1486407053418521E-03   6.3358846804970980E+01 
+      1         1       23     23     DADI   1.50E+00  1.00   ----   3.5908899913576786E-01  -9.8174832700512749E-03  -7.7656606661374071E-03   5.4558200820576424E+01 
+      1         2       23     23     DADI   1.50E+00  1.00   ----   3.6012091780827099E-01   5.7280321857595629E-02  -7.3053189379205363E-03   5.4716451366741687E+01 
+      1         3       23     23     DADI   1.50E+00  1.00   ----   3.6032505114783825E-01  -6.4587108657803038E-02  -7.0342242226201328E-03   5.4783400318779577E+01 
+      1         4       23     23     DADI   1.50E+00  1.00   ----   3.6012321577784412E-01   5.9872274039033668E-02  -7.2521924843481052E-03   5.4716903565312755E+01 
+      1         5       23     23     DADI   1.50E+00  1.00   ----   3.6285487864500010E-01   1.2697317134249891E-01  -5.3487668213866362E-03   5.5158091232957254E+01 
+      1         6       23     23     DADI   1.50E+00  1.00   ----   3.5919854014873076E-01   5.0907489135242345E-03  -7.7304437367427658E-03   5.4577000655537120E+01 
+      1         7       23     23     DADI   1.50E+00  1.00   ----   3.6038170252110130E-01  -6.2081338015633536E-02  -7.0568671854102510E-03   5.4791447611160329E+01 
+      1         8       23     23     DADI   1.50E+00  1.00   ----   3.5920832619236576E-01   5.0060283652921811E-03  -7.7065135761350979E-03   5.4577215894916868E+01 
+      1         9       23     23     DADI   1.50E+00  1.00   ----   3.6397457917151271E-01  -1.1685495069386007E-01  -5.4550916813380403E-03   5.5409353479817021E+01 
+      1         1       24     24     DADI   1.50E+00  1.00   ----   3.2483310470186155E-01  -9.9057621056215517E-03  -1.1049003031874513E-02   4.8413603512634197E+01 
+      1         2       24     24     DADI   1.50E+00  1.00   ----   3.2454887321263881E-01   5.1039879004557254E-02  -1.0636736466356279E-02   4.8410795411248451E+01 
+      1         3       24     24     DADI   1.50E+00  1.00   ----   3.2627465855986193E-01  -5.8374498796517793E-02  -1.0427436479996969E-02   4.8622803372101210E+01 
+      1         4       24     24     DADI   1.50E+00  1.00   ----   3.2457982526632051E-01   5.3665525974334605E-02  -1.0583148986612993E-02   4.8414455676820353E+01 
+      1         5       24     24     DADI   1.50E+00  1.00   ----   3.2601453509232542E-01   1.1463712227640685E-01  -8.8921566938429675E-03   4.8715730595471712E+01 
+      1         6       24     24     DADI   1.50E+00  1.00   ----   3.2495996847275832E-01   5.1809757089373298E-03  -1.1011455865685343E-02   4.8429774916600252E+01 
+      1         7       24     24     DADI   1.50E+00  1.00   ----   3.2630974775562765E-01  -5.5843547391227988E-02  -1.0447797465745801E-02   4.8626854888860478E+01 
+      1         8       24     24     DADI   1.50E+00  1.00   ----   3.2495834949306895E-01   5.0883310925829983E-03  -1.0984837554952855E-02   4.8428210961229965E+01 
+      1         9       24     24     DADI   1.50E+00  1.00   ----   3.2867324884387528E-01  -1.0432517610815031E-01  -9.1194692077561021E-03   4.9015667718615717E+01 
+      1         1       25     25     DADI   1.50E+00  1.00   ----   3.1718520869865224E-01  -1.0324771878544525E-02  -1.4457514157624980E-02   4.7446255862533441E+01 
+      1         2       25     25     DADI   1.50E+00  1.00   ----   3.1571833898515878E-01   4.9130651776311041E-02  -1.4054474436997245E-02   4.7144071639272433E+01 
+      1         3       25     25     DADI   1.50E+00  1.00   ----   3.1868162722197352E-01  -5.7242596824537750E-02  -1.3875901143121214E-02   4.7699425642453392E+01 
+      1         4       25     25     DADI   1.50E+00  1.00   ----   3.1577579355597613E-01   5.1772945458057329E-02  -1.4000732280601011E-02   4.7153624562406264E+01 
+      1         5       25     25     DADI   1.50E+00  1.00   ----   3.1432366822569557E-01   1.1124022531448785E-01  -1.2374334014008377E-02   4.6839988981170890E+01 
+      1         6       25     25     DADI   1.50E+00  1.00   ----   3.1739821448809707E-01   4.8424184402087733E-03  -1.4417212924914659E-02   4.7479116448076603E+01 
+      1         7       25     25     DADI   1.50E+00  1.00   ----   3.1872433682600998E-01  -5.4703306990210143E-02  -1.3893030764971882E-02   4.7704046945281810E+01 
+      1         8       25     25     DADI   1.50E+00  1.00   ----   3.1740684105407035E-01   4.7417911651935207E-03  -1.4387627819650237E-02   4.7479157768600132E+01 
+      1         9       25     25     DADI   1.50E+00  1.00   ----   3.1988192597716214E-01  -1.0161687452185222E-01  -1.2656884154978485E-02   4.7829303414536326E+01 
+      1         1       26     26     DADI   1.50E+00  1.00   ----   2.9342010498705867E-01  -9.9627016092604936E-03  -1.4684344339496683E-02   4.4469624581576987E+01 
+      1         2       26     26     DADI   1.50E+00  1.00   ----   2.9449779536461351E-01   5.5590491810572129E-02  -1.4195812549609357E-02   4.4581132671919249E+01 
+      1         3       26     26     DADI   1.50E+00  1.00   ----   2.9385577330143087E-01  -6.2802135722816510E-02  -1.4031218383017185E-02   4.4558374239662072E+01 
+      1         4       26     26     DADI   1.50E+00  1.00   ----   2.9450266268027409E-01   5.8274665965055095E-02  -1.4140219241006637E-02   4.4582312653823692E+01 
+      1         5       26     26     DADI   1.50E+00  1.00   ----   2.9629517186115872E-01   1.2382141554610165E-01  -1.2266499497879314E-02   4.4766181726936324E+01 
+      1         6       26     26     DADI   1.50E+00  1.00   ----   2.9350984335548208E-01   5.4298077099093622E-03  -1.4638499808493246E-02   4.4483534046014874E+01 
+      1         7       26     26     DADI   1.50E+00  1.00   ----   2.9390441413479185E-01  -6.0229902191683227E-02  -1.4045346521990304E-02   4.4564120506426647E+01 
+      1         8       26     26     DADI   1.50E+00  1.00   ----   2.9351996796760033E-01   5.3203176321667822E-03  -1.4606006052249824E-02   4.4483962023252388E+01 
+      1         9       26     26     DADI   1.50E+00  1.00   ----   2.9603606384792641E-01  -1.1305789137374872E-01  -1.2591086528788629E-02   4.4866452418435287E+01 
+      1         1       27     27     DADI   1.50E+00  1.00   ----   2.6044758925067668E-01  -9.5515498600315940E-03  -1.4939111310047168E-02   3.9078243559717059E+01 
+      1         2       27     27     DADI   1.50E+00  1.00   ----   2.6124925758931400E-01   5.6298274419805783E-02  -1.4477504272105257E-02   3.9251041552784933E+01 
+      1         3       27     27     DADI   1.50E+00  1.00   ----   2.6110220186438948E-01  -6.2550592401398042E-02  -1.4284323302309741E-02   3.9178237691546840E+01 
+      1         4       27     27     DADI   1.50E+00  1.00   ----   2.6124016467683769E-01   5.9012277122885204E-02  -1.4419095128269395E-02   3.9248365772133290E+01 
+      1         5       27     27     DADI   1.50E+00  1.00   ----   2.6387495936242417E-01   1.2488257389120075E-01  -1.2585125466438678E-02   3.9715938539361730E+01 
+      1         6       27     27     DADI   1.50E+00  1.00   ----   2.6047381102647277E-01   5.9985693336566670E-03  -1.4885030812595873E-02   3.9080041648155863E+01 
+      1         7       27     27     DADI   1.50E+00  1.00   ----   2.6112172912699821E-01  -5.9956598379191151E-02  -1.4295149340503769E-02   3.9181058359960033E+01 
+      1         8       27     27     DADI   1.50E+00  1.00   ----   2.6046366573018320E-01   5.8811600681663578E-03  -1.4849811374106023E-02   3.9078170342944098E+01 
+      1         9       27     27     DADI   1.50E+00  1.00   ----   2.6325872222121438E-01  -1.1296440124594415E-01  -1.2878985989791435E-02   3.9562329311410544E+01 
+      1         1       28     28     DADI   1.50E+00  1.00   ----   2.5181766759141028E-01  -9.9488189193810972E-03  -1.6681681576204876E-02   3.7258609426744961E+01 
+      1         2       28     28     DADI   1.50E+00  1.00   ----   2.5058909916762268E-01   5.2432174119287411E-02  -1.6331050354565085E-02   3.7099314381132515E+01 
+      1         3       28     28     DADI   1.50E+00  1.00   ----   2.5292263885251071E-01  -5.9509347477719021E-02  -1.6068695242859102E-02   3.7444237479555824E+01 
+      1         4       28     28     DADI   1.50E+00  1.00   ----   2.5061844409290579E-01   5.5141080455561153E-02  -1.6270312247758073E-02   3.7102766332979336E+01 
+      1         5       28     28     DADI   1.50E+00  1.00   ----   2.4998636238814428E-01   1.1755821326078175E-01  -1.4695704687305616E-02   3.7086103241220520E+01 
+      1         6       28     28     DADI   1.50E+00  1.00   ----   2.5191099988511251E-01   5.5595661060048318E-03  -1.6618664511551376E-02   3.7272495659980549E+01 
+      1         7       28     28     DADI   1.50E+00  1.00   ----   2.5291847487928470E-01  -5.6927047653354546E-02  -1.6075388186174454E-02   3.7444601619525152E+01 
+      1         8       28     28     DADI   1.50E+00  1.00   ----   2.5188832703282660E-01   5.4357097319621128E-03  -1.6580907646348127E-02   3.7269420429457199E+01 
+      1         9       28     28     DADI   1.50E+00  1.00   ----   2.5359702952721641E-01  -1.0649962028470997E-01  -1.4863592425576283E-02   3.7612048187647616E+01 
+      1         1       29     29     DADI   1.50E+00  1.00   ----   2.3854462760723083E-01  -1.0014057734015203E-02  -1.7111458220812455E-02   3.5621021189931902E+01 
+      1         2       29     29     DADI   1.50E+00  1.00   ----   2.3857134909120317E-01   5.5142987061582827E-02  -1.6753680685121251E-02   3.5603860497593118E+01 
+      1         3       29     29     DADI   1.50E+00  1.00   ----   2.3966692937443593E-01  -6.2447740158053988E-02  -1.6466606785831450E-02   3.5813834347406157E+01 
+      1         4       29     29     DADI   1.50E+00  1.00   ----   2.3858999098707881E-01   5.7837210906726499E-02  -1.6690739090072175E-02   3.5606462062463088E+01 
+      1         5       29     29     DADI   1.50E+00  1.00   ----   2.3950240739656897E-01   1.2299581977954871E-01  -1.5081396324313798E-02   3.5730753852297070E+01 
+      1         6       29     29     DADI   1.50E+00  1.00   ----   2.3862522357269658E-01   5.3977658201684875E-03  -1.7039428905015426E-02   3.5635180696954031E+01 
+      1         7       29     29     DADI   1.50E+00  1.00   ----   2.3967050193917733E-01  -5.9886128644243308E-02  -1.6469093042574937E-02   3.5815473851313847E+01 
+      1         8       29     29     DADI   1.50E+00  1.00   ----   2.3860139788463117E-01   5.2679575405469303E-03  -1.6999574256016704E-02   3.5632044316979623E+01 
+      1         9       29     29     DADI   1.50E+00  1.00   ----   2.4188368483742359E-01  -1.1231198760431801E-01  -1.5189925739230919E-02   3.6178216665124147E+01 
+      1         1       30     30     DADI   1.50E+00  1.00   ----   2.0672341458422000E-01  -9.3569722713097714E-03  -1.6083220294166155E-02   3.1161591837530629E+01 
+      1         2       30     30     DADI   1.50E+00  1.00   ----   2.0772237085562398E-01   5.9816169054096313E-02  -1.5654136836671113E-02   3.1330996925754796E+01 
+      1         3       30     30     DADI   1.50E+00  1.00   ----   2.0741179873356566E-01  -6.5887509588699933E-02  -1.5405607092967701E-02   3.1285579620917328E+01 
+      1         4       30     30     DADI   1.50E+00  1.00   ----   2.0770686386880677E-01   6.2498504895655810E-02  -1.5588525909164798E-02   3.1328107467603239E+01 
+      1         5       30     30     DADI   1.50E+00  1.00   ----   2.0991563928611884E-01   1.3164639969184838E-01  -1.3823208183759345E-02   3.1702665272053505E+01 
+      1         6       30     30     DADI   1.50E+00  1.00   ----   2.0672937415240097E-01   5.9770167641339245E-03  -1.6001638133869685E-02   3.1163694457838314E+01 
+      1         7       30     30     DADI   1.50E+00  1.00   ----   2.0741835257182253E-01  -6.3342760830060574E-02  -1.5404386905104159E-02   3.1287630958502586E+01 
+      1         8       30     30     DADI   1.50E+00  1.00   ----   2.0670762443313187E-01   5.8421390902397285E-03  -1.5960345391183118E-02   3.1160699493022371E+01 
+      1         9       30     30     DADI   1.50E+00  1.00   ----   2.0988763469779784E-01  -1.1985526255595330E-01  -1.3991567619958265E-02   3.1724517071517806E+01 
+      1         1       31     31     DADI   1.50E+00  1.00   ----   1.9558549817917367E-01  -9.2288193667769414E-03  -1.6028521521850775E-02   2.9035830674321840E+01 
+      1         2       31     31     DADI   1.50E+00  1.00   ----   1.9636655569566194E-01   5.8618558893185818E-02  -1.5611992455299869E-02   2.9178241581913614E+01 
+      1         3       31     31     DADI   1.50E+00  1.00   ----   1.9606997394489853E-01  -6.4550703826239092E-02  -1.5385057070805293E-02   2.9124416824324353E+01 
+      1         4       31     31     DADI   1.50E+00  1.00   ----   1.9633273323558309E-01   6.1277156646479702E-02  -1.5543615553509676E-02   2.9172594431830372E+01 
+      1         5       31     31     DADI   1.50E+00  1.00   ----   1.9845344787968419E-01   1.2910496242882019E-01  -1.3854825259378529E-02   2.9553831309030677E+01 
+      1         6       31     31     DADI   1.50E+00  1.00   ----   1.9552360945211900E-01   5.9643858557411611E-03  -1.5937259449635026E-02   2.9027475510079377E+01 
+      1         7       31     31     DADI   1.50E+00  1.00   ----   1.9606392317711532E-01  -6.2032637946323937E-02  -1.5380314991745374E-02   2.9124587592794725E+01 
+      1         8       31     31     DADI   1.50E+00  1.00   ----   1.9550477594075238E-01   5.8262946640829649E-03  -1.5895154551722399E-02   2.9024868265459947E+01 
+      1         9       31     31     DADI   1.50E+00  1.00   ----   1.9807085698190938E-01  -1.1734403359071760E-01  -1.4055946555898730E-02   2.9483423639784338E+01 
+      1         1       32     32     DADI   1.50E+00  1.00   ----   2.0261530297396046E-01  -9.5622146089659188E-03  -1.6477174469726276E-02   2.9794620721127234E+01 
+      1         2       32     32     DADI   1.50E+00  1.00   ----   2.0275409727926796E-01   5.7648112174090882E-02  -1.6095111678924898E-02   2.9827622321593363E+01 
+      1         3       32     32     DADI   1.50E+00  1.00   ----   2.0314718002533225E-01  -6.4455523632232781E-02  -1.5850810171555967E-02   2.9885817093801293E+01 
+      1         4       32     32     DADI   1.50E+00  1.00   ----   2.0272486322949010E-01   6.0263315373933202E-02  -1.6023847990439710E-02   2.9822896878394989E+01 
+      1         5       32     32     DADI   1.50E+00  1.00   ----   2.0352795291780196E-01   1.2745720589009826E-01  -1.4427679118685316E-02   2.9983638708904607E+01 
+      1         6       32     32     DADI   1.50E+00  1.00   ----   2.0254992724489923E-01   5.3811727200610282E-03  -1.6376016613037420E-02   2.9786055007066317E+01 
+      1         7       32     32     DADI   1.50E+00  1.00   ----   2.0313176792746873E-01  -6.1981881059051891E-02  -1.5842819110664746E-02   2.9884657259413103E+01 
+      1         8       32     32     DADI   1.50E+00  1.00   ----   2.0252526405480301E-01   5.2415900318904807E-03  -1.6333730640747141E-02   2.9782669464471244E+01 
+      1         9       32     32     DADI   1.50E+00  1.00   ----   2.0458857374038766E-01  -1.1686677971315659E-01  -1.4597358258962497E-02   3.0137116046373478E+01 
+      1         1       33     33     DADI   1.50E+00  1.00   ----   1.9369997140378822E-01  -9.1844570746494325E-03  -1.5486943209689529E-02   2.8737754351981312E+01 
+      1         2       33     33     DADI   1.50E+00  1.00   ----   1.9422568010754057E-01   6.1363869984217806E-02  -1.5091274348744322E-02   2.8830354636061443E+01 
+      1         3       33     33     DADI   1.50E+00  1.00   ----   1.9410867020317979E-01  -6.7672037399640034E-02  -1.4835723253851199E-02   2.8814240378121582E+01 
+      1         4       33     33     DADI   1.50E+00  1.00   ----   1.9419173358540193E-01   6.3926510448837459E-02  -1.5016229554559526E-02   2.8824911758145834E+01 
+      1         5       33     33     DADI   1.50E+00  1.00   ----   1.9561813507037701E-01   1.3445657146277579E-01  -1.3362499750231216E-02   2.9063743951629863E+01 
+      1         6       33     33     DADI   1.50E+00  1.00   ----   1.9360944298811439E-01   5.4604289365004777E-03  -1.5374945442226243E-02   2.8726313186931872E+01 
+      1         7       33     33     DADI   1.50E+00  1.00   ----   1.9408176071686095E-01  -6.5250405353684787E-02  -1.4825373852985360E-02   2.8811885811429200E+01 
+      1         8       33     33     DADI   1.50E+00  1.00   ----   1.9357818469193555E-01   5.3207531575776290E-03  -1.5333241045812693E-02   2.8722025776664598E+01 
+      1         9       33     33     DADI   1.50E+00  1.00   ----   1.9567712883658139E-01  -1.2372781024531759E-01  -1.3529292176811834E-02   2.9091874486604166E+01 
+      1         1       34     37     *ANK   1.00E+01  1.00  0.035   9.2583544520351155E-02  -7.6239863970717636E-03  -1.2451900585195403E-02   1.3899794130047670E+01 
+      1         2       34     37     *ANK   1.00E+01  1.00  0.035   9.2558140589652435E-02   6.3665261209789742E-02  -1.2111341186910055E-02   1.3913531248803233E+01 
+      1         3       34     37     *ANK   1.00E+01  1.00  0.035   9.2952327045941835E-02  -6.8045403163547513E-02  -1.1863279007506002E-02   1.3986000232642910E+01 
+      1         4       34     37     *ANK   1.00E+01  1.00  0.035   9.2515233987879683E-02   6.5969059280852504E-02  -1.2030740950672872E-02   1.3907724152500926E+01 
+      1         5       34     37     *ANK   1.00E+01  1.00  0.035   9.3452818183726236E-02   1.3727408763164670E-01  -1.0559726615057033E-02   1.4096679196308521E+01 
+      1         6       34     37     *ANK   1.00E+01  1.00  0.035   9.2434541495591410E-02   5.5746759963158088E-03  -1.2320779202757353E-02   1.3883313144640020E+01 
+      1         7       34     37     *ANK   1.00E+01  1.00  0.035   9.2886725063810890E-02  -6.5863592002161075E-02  -1.1849711540187258E-02   1.3979378959098431E+01 
+      1         8       34     37     *ANK   1.00E+01  1.00  0.035   9.2392780814814238E-02   5.4534790163797420E-03  -1.2284158711690555E-02   1.3878673144531430E+01 
+      1         9       34     37     *ANK   1.00E+01  1.00  0.035   9.3929614062488911E-02  -1.2631432879060250E-01  -1.0733375680589458E-02   1.4205009367012222E+01 
+      1         1       35     43     *ANK   3.25E+01  1.00  0.028   5.4925772949908074E-02  -4.1656384017398629E-03  -3.6326692486627109E-03   8.4749364305566655E+00 
+      1         2       35     43     *ANK   3.25E+01  1.00  0.028   5.4781236400746232E-02   7.0704358076359650E-02  -3.3268994046928039E-03   8.4859309885684908E+00 
+      1         3       35     43     *ANK   3.25E+01  1.00  0.028   5.4498018999324507E-02  -7.2419438398660357E-02  -3.1871027493946807E-03   8.4741815635216433E+00 
+      1         4       35     43     *ANK   3.25E+01  1.00  0.028   5.4734569198575132E-02   7.2078767897712087E-02  -3.2592526245410671E-03   8.4816200494564971E+00 
+      1         5       35     43     *ANK   3.25E+01  1.00  0.028   5.4478638764781713E-02   1.4702729572128265E-01  -2.0529679348763562E-03   8.5619917845049685E+00 
+      1         6       35     43     *ANK   3.25E+01  1.00  0.028   5.4746928401097843E-02   3.8728375486894451E-03  -3.5177265871547863E-03   8.4566222721882394E+00 
+      1         7       35     43     *ANK   3.25E+01  1.00  0.028   5.4409699252410119E-02  -7.1069983564736400E-02  -3.1784793478394835E-03   8.4643961407336814E+00 
+      1         8       35     43     *ANK   3.25E+01  1.00  0.028   5.4687316511893333E-02   3.8580131431692199E-03  -3.5004124435786097E-03   8.4504750692277035E+00 
+      1         9       35     43     *ANK   3.25E+01  1.00  0.028   5.4002286773165424E-02  -1.3940535249468325E-01  -2.2749846913244776E-03   8.5483302544807973E+00 
+      1         1       36     49      ANK   3.25E+01  1.00  0.027   3.5026601962161959E-02  -1.8665771867466541E-03   2.3500907457389480E-03   5.3119116580281274E+00 
+      1         2       36     49      ANK   3.25E+01  1.00  0.027   3.5102193420178632E-02   7.8033611796362978E-02   2.7005131151463437E-03   5.3881623093611344E+00 
+      1         3       36     49      ANK   3.25E+01  1.00  0.027   3.4750501897530525E-02  -7.8052484855384338E-02   2.7419100958964919E-03   5.3496449050340260E+00 
+      1         4       36     49      ANK   3.25E+01  1.00  0.027   3.5067781841210406E-02   7.8775865276564938E-02   2.7410541631617247E-03   5.3866910705923923E+00 
+      1         5       36     49      ANK   3.25E+01  1.00  0.027   3.5151586389835808E-02   1.5874846728049086E-01   3.9388641509276023E-03   5.6192211471808555E+00 
+      1         6       36     49      ANK   3.25E+01  1.00  0.027   3.4959489133853168E-02   2.6591712485414254E-03   2.4156569736835188E-03   5.3032786925087176E+00 
+      1         7       36     49      ANK   3.25E+01  1.00  0.027   3.4718385479127832E-02  -7.7263596500254730E-02   2.7421714341907726E-03   5.3440315012133333E+00 
+      1         8       36     49      ANK   3.25E+01  1.00  0.027   3.4913122965506860E-02   2.7294784930318727E-03   2.4224809552486804E-03   5.2988567145176049E+00 
+      1         9       36     49      ANK   3.25E+01  1.00  0.027   3.4737777373314412E-02  -1.5350147798825348E-01   3.7128522995825298E-03   5.5530313214044380E+00 
+      1         1       37     57     *ANK   1.32E+02  1.00  0.043   1.1289074055914398E-02  -2.1655356223173050E-03   3.2125162331090975E-03   2.2011273096473722E+00 
+      1         2       37     57     *ANK   1.32E+02  1.00  0.043   1.2670108428493995E-02   9.1151000159553935E-02   3.6780566696065758E-03   2.5425994133114598E+00 
+      1         3       37     57     *ANK   1.32E+02  1.00  0.043   1.2400532373247175E-02  -9.1053152312149679E-02   3.6741636443365423E-03   2.5077945352268798E+00 
+      1         4       37     57     *ANK   1.32E+02  1.00  0.043   1.2738100338129246E-02   9.2058204421457929E-02   3.6813273455055199E-03   2.5625249717470977E+00 
+      1         5       37     57     *ANK   1.32E+02  1.00  0.043   1.7135274324346139E-02   1.8528156735121265E-01   5.1958162030380992E-03   3.5805589825856230E+00 
+      1         6       37     57     *ANK   1.32E+02  1.00  0.043   1.1253908379931208E-02   3.2949042691746422E-03   3.1862849221665256E-03   2.1883030139748572E+00 
+      1         7       37     57     *ANK   1.32E+02  1.00  0.043   1.2304780920247303E-02  -9.0108643401937749E-02   3.6586181433785488E-03   2.4792907491541873E+00 
+      1         8       37     57     *ANK   1.32E+02  1.00  0.043   1.1228956930424642E-02   3.3775459312799516E-03   3.2001984138815744E-03   2.1818484337367217E+00 
+      1         9       37     57     *ANK   1.32E+02  1.00  0.043   1.5749743767009845E-02  -1.7895823017367710E-01   4.9827962905226236E-03   3.2707355547687351E+00 
+      1         1       38     65      ANK   1.32E+02  1.00  0.031   5.2694548182075683E-03  -3.4245041631063289E-03   1.4927515119994804E-03   1.1140992871293580E+00 
+      1         2       38     65      ANK   1.32E+02  1.00  0.031   6.6357990847089538E-03   9.7018801510244196E-02   1.9003895517356651E-03   1.5309665653252871E+00 
+      1         3       38     65      ANK   1.32E+02  1.00  0.031   6.5091386206049557E-03  -9.6653047281511917E-02   1.9154415547159073E-03   1.5198277578989448E+00 
+      1         4       38     65      ANK   1.32E+02  1.00  0.031   6.7330924937209049E-03   9.8524383580468861E-02   1.9035346348260074E-03   1.5626085779220782E+00 
+      1         5       38     65      ANK   1.32E+02  1.00  0.031   1.1544467206921639E-02   1.9880469857705163E-01   3.2886966964122653E-03   2.7329057185931624E+00 
+      1         6       38     65      ANK   1.32E+02  1.00  0.031   5.2589892693806657E-03   5.4544362453624595E-03   1.4565883010473481E-03   1.1167381068246924E+00 
+      1         7       38     65      ANK   1.32E+02  1.00  0.031   6.4030783678831471E-03  -9.5148226542690534E-02   1.8940924808164834E-03   1.4878399677009346E+00 
+      1         8       38     65      ANK   1.32E+02  1.00  0.031   5.2598018222800753E-03   5.4997035462825139E-03   1.4718287410461206E-03   1.1144581407490606E+00 
+      1         9       38     65      ANK   1.32E+02  1.00  0.031   1.0042780174825242E-02  -1.8835958214504911E-01   3.0688316732553223E-03   2.3766820708122243E+00 
+      1         1       39     74     *ANK   4.94E+02  1.00  0.045   3.0104153648529541E-03  -5.3627482723543618E-03   3.9457699350752256E-04   6.6642055746884510E-01 
+      1         2       39     74     *ANK   4.94E+02  1.00  0.045   4.2005381707835437E-03   1.0166121863527094E-01   6.9523904905090163E-04   1.1046830326888988E+00 
+      1         3       39     74     *ANK   4.94E+02  1.00  0.045   4.4365291944638363E-03  -1.0224282741886091E-01   7.1667029347681791E-04   1.1379881634806310E+00 
+      1         4       39     74     *ANK   4.94E+02  1.00  0.045   4.3290214110387982E-03   1.0377760512773332E-01   7.0830169530648442E-04   1.1489627004244547E+00 
+      1         5       39     74     *ANK   4.94E+02  1.00  0.045   9.2302781714181676E-03   2.1055595842460142E-01   1.7708292273792359E-03   2.3742523246345564E+00 
+      1         6       39     74     *ANK   4.94E+02  1.00  0.045   2.9367402510526892E-03   7.1032825814751066E-03   3.8275065997906452E-04   6.5704203931585536E-01 
+      1         7       39     74     *ANK   4.94E+02  1.00  0.045   4.2984635344454746E-03  -1.0013496817759145E-01   6.9783659667385905E-04   1.0942899835910418E+00 
+      1         8       39     74     *ANK   4.94E+02  1.00  0.045   2.9526059110072020E-03   7.1245682548471967E-03   3.8979545775293134E-04   6.6016185640968905E-01 
+      1         9       39     74     *ANK   4.94E+02  1.00  0.045   7.9776024833278832E-03  -1.9699476869492769E-01   1.5579846592512362E-03   1.9849361112940602E+00 
+      1         1       40     83      ANK   4.94E+02  1.00  0.030   2.1034885859255864E-03  -6.6195639524531946E-03   3.1692343364492811E-04   5.2929493152157236E-01 
+      1         2       40     83      ANK   4.94E+02  1.00  0.030   3.4566855645277337E-03   1.0474495829863587E-01   5.5021926205745496E-04   9.2788747392847870E-01 
+      1         3       40     83      ANK   4.94E+02  1.00  0.030   3.3700685678680160E-03  -1.0668330859495259E-01   5.6440920992821813E-04   9.3647115460390518E-01 
+      1         4       40     83      ANK   4.94E+02  1.00  0.030   3.5721703735326999E-03   1.0709539502293469E-01   5.6140107923219502E-04   9.6745062655825853E-01 
+      1         5       40     83      ANK   4.94E+02  1.00  0.030   7.6769297413657638E-03   2.1816838041652811E-01   1.3793674598388747E-03   2.0069297573423275E+00 
+      1         6       40     83      ANK   4.94E+02  1.00  0.030   2.0885083973473961E-03   7.2549148731617108E-03   3.1372490562825580E-04   5.2716842790632623E-01 
+      1         7       40     83      ANK   4.94E+02  1.00  0.030   3.2361800138455622E-03  -1.0433170237361661E-01   5.5196651218424476E-04   8.9612552438882742E-01 
+      1         8       40     83      ANK   4.94E+02  1.00  0.030   2.0956040698378851E-03   7.2797565709616097E-03   3.1662464966954922E-04   5.2875720823387440E-01 
+      1         9       40     83      ANK   4.94E+02  1.00  0.030   6.4013501100903900E-03  -2.0437474638252440E-01   1.2297656900635903E-03   1.6503680598708759E+00 
+      1         1       41     91      ANK   4.94E+02  1.00  0.033   1.6909567330839995E-03  -7.0582789248695710E-03   4.3820878621797076E-04   4.4815718743183014E-01 
+      1         2       41     91      ANK   4.94E+02  1.00  0.033   2.7058729083338185E-03   1.0756215543737853E-01   6.4027798183798230E-04   7.4952030786615464E-01 
+      1         3       41     91      ANK   4.94E+02  1.00  0.033   2.5238153453766140E-03  -1.0979956853679679E-01   6.4420489934339555E-04   7.4248269563862179E-01 
+      1         4       41     91      ANK   4.94E+02  1.00  0.033   2.7839728308301746E-03   1.1002855913209560E-01   6.4776485350913349E-04   7.7814715052795991E-01 
+      1         5       41     91      ANK   4.94E+02  1.00  0.033   5.5869783604817671E-03   2.2431451527154528E-01   1.3340249436139869E-03   1.5428239237724082E+00 
+      1         6       41     91      ANK   4.94E+02  1.00  0.033   1.6978997854373229E-03   7.5153628170980258E-03   4.3615795636958873E-04   4.4958475905739326E-01 
+      1         7       41     91      ANK   4.94E+02  1.00  0.033   2.4265143892706364E-03  -1.0732857983572483E-01   6.3616571641595190E-04   7.1231672027525605E-01 
+      1         8       41     91      ANK   4.94E+02  1.00  0.033   1.7036522476950103E-03   7.5418963063618727E-03   4.3773144202577450E-04   4.5074619002491423E-01 
+      1         9       41     91      ANK   4.94E+02  1.00  0.033   4.5981962791244863E-03  -2.1004369311868415E-01   1.2263167709092599E-03   1.2662636918954944E+00 
+      1         1       42     99      ANK   4.94E+02  1.00  0.029   1.0702643422298153E-03  -7.1477681178210850E-03   4.9324176531559904E-04   3.3566575307715979E-01 
+      1         2       42     99      ANK   4.94E+02  1.00  0.029   1.7901466102582756E-03   1.0981160931061347E-01   6.7829009632169868E-04   5.5315575500207559E-01 
+      1         3       42     99      ANK   4.94E+02  1.00  0.029   1.6673601132866807E-03  -1.1186966692370813E-01   6.7559816582276298E-04   5.4048630601094960E-01 
+      1         4       42     99      ANK   4.94E+02  1.00  0.029   1.8450420336893485E-03   1.1235054076417485E-01   6.8352968962959084E-04   5.7272917654463751E-01 
+      1         5       42     99      ANK   4.94E+02  1.00  0.029   3.7137867660278932E-03   2.2894141819287553E-01   1.2950707131534327E-03   1.1064516482912172E+00 
+      1         6       42     99      ANK   4.94E+02  1.00  0.029   1.0975425613573089E-03   7.8599522985199344E-03   4.9227992892960097E-04   3.4132976182858504E-01 
+      1         7       42     99      ANK   4.94E+02  1.00  0.029   1.6060884883854121E-03  -1.0932549865432716E-01   6.7018264054793247E-04   5.2063678095622157E-01 
+      1         8       42     99      ANK   4.94E+02  1.00  0.029   1.0999600626739169E-03   7.8870233896956021E-03   4.9348854756426914E-04   3.4206740530852819E-01 
+      1         9       42     99      ANK   4.94E+02  1.00  0.029   3.0644921173909037E-03  -2.1401708244187834E-01   1.2090480226204757E-03   9.0805946169437357E-01 
+      1         1       43    107     *ANK   2.05E+03  1.00  0.039   6.4852613770246203E-04  -7.1882400273290403E-03   5.0230367291285581E-04   2.4412267983268754E-01 
+      1         2       43    107     *ANK   2.05E+03  1.00  0.039   1.3913471665978612E-03   1.1165900057841720E-01   6.7087802719318756E-04   4.2777777508628162E-01 
+      1         3       43    107     *ANK   2.05E+03  1.00  0.039   1.2952501352102297E-03  -1.1350865254333431E-01   6.6765988828937362E-04   4.0738449578674768E-01 
+      1         4       43    107     *ANK   2.05E+03  1.00  0.039   1.4321668659127527E-03   1.1425660644591561E-01   6.7475759048358629E-04   4.4113067329785949E-01 
+      1         5       43    107     *ANK   2.05E+03  1.00  0.039   2.9378682629772651E-03   2.3271222612490527E-01   1.2265797581398289E-03   8.4396195092234816E-01 
+      1         6       43    107     *ANK   2.05E+03  1.00  0.039   6.7638770954147871E-04   8.1664787347002776E-03   5.0179618592211439E-04   2.5083518357571877E-01 
+      1         7       43    107     *ANK   2.05E+03  1.00  0.039   1.2520395331358815E-03  -1.1090562734177607E-01   6.6380292644049096E-04   3.9418613580259776E-01 
+      1         8       43    107     *ANK   2.05E+03  1.00  0.039   6.7787235004466832E-04   8.1940584333921596E-03   5.0292932578785508E-04   2.5142508169555805E-01 
+      1         9       43    107     *ANK   2.05E+03  1.00  0.039   2.4870230376971936E-03  -2.1719107090329853E-01   1.1601624669598156E-03   6.9722476694782831E-01 
+      1         1       44    115      ANK   2.05E+03  1.00  0.025   4.5155084379661092E-04  -7.2126564306891072E-03   4.9814790401178188E-04   1.8695745725189600E-01 
+      1         2       44    115      ANK   2.05E+03  1.00  0.025   1.0736595617517742E-03   1.1281669130378927E-01   6.5452026747130857E-04   3.2561551520986060E-01 
+      1         3       44    115      ANK   2.05E+03  1.00  0.025   9.4894520813138764E-04  -1.1452286862183696E-01   6.5003277539459926E-04   2.9976130256054817E-01 
+      1         4       44    115      ANK   2.05E+03  1.00  0.025   1.1009606500806176E-03   1.1545298389778598E-01   6.5757859728429562E-04   3.3412885156140526E-01 
+      1         5       44    115      ANK   2.05E+03  1.00  0.025   2.1757025399809999E-03   2.3507482540150787E-01   1.1655691449064375E-03   6.1549247833839471E-01 
+      1         6       44    115      ANK   2.05E+03  1.00  0.025   4.8522591459893065E-04   8.3719454449495412E-03   4.9782788120219753E-04   1.9354993463615544E-01 
+      1         7       44    115      ANK   2.05E+03  1.00  0.025   9.2251580318330930E-04  -1.1188079600634809E-01   6.4708257767563584E-04   2.9171383472882695E-01 
+      1         8       44    115      ANK   2.05E+03  1.00  0.025   4.8573547013635432E-04   8.4001912384937816E-03   4.9895929607720354E-04   1.9397685700727366E-01 
+      1         9       44    115      ANK   2.05E+03  1.00  0.025   1.8403762326060322E-03  -2.1914822159177927E-01   1.1092524173098740E-03   5.0991618489542734E-01 
+      1         1       45    122      ANK   2.05E+03  1.00  0.035   3.8584660868723334E-04  -7.2600065990564011E-03   4.9155629842757278E-04   1.5246971990068323E-01 
+      1         2       45    122      ANK   2.05E+03  1.00  0.035   8.2045788022041643E-04   1.1352236895892413E-01   6.4053955419551660E-04   2.4744305275167297E-01 
+      1         3       45    122      ANK   2.05E+03  1.00  0.035   6.9475330430028050E-04  -1.1520232281115622E-01   6.3587555064942378E-04   2.2330274923237539E-01 
+      1         4       45    122      ANK   2.05E+03  1.00  0.035   8.3666987626560203E-04   1.1618275768005559E-01   6.4305387168705520E-04   2.5252702546470318E-01 
+      1         5       45    122      ANK   2.05E+03  1.00  0.035   1.5311256998125772E-03   2.3654762022264195E-01   1.1254276478970624E-03   4.3698261950473377E-01 
+      1         6       45    122      ANK   2.05E+03  1.00  0.035   4.0649363393365618E-04   8.4681253231898845E-03   4.9098206315439908E-04   1.5671199445301984E-01 
+      1         7       45    122      ANK   2.05E+03  1.00  0.035   6.7930618581290875E-04  -1.1253587823230018E-01   6.3338814852811377E-04   2.1861500332423345E-01 
+      1         8       45    122      ANK   2.05E+03  1.00  0.035   4.0662186472198962E-04   8.4970572434556746E-03   4.9214323032291331E-04   1.5703255121480328E-01 
+      1         9       45    122      ANK   2.05E+03  1.00  0.035   1.2796233514937910E-03  -2.2042581275092454E-01   1.0760682681217951E-03   3.6321598103686747E-01 
+      1         1       46    129     *ANK   8.16E+03  1.00  0.044   3.5322029985069127E-04  -7.2976297612041552E-03   4.9194188641829757E-04   1.2719049641791411E-01 
+      1         2       46    129     *ANK   8.16E+03  1.00  0.044   6.6426400438598379E-04   1.1399308927424952E-01   6.3598140317558307E-04   1.9377677097800464E-01 
+      1         3       46    129     *ANK   8.16E+03  1.00  0.044   5.4793772802733684E-04  -1.1566948874765533E-01   6.3140563143088656E-04   1.7243702987655024E-01 
+      1         4       46    129     *ANK   8.16E+03  1.00  0.044   6.7513448839081724E-04   1.1666893673567573E-01   6.3816323124314678E-04   1.9693819150877512E-01 
+      1         5       46    129     *ANK   8.16E+03  1.00  0.044   1.1506379679843556E-03   2.3753433924689826E-01   1.1033493119078398E-03   3.2045661882559723E-01 
+      1         6       46    129     *ANK   8.16E+03  1.00  0.044   3.6672406490172198E-04   8.5234703215620045E-03   4.9135488462110971E-04   1.3012253835729440E-01 
+      1         7       46    129     *ANK   8.16E+03  1.00  0.044   5.3780065039597238E-04  -1.1298738564610698E-01   6.2924024501546851E-04   1.6964791424119144E-01 
+      1         8       46    129     *ANK   8.16E+03  1.00  0.044   3.6658505054205513E-04   8.5528167206736228E-03   4.9252732862026249E-04   1.3035412803332710E-01 
+      1         9       46    129     *ANK   8.16E+03  1.00  0.044   9.4177899555255998E-04  -2.2129688009755927E-01   1.0589723127531394E-03   2.6667903569059853E-01 
+      1         1       47    137      *NK     ----    1.00  0.220   1.4728515444046054E-04  -7.3001062822569407E-03   4.9353802235147610E-04   2.2502406816564392E-02 
+      1         2       47    137      *NK     ----    1.00  0.220   1.9474162973592572E-04   1.1484077101714144E-01   6.3668647817776390E-04   3.6546624487303073E-02 
+      1         3       47    137      *NK     ----    1.00  0.220   2.6602890769817364E-04  -1.1640908464048132E-01   6.2226412032273266E-04   4.3267337304813636E-02 
+      1         4       47    137      *NK     ----    1.00  0.220   1.9455837941363083E-04   1.1753838912766813E-01   6.3852521558644283E-04   3.6619982568439388E-02 
+      1         5       47    137      *NK     ----    1.00  0.220   3.9150093461380332E-04   2.3922475107368676E-01   1.0869096687976861E-03   7.0296079757188962E-02 
+      1         6       47    137      *NK     ----    1.00  0.220   1.5098404382479154E-04   8.6529882350743770E-03   4.9373107032920391E-04   2.3065483745655212E-02 
+      1         7       47    137      *NK     ----    1.00  0.220   2.6745600707205958E-04  -1.1370522661161882E-01   6.2070842147225053E-04   4.3326225527107347E-02 
+      1         8       47    137      *NK     ----    1.00  0.220   1.5176054434503045E-04   8.6827438003135304E-03   4.9492427514414867E-04   2.3072089170537432E-02 
+      1         9       47    137      *NK     ----    1.00  0.220   3.6089940841207605E-04  -2.2271419605381348E-01   1.0294506996664302E-03   6.3557257930872232E-02 
+      1         1       48    147       NK     ----    1.00  0.122   1.5926021169098239E-05  -7.3542824814874230E-03   4.9692110858218469E-04   2.6517826524761409E-03 
+      1         2       48    147       NK     ----    1.00  0.122   2.5098265080554498E-05   1.1495219934506094E-01   6.3373533198302252E-04   4.4952090448574520E-03 
+      1         3       48    147       NK     ----    1.00  0.122   2.4638272558160110E-05  -1.1660556165544199E-01   6.2465212104961722E-04   4.9575128957979530E-03 
+      1         4       48    147       NK     ----    1.00  0.122   2.5405143729689729E-05   1.1765425410338806E-01   6.3532062363977522E-04   4.5618112028063124E-03 
+      1         5       48    147       NK     ----    1.00  0.122   3.7680855046679705E-05   2.3950920138984161E-01   1.0697242709159210E-03   8.0273194698196517E-03 
+      1         6       48    147       NK     ----    1.00  0.122   1.6421888185552450E-05   8.6242521141513540E-03   4.9638365750097227E-04   2.6104777011131579E-03 
+      1         7       48    147       NK     ----    1.00  0.122   2.4555231581516595E-05  -1.1389732810393140E-01   6.2308891148047003E-04   4.9110498009494203E-03 
+      1         8       48    147       NK     ----    1.00  0.122   1.6312629274582060E-05   8.6540768462340101E-03   4.9756517650345502E-04   2.5916098933326183E-03 
+      1         9       48    147       NK     ----    1.00  0.122   4.5135578447539529E-05  -2.2304372427395314E-01   1.0261356947318043E-03   8.8439005695043864E-03 
+      1         1       49    162       NK     ----    1.00  0.030   4.2459713392553295E-07  -7.3530627098163659E-03   4.9540868650593622E-04   8.8912911591875870E-05 
+      1         2       49    162       NK     ----    1.00  0.030   8.5572468714013503E-07   1.1499639371633098E-01   6.3067147318458198E-04   1.6184849507766829E-04 
+      1         3       49    162       NK     ----    1.00  0.030   5.5997564454915654E-07  -1.1663539482146688E-01   6.2394100355196106E-04   1.1464033036942042E-04 
+      1         4       49    162       NK     ----    1.00  0.030   8.5475140622610016E-07   1.1769947281661342E-01   6.3219476398225158E-04   1.6233152557193047E-04 
+      1         5       49    162       NK     ----    1.00  0.030   1.6080458636489637E-06   2.3960709308273731E-01   1.0645327894993183E-03   2.9769575400583921E-04 
+      1         6       49    162       NK     ----    1.00  0.030   4.3027730333781677E-07   8.6303791282894282E-03   4.9467678126912740E-04   9.1968429323295350E-05 
+      1         7       49    162       NK     ----    1.00  0.030   5.6014369137559668E-07  -1.1392652684336346E-01   6.2237786008146473E-04   1.1584367444673637E-04 
+      1         8       49    162       NK     ----    1.00  0.030   4.3082272430415362E-07   8.6602091853716368E-03   4.9586414391880151E-04   9.1817178091027933E-05 
+      1         9       49    162       NK     ----    1.00  0.030   9.4182766840581668E-07  -2.2309870866253831E-01   1.0258152652464839E-03   1.7560182182831363E-04 
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#  Grid  | Spectral | Iter | Iter |  Iter  |   CFL   | Step | Lin  |        Res rho         |         C_lift         |        C_drag          |        totalRes        |
+#  level | Solution |      | Tot  |  Type  |         |      | Res  |                        |                        |                        |                        |
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      1         1       50    186       NK     ----    1.00  0.003   1.9132978350669387E-09  -7.3539545439232634E-03   4.9540735069472544E-04   3.2711490517024989E-07 
+      1         2       50    186       NK     ----    1.00  0.003   2.1697354569784689E-09   1.1499487369997313E-01   6.3067292638991496E-04   3.6512488247514107E-07 
+      1         3       50    186       NK     ----    1.00  0.003   2.1999657067445413E-09  -1.1663560230559261E-01   6.2390048189888553E-04   3.7051815349019441E-07 
+      1         4       50    186       NK     ----    1.00  0.003   2.1238013242745722E-09   1.1769794501330454E-01   6.3219701092686459E-04   3.5787849049822023E-07 
+      1         5       50    186       NK     ----    1.00  0.003   3.6719110794263724E-09   2.3960554529688005E-01   1.0644478274686835E-03   8.2173666722358549E-07 
+      1         6       50    186       NK     ----    1.00  0.003   2.0449119350733777E-09   8.6293911955413471E-03   4.9468096402215870E-04   3.6139999309675199E-07 
+      1         7       50    186       NK     ----    1.00  0.003   2.1545584789211860E-09  -1.1392675122801835E-01   6.2233822290326101E-04   3.6410165851895100E-07 
+      1         8       50    186       NK     ----    1.00  0.003   2.0619207195439846E-09   8.6592185256009757E-03   4.9586801868379085E-04   3.6335907643438134E-07 
+      1         9       50    186       NK     ----    1.00  0.003   3.4705137794622992E-09  -2.2309855114015356E-01   1.0257297750187987E-03   5.6742688354977083E-07 
+      1         1       51    211       NK     ----    1.00  0.002   3.6308353079014942E-12  -7.3539526556080093E-03   4.9540721526194478E-04   5.9294737704230645E-10 
+      1         2       51    211       NK     ----    1.00  0.002   5.3052768979889676E-12   1.1499487480135048E-01   6.3067275227886039E-04   9.7033038194372486E-10 
+      1         3       51    211       NK     ----    1.00  0.002   4.5628431800820561E-12  -1.1663559886236707E-01   6.2390035102420291E-04   6.5905881032899886E-10 
+      1         4       51    211       NK     ----    1.00  0.002   5.2281205030621088E-12   1.1769794615277382E-01   6.3219682638174061E-04   9.5523790315074673E-10 
+      1         5       51    211       NK     ----    1.00  0.002   7.5037373686787453E-12   2.3960555080444917E-01   1.0644471717037047E-03   1.2055481074274446E-09 
+      1         6       51    211       NK     ----    1.00  0.002   3.6218777667400133E-12   8.6293929328291330E-03   4.9468079489483653E-04   6.0400673261125500E-10 
+      1         7       51    211       NK     ----    1.00  0.002   4.3973209507032677E-12  -1.1392674781632339E-01   6.2233808479774701E-04   6.3953202119077019E-10 
+      1         8       51    211       NK     ----    1.00  0.002   3.6378061877578425E-12   8.6592202533980200E-03   4.9586785170232356E-04   6.0645592491508829E-10 
+      1         9       51    211       NK     ----    1.00  0.002   5.8389429580432909E-12  -2.2309854710175506E-01   1.0257296976830914E-03   9.6304311321865821E-10 
++-------------------------------------------------+
+|
+| Solution Timings:
+|
+| Set AeroProblem Time          :      0.006 sec
+| Solution Time                 :      1.389 sec
+| Write Solution Time           :      0.001 sec
+| Stability Parameter Time      :      0.000 sec
+|
+| Total Call Time               :      1.396 sec
++--------------------------------------------------+
+
+Torus CL values extracted:
+
+Torus CL values extracted:
+
+Torus CL values extracted:
+
+Torus CL values extracted:
+  Instance 1 (0,0): θ₁=0.0000, θ₂=0.0000, α=  0.000°, CL=-0.0073539527
+  Instance 2 (1,0): θ₁=2.0944, θ₂=0.0000, α=  0.866°, CL=0.1149948748
+  Instance 3 (2,0): θ₁=4.1888, θ₂=0.0000, α= -0.866°, CL=-0.1166355989
+  Instance 1 (0,0): θ₁=0.0000, θ₂=0.0000, α=  0.000°, CL=-0.0073539527
+  Instance 2 (1,0): θ₁=2.0944, θ₂=0.0000, α=  0.866°, CL=0.1149948748
+  Instance 3 (2,0): θ₁=4.1888, θ₂=0.0000, α= -0.866°, CL=-0.1166355989
+  Instance 4 (0,1): θ₁=0.0000, θ₂=2.0944, α=  0.866°, CL=0.1176979462
+  Instance 1 (0,0): θ₁=0.0000, θ₂=0.0000, α=  0.000°, CL=-0.0073539527
+  Instance 2 (1,0): θ₁=2.0944, θ₂=0.0000, α=  0.866°, CL=0.1149948748
+  Instance 3 (2,0): θ₁=4.1888, θ₂=0.0000, α= -0.866°, CL=-0.1166355989
+  Instance 4 (0,1): θ₁=0.0000, θ₂=2.0944, α=  0.866°, CL=0.1176979462
+  Instance 1 (0,0): θ₁=0.0000, θ₂=0.0000, α=  0.000°, CL=-0.0073539527
+  Instance 2 (1,0): θ₁=2.0944, θ₂=0.0000, α=  0.866°, CL=0.1149948748
+  Instance 3 (2,0): θ₁=4.1888, θ₂=0.0000, α= -0.866°, CL=-0.1166355989
+  Instance 4 (0,1): θ₁=0.0000, θ₂=2.0944, α=  0.866°, CL=0.1176979462
+  Instance 5 (1,1): θ₁=2.0944, θ₂=2.0944, α=  1.732°, CL=0.2396055508
+  Instance 6 (2,1): θ₁=4.1888, θ₂=2.0944, α=  0.000°, CL=0.0086293929
+  Instance 7 (0,2): θ₁=0.0000, θ₂=4.1888, α= -0.866°, CL=-0.1139267478
+  Instance 5 (1,1): θ₁=2.0944, θ₂=2.0944, α=  1.732°, CL=0.2396055508
+  Instance 6 (2,1): θ₁=4.1888, θ₂=2.0944, α=  0.000°, CL=0.0086293929
+  Instance 7 (0,2): θ₁=0.0000, θ₂=4.1888, α= -0.866°, CL=-0.1139267478
+  Instance 4 (0,1): θ₁=0.0000, θ₂=2.0944, α=  0.866°, CL=0.1176979462
+  Instance 5 (1,1): θ₁=2.0944, θ₂=2.0944, α=  1.732°, CL=0.2396055508
+  Instance 6 (2,1): θ₁=4.1888, θ₂=2.0944, α=  0.000°, CL=0.0086293929
+  Instance 7 (0,2): θ₁=0.0000, θ₂=4.1888, α= -0.866°, CL=-0.1139267478
+  Instance 8 (1,2): θ₁=2.0944, θ₂=4.1888, α=  0.000°, CL=0.0086592203
+  Instance 9 (2,2): θ₁=4.1888, θ₂=4.1888, α= -1.732°, CL=-0.2230985471
+  Instance 5 (1,1): θ₁=2.0944, θ₂=2.0944, α=  1.732°, CL=0.2396055508
+  Instance 6 (2,1): θ₁=4.1888, θ₂=2.0944, α=  0.000°, CL=0.0086293929
+  Instance 7 (0,2): θ₁=0.0000, θ₂=4.1888, α= -0.866°, CL=-0.1139267478
+  Instance 8 (1,2): θ₁=2.0944, θ₂=4.1888, α=  0.000°, CL=0.0086592203
+  Instance 9 (2,2): θ₁=4.1888, θ₂=4.1888, α= -1.732°, CL=-0.2230985471
+  Instance 8 (1,2): θ₁=2.0944, θ₂=4.1888, α=  0.000°, CL=0.0086592203
+  Instance 9 (2,2): θ₁=4.1888, θ₂=4.1888, α= -1.732°, CL=-0.2230985471
+  Instance 8 (1,2): θ₁=2.0944, θ₂=4.1888, α=  0.000°, CL=0.0086592203
+  Instance 9 (2,2): θ₁=4.1888, θ₂=4.1888, α= -1.732°, CL=-0.2230985471
+
+Torus results saved to torus_results.npz

@@ -1,0 +1,18 @@
+[sicheng-MS-7E12:218116] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+======================================================================
+COMPARISON: Torus Time Spectral vs Time Accurate (ω ratio = 1/√2)
+======================================================================
+
+======================================================================
+Running solvers in separate processes to avoid state conflicts
+======================================================================
+
+[1/2] Running torus time spectral solver with 4 cores...
+Torus run failed! Check torus_run.log for details
+Traceback (most recent call last):
+  File "/home/sicheng/repo/adflow/adflow/tests/compare_torus_ts_vs_ta.py", line 650, in <module>
+    results = main()
+              ^^^^^^
+  File "/home/sicheng/repo/adflow/adflow/tests/compare_torus_ts_vs_ta.py", line 487, in main
+    raise RuntimeError("Torus time spectral run failed")
+RuntimeError: Torus time spectral run failed

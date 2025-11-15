@@ -1,0 +1,562 @@
+[sicheng-MS-7E12:209074] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+[sicheng-MS-7E12:209076] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+[sicheng-MS-7E12:209075] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+[sicheng-MS-7E12:209079] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+[sicheng-MS-7E12:209078] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+[sicheng-MS-7E12:209081] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+[sicheng-MS-7E12:209082] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+[sicheng-MS-7E12:209077] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+[sicheng-MS-7E12:209088] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+[sicheng-MS-7E12:209080] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+[sicheng-MS-7E12:209181] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+[sicheng-MS-7E12:209148] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+[sicheng-MS-7E12:209175] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+[sicheng-MS-7E12:209149] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+[sicheng-MS-7E12:209218] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+[sicheng-MS-7E12:209203] mca_base_component_repository_open: unable to open mca_op_avx: /home/sicheng/packages/openmpi-4.1.0/opt-gfortran/lib/openmpi/mca_op_avx.so: undefined symbol: ompi_op_base_module_t_class (ignored)
+
+======================================================================
+RUNNING TIME ACCURATE (dual-frequency motion)
+======================================================================
+
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Time step: dt=0.078540, Total time: 1.26
+Number of periods: 2
+Total time steps: 16
+Motion: α(t) = 1.0°·sin(ω₁t) + 1.0°·sin(ω₂t)
+
+Initializing ADflow (time accurate)...
+
+======================================================================
+RUNNING TIME ACCURATE (dual-frequency motion)
+======================================================================
+
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Time step: dt=0.078540, Total time: 1.26
+Number of periods: 2
+Total time steps: 16
+Motion: α(t) = 1.0°·sin(ω₁t) + 1.0°·sin(ω₂t)
+
+Initializing ADflow (time accurate)...
+
+======================================================================
+RUNNING TIME ACCURATE (dual-frequency motion)
+======================================================================
+
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Time step: dt=0.078540, Total time: 1.26
+Number of periods: 2
+Total time steps: 16
+Motion: α(t) = 1.0°·sin(ω₁t) + 1.0°·sin(ω₂t)
+
+Initializing ADflow (time accurate)...
+
+======================================================================
+RUNNING TIME ACCURATE (dual-frequency motion)
+======================================================================
+
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Time step: dt=0.078540, Total time: 1.26
+Number of periods: 2
+Total time steps: 16
+Motion: α(t) = 1.0°·sin(ω₁t) + 1.0°·sin(ω₂t)
+
+Initializing ADflow (time accurate)...
+
+======================================================================
+RUNNING TIME ACCURATE (dual-frequency motion)
+======================================================================
+
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Time step: dt=0.078540, Total time: 1.26
+Number of periods: 2
+Total time steps: 16
+Motion: α(t) = 1.0°·sin(ω₁t) + 1.0°·sin(ω₂t)
+
+Initializing ADflow (time accurate)...
+
+======================================================================
+RUNNING TIME ACCURATE (dual-frequency motion)
+======================================================================
+
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Time step: dt=0.078540, Total time: 1.26
+Number of periods: 2
+Total time steps: 16
+Motion: α(t) = 1.0°·sin(ω₁t) + 1.0°·sin(ω₂t)
+
+Initializing ADflow (time accurate)...
+
+======================================================================
+RUNNING TIME ACCURATE (dual-frequency motion)
+======================================================================
+
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Time step: dt=0.078540, Total time: 1.26
+Number of periods: 2
+Total time steps: 16
+Motion: α(t) = 1.0°·sin(ω₁t) + 1.0°·sin(ω₂t)
+
+Initializing ADflow (time accurate)...
+
+======================================================================
+RUNNING TIME ACCURATE (dual-frequency motion)
+======================================================================
+
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Time step: dt=0.078540, Total time: 1.26
+Number of periods: 2
+Total time steps: 16
+Motion: α(t) = 1.0°·sin(ω₁t) + 1.0°·sin(ω₂t)
+
+Initializing ADflow (time accurate)...
+
+======================================================================
+RUNNING TIME ACCURATE (dual-frequency motion)
+======================================================================
+
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Time step: dt=0.078540, Total time: 1.26
+Number of periods: 2
+Total time steps: 16
+Motion: α(t) = 1.0°·sin(ω₁t) + 1.0°·sin(ω₂t)
+
+Initializing ADflow (time accurate)...
+
+======================================================================
+RUNNING TIME ACCURATE (dual-frequency motion)
+======================================================================
+
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Time step: dt=0.078540, Total time: 1.26
+Number of periods: 2
+Total time steps: 16
+Motion: α(t) = 1.0°·sin(ω₁t) + 1.0°·sin(ω₂t)
+
+Initializing ADflow (time accurate)...
+
+======================================================================
+RUNNING TIME ACCURATE (dual-frequency motion)
+======================================================================
+
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Time step: dt=0.078540, Total time: 1.26
+Number of periods: 2
+Total time steps: 16
+Motion: α(t) = 1.0°·sin(ω₁t) + 1.0°·sin(ω₂t)
+
+Initializing ADflow (time accurate)...
+
+======================================================================
+RUNNING TIME ACCURATE (dual-frequency motion)
+======================================================================
+
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Time step: dt=0.078540, Total time: 1.26
+Number of periods: 2
+Total time steps: 16
+Motion: α(t) = 1.0°·sin(ω₁t) + 1.0°·sin(ω₂t)
+
+Initializing ADflow (time accurate)...
+
+======================================================================
+RUNNING TIME ACCURATE (dual-frequency motion)
+======================================================================
+
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Time step: dt=0.078540, Total time: 1.26
+Number of periods: 2
+Total time steps: 16
+Motion: α(t) = 1.0°·sin(ω₁t) + 1.0°·sin(ω₂t)
+
+Initializing ADflow (time accurate)...
+
+======================================================================
+RUNNING TIME ACCURATE (dual-frequency motion)
+======================================================================
+
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Time step: dt=0.078540, Total time: 1.26
+Number of periods: 2
+Total time steps: 16
+Motion: α(t) = 1.0°·sin(ω₁t) + 1.0°·sin(ω₂t)
+
+Initializing ADflow (time accurate)...
+
+======================================================================
+RUNNING TIME ACCURATE (dual-frequency motion)
+======================================================================
+
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Time step: dt=0.078540, Total time: 1.26
+Number of periods: 2
+Total time steps: 16
+Motion: α(t) = 1.0°·sin(ω₁t) + 1.0°·sin(ω₂t)
+
+Initializing ADflow (time accurate)...
+
+======================================================================
+RUNNING TIME ACCURATE (dual-frequency motion)
+======================================================================
+
+Frequencies: ω₁=10.0000, ω₂=14.1421
+Ratio: ω₁/ω₂ = 0.707107 = 1/√2
+Time step: dt=0.078540, Total time: 1.26
+Number of periods: 2
+Total time steps: 16
+Motion: α(t) = 1.0°·sin(ω₁t) + 1.0°·sin(ω₂t)
+
+Initializing ADflow (time accurate)...
+#
+# ADflow, multiblock structured flow solver
+#
+# This code solves the 3D RANS, laminar NS or Euler equations
+# on multiblock structured hexahedral grids.
+# This is a parallel executable running on 16 processors.
+# It has been compiled with the following options:
+# - Optimized mode.
+# - Size of standard integers: 4 bytes.
+# - Size of standard floating point types: 8 bytes.
+# - With cgns support
+# - With support for signals.
+#
++----------------------------------------+
+|          All ADFLOW Options:           |
++----------------------------------------+
+{'ADPC': False,
+ 'ANKADPC': False,
+ 'ANKAMGLevels': 2,
+ 'ANKAMGNSmooth': 1,
+ 'ANKASMOverlap': 1,
+ 'ANKASMOverlapCoarse': 0,
+ 'ANKCFL0': 5.0,
+ 'ANKCFLCutback': 0.5,
+ 'ANKCFLExponent': 0.5,
+ 'ANKCFLFactor': 10.0,
+ 'ANKCFLLimit': 100000.0,
+ 'ANKCFLMin': 1.0,
+ 'ANKCFLReset': True,
+ 'ANKCharTimeStepType': 'None',
+ 'ANKConstCFLStep': 0.4,
+ 'ANKCoupledSwitchTol': 1e-16,
+ 'ANKGlobalPreconditioner': 'additive Schwarz',
+ 'ANKInnerPreconIts': 1,
+ 'ANKInnerPreconItsCoarse': 1,
+ 'ANKJacobianLag': 10,
+ 'ANKLinResMax': 0.1,
+ 'ANKLinearSolveBuffer': 0.01,
+ 'ANKLinearSolveTol': 0.05,
+ 'ANKMaxIter': 40,
+ 'ANKNSubiterTurb': 1,
+ 'ANKOuterPreconIts': 1,
+ 'ANKPCILUFill': 2,
+ 'ANKPCILUFillCoarse': 0,
+ 'ANKPCUpdateCutoff': 1e-16,
+ 'ANKPCUpdateTol': 0.5,
+ 'ANKPCUpdateTolAfterCutoff': 0.0001,
+ 'ANKPhysicalLSTol': 0.2,
+ 'ANKPhysicalLSTolTurb': 0.99,
+ 'ANKSecondOrdSwitchTol': 1e-16,
+ 'ANKStepFactor': 1.0,
+ 'ANKStepMin': 0.01,
+ 'ANKSubspaceSize': -1,
+ 'ANKSwitchTol': 1000.0,
+ 'ANKTurbCFLScale': 1.0,
+ 'ANKTurbKSPDebug': False,
+ 'ANKUnsteadyLSTol': 1.0,
+ 'ANKUseApproxSA': False,
+ 'ANKUseFullVisc': True,
+ 'ANKUseMatrixFree': True,
+ 'ANKUseTurbDADI': True,
+ 'ASMOverlap': 1,
+ 'ASMOverlapCoarse': 0,
+ 'CFL': 2.5,
+ 'CFLCoarse': 1.2,
+ 'CFLLimit': 1.5,
+ 'GMRESOrthogonalizationType': 'modified Gram-Schmidt',
+ 'ILUFill': 2,
+ 'ILUFillCoarse': 0,
+ 'L2Convergence': 1e-06,
+ 'L2ConvergenceCoarse': 0.0001,
+ 'L2ConvergenceRel': 1e-16,
+ 'MGCycle': '3w',
+ 'MGStartLevel': 1,
+ 'NKADPC': False,
+ 'NKAMGLevels': 2,
+ 'NKAMGNSmooth': 1,
+ 'NKASMOverlap': 1,
+ 'NKASMOverlapCoarse': 0,
+ 'NKFixedStep': 0.25,
+ 'NKGlobalPreconditioner': 'additive Schwarz',
+ 'NKInnerPreconIts': 1,
+ 'NKInnerPreconItsCoarse': 1,
+ 'NKJacobianLag': 20,
+ 'NKLS': 'cubic',
+ 'NKLinearSolveTol': 0.3,
+ 'NKOuterPreconIts': 1,
+ 'NKPCILUFill': 2,
+ 'NKPCILUFillCoarse': 0,
+ 'NKSubspaceSize': 60,
+ 'NKSwitchTol': 1e-05,
+ 'NKUseEW': True,
+ 'NKViscPC': False,
+ 'RKReset': False,
+ 'TSStability': False,
+ 'acousticScaleFactor': 1.0,
+ 'adjointAMGLevels': 2,
+ 'adjointAMGNSmooth': 1,
+ 'adjointDivTol': 100000.0,
+ 'adjointL2Convergence': 1e-06,
+ 'adjointL2ConvergenceAbs': 1e-16,
+ 'adjointL2ConvergenceRel': 1e-16,
+ 'adjointMaxIter': 500,
+ 'adjointMaxL2DeviationFactor': 1.0,
+ 'adjointMonitorStep': 10,
+ 'adjointSolver': 'GMRES',
+ 'adjointSubspaceSize': 100,
+ 'alphaFollowing': True,
+ 'alphaMode': False,
+ 'altitudeMode': False,
+ 'applyAdjointPCSubspaceSize': 20,
+ 'applyPCSubspaceSize': 10,
+ 'approxPC': True,
+ 'backgroundVolScale': 1.0,
+ 'betaMode': False,
+ 'blockSplitting': True,
+ 'cavExponent': 0,
+ 'cavSensorOffset': 0.0,
+ 'cavSensorSharpness': 10.0,
+ 'cavitationNumber': 1.4,
+ 'closedSurfaceFamilies': None,
+ 'coarseDiscretization': 'central plus scalar dissipation',
+ 'computeCavitation': False,
+ 'computeSepSensorKs': False,
+ 'coupledSolution': False,
+ 'cpMinRho': 100.0,
+ 'cutCallback': None,
+ 'debugZipper': False,
+ 'deltaT': 0.07853981633974483,
+ 'designSurfaceFamily': None,
+ 'discretization': 'central plus scalar dissipation',
+ 'dissContMagnitude': 1.0,
+ 'dissContMidpoint': 3.0,
+ 'dissContSharpness': 3.0,
+ 'dissipationLumpingParameter': 6.0,
+ 'dissipationScalingExponent': 0.67,
+ 'eddyVisInfRatio': 0.009,
+ 'equationMode': 'unsteady',
+ 'equationType': 'Euler',
+ 'eulerWallTreatment': 'linear pressure extrapolation',
+ 'explicitSurfaceCallback': None,
+ 'firstRun': True,
+ 'flowType': 'external',
+ 'forcesAsTractions': True,
+ 'frozenTurbulence': False,
+ 'globalPreconditioner': 'additive Schwarz',
+ 'gridFile': '../input_files/naca64A010_euler-L2.cgns',
+ 'gridPrecision': 'double',
+ 'gridPrecisionSurface': 'single',
+ 'infChangeCorrection': True,
+ 'infChangeCorrectionTol': 1e-12,
+ 'infChangeCorrectionType': 'offset',
+ 'innerPreconIts': 1,
+ 'innerPreconItsCoarse': 1,
+ 'isoVariables': [],
+ 'isosurface': {},
+ 'liftIndex': 2,
+ 'limiter': 'van Albada',
+ 'loadBalanceIter': 10,
+ 'loadImbalance': 0.1,
+ 'localPreconditioner': 'ILU',
+ 'lowSpeedPreconditioner': False,
+ 'machMode': False,
+ 'matrixOrdering': 'RCM',
+ 'maxL2DeviationFactor': 1.0,
+ 'meshMaxSkewness': 1.0,
+ 'meshSurfaceFamily': None,
+ 'monitorVariables': ['resrho', 'cl', 'cd'],
+ 'nCycles': 100,
+ 'nCyclesCoarse': 500,
+ 'nFloodIter': -1,
+ 'nRKReset': 5,
+ 'nRefine': 10,
+ 'nSaveSurface': 1,
+ 'nSaveVolume': 1,
+ 'nSubiter': 5,
+ 'nSubiterTurb': 10,
+ 'nTimeIntervalsSpectral1': 3,
+ 'nTimeIntervalsSpectral2': 3,
+ 'nTimeStepsCoarse': 0,
+ 'nTimeStepsFine': 16,
+ 'nearWallDist': 0.1,
+ 'numberSolutions': True,
+ 'omegaFourier1': 0.0,
+ 'omegaFourier2': 0.0,
+ 'outerPreconIts': 3,
+ 'outputDirectory': './output_compare',
+ 'outputSurfaceFamily': 'allSurfaces',
+ 'overlapFactor': 0.9,
+ 'oversetDebugPrint': False,
+ 'oversetLoadBalance': True,
+ 'oversetPriority': {},
+ 'oversetProjTol': 1e-12,
+ 'oversetUpdateMode': 'frozen',
+ 'pMode': False,
+ 'partitionLikeNProc': -1,
+ 'partitionOnly': False,
+ 'preconditionerSide': 'right',
+ 'printAllOptions': True,
+ 'printBadlySkewedCells': False,
+ 'printIntro': True,
+ 'printIterations': True,
+ 'printNegativeVolumes': False,
+ 'printTiming': True,
+ 'printWarnings': True,
+ 'qMode': False,
+ 'rMode': False,
+ 'recomputeOverlapMatrix': True,
+ 'resAveraging': 'alternate',
+ 'restartAdjoint': True,
+ 'restartFile': None,
+ 'restrictionRelaxation': 0.8,
+ 'selfZipCutoff': 120.0,
+ 'sepSensorKsOffset': 0.0,
+ 'sepSensorKsPhi': 90.0,
+ 'sepSensorKsRho': 1000.0,
+ 'sepSensorKsSharpness': 25.0,
+ 'sepSensorOffset': 0.0,
+ 'sepSensorSharpness': 10.0,
+ 'setMonitor': True,
+ 'skipAfterFailedAdjoint': True,
+ 'smoothParameter': 1.5,
+ 'smoother': 'DADI',
+ 'solutionPrecision': 'single',
+ 'solutionPrecisionSurface': 'single',
+ 'storeConvHist': True,
+ 'storeRindLayer': True,
+ 'surfaceVariables': ['cp', 'vx', 'vy', 'vz', 'mach'],
+ 'timeAccuracy': 2,
+ 'timeIntegrationScheme': 'BDF',
+ 'timeIntervals': 1,
+ 'timeLimit': -1.0,
+ 'turbResScale': 10000.0,
+ 'turbulenceModel': 'SA',
+ 'turbulenceOrder': 'first order',
+ 'turbulenceProduction': 'strain',
+ 'updateWallAssociations': False,
+ 'useALE': False,
+ 'useANKSolver': False,
+ 'useApproxWallDistance': True,
+ 'useBlockettes': True,
+ 'useDiagTSPC': True,
+ 'useDissContinuation': False,
+ 'useExternalDynamicMesh': True,
+ 'useGridMotion': True,
+ 'useLinResMonitor': False,
+ 'useMatrixFreedrdw': True,
+ 'useNKSolver': False,
+ 'useOversetWallScaling': False,
+ 'useQCR': False,
+ 'useRotationSA': False,
+ 'useSkewnessCheck': False,
+ 'useTSInterpolatedGridVelocity': True,
+ 'useTorusTimeSpectral': False,
+ 'useWallFunctions': False,
+ 'useZipperMesh': True,
+ 'useft2SA': True,
+ 'verifyExtra': True,
+ 'verifySpatial': True,
+ 'verifyState': True,
+ 'vis2': 0.25,
+ 'vis2Coarse': 0.5,
+ 'vis4': 0.0156,
+ 'viscPC': False,
+ 'viscWallTreatment': 'constant pressure extrapolation',
+ 'viscousSurfaceVelocities': True,
+ 'volumeVariables': ['resrho'],
+ 'wallDistCutoff': 1e+20,
+ 'windAxis': False,
+ 'writeSolutionDigits': 3,
+ 'writeSolutionEachIter': False,
+ 'writeSurfaceSolution': False,
+ 'writeTecplotSurfaceSolution': False,
+ 'writeVolumeSolution': False,
+ 'zipperSurfaceFamily': None}
+-> Alpha... 0.000000 
+#
+#                      Warning
+# It is assumed that the grid is given in meters.
+#
+#
+# Specified load imbalance tolerance 0.100 achieved.
+# Continuing with 0.000 load imbalance for the cells and 0.000 for the faces
+#
+#
+# Grid level: 1, Total number of cells: 1536
+#
+#
+# Grid level: 2, Total number of cells: 384
+#
+#
+# Grid level: 3, Total number of cells: 96
+#
++--------------------------------------------------+
+  CGNS Surface Families by Boundary Condition Type
++--------------------------------------------------+
+| Wall Types           : wall 
+| Inflow Types         : 
+| Outflow Types        : 
+| Symmetry Types       : sym 
+| Farfield Types       : far 
+| Overset Types        : 
++--------------------------------------------------+
+[12]PETSC ERROR: ------------------------------------------------------------------------
+[12]PETSC ERROR: Caught signal number 11 SEGV: Segmentation Violation, probably memory access out of range
+[12]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
+[12]PETSC ERROR: or see https://petsc.org/release/faq/#valgrind and https://petsc.org/release/faq/
+[12]PETSC ERROR: ---------------------  Stack Frames ------------------------------------
+[12]PETSC ERROR: No error traceback is available, the problem could be in the main program. 
+[8]PETSC ERROR: ------------------------------------------------------------------------
+[8]PETSC ERROR: Caught signal number 11 SEGV: Segmentation Violation, probably memory access out of range
+[8]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
+[8]PETSC ERROR: or see https://petsc.org/release/faq/#valgrind and https://petsc.org/release/faq/
+[8]PETSC ERROR: ---------------------  Stack Frames ------------------------------------
+[4]PETSC ERROR: ------------------------------------------------------------------------
+[4]PETSC ERROR: Caught signal number 11 SEGV: Segmentation Violation, probably memory access out of range
+[4]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
+[4]PETSC ERROR: or see https://petsc.org/release/faq/#valgrind and https://petsc.org/release/faq/
+[4]PETSC ERROR: ---------------------  Stack Frames ------------------------------------
+[4]PETSC ERROR: No error traceback is available, the problem could be in the main program. 
+[8]PETSC ERROR: No error traceback is available, the problem could be in the main program. 
+[0]PETSC ERROR: ------------------------------------------------------------------------
+[0]PETSC ERROR: Caught signal number 11 SEGV: Segmentation Violation, probably memory access out of range
+[0]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
+[0]PETSC ERROR: or see https://petsc.org/release/faq/#valgrind and https://petsc.org/release/faq/
+[0]PETSC ERROR: ---------------------  Stack Frames ------------------------------------
+[0]PETSC ERROR: No error traceback is available, the problem could be in the main program. 
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 12 in communicator MPI_COMM_WORLD
+with errorcode 59.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
+[sicheng-MS-7E12:209069] PMIX ERROR: UNREACHABLE in file server/pmix_server.c at line 2198
+[sicheng-MS-7E12:209069] 3 more processes have sent help message help-mpi-api.txt / mpi-abort
+[sicheng-MS-7E12:209069] Set MCA parameter "orte_base_help_aggregate" to 0 to see all help / error messages
