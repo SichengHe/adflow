@@ -2,13 +2,20 @@
 """
 Save Resolvent Modes to CGNS Format
 
-This script shows how to save resolvent mode shapes as CGNS files
+⚠️ NOTE: This script has known issues with ADflow's CGNS writing.
+⚠️ RECOMMENDED ALTERNATIVE: Use save_resolvent_modes_numpy.py instead!
+
+The NumPy export is simpler, more reliable, and produces smaller files.
+You can then visualize modes using custom Python tools or convert to
+other formats as needed.
+
+This script attempts to save resolvent mode shapes as CGNS files
 for visualization in Tecplot, ParaView, or other CFD visualization tools.
 
-The modes are saved as field variables on the CFD mesh, allowing you to:
-- Visualize spatial distribution of forcing/response
-- Identify critical regions for actuator placement
-- Understand mode structure in physical space
+KNOWN ISSUES:
+- ADflow may fail to write CGNS files depending on configuration
+- Error: "File could not be opened by cgns for writing"
+- Workaround: Use save_resolvent_modes_numpy.py instead
 """
 
 import numpy as np
