@@ -1,143 +1,162 @@
-# Torus Time Spectral Solver - Verification Summary
+# Torus Time Spectral Verification Summary
 
 ## Overview
+This document summarizes the verification tests for the Torus Time Spectral method in ADflow, specifically focusing on the degenerate case where ω₁ = ω₂.
 
-This document summarizes the verification testing performed on the torus time spectral solver implementation in ADflow.
+## Test Files
 
-## Tests Performed
+### 1. Unit Test: Spectral Operator Verification
+**File**: `unit_tests/test_torus_degenerate_matches_ts.py`
 
-### 1. General Two-Frequency Case
-**File**: `run_torus_with_pitching.py`
+**Purpose**: Verify that the torus spectral differentiation operator with n₂=1 matches the classical 1D time spectral operator.
 
-**Parameters**:
-- omega1 = 100.0 rad/s
-- omega2 = 100.0√2 rad/s (quasi-periodic)
-- A1 = 1.0°, A2 = 0.5°
-- Grid: 3×3 = 9 instances
+**Setup**:
+- Torus: n₁=4, n₂=1, ω₁=ω₂=95 rad/s
+- Classic 1D TS: n=4, ω=95 rad/s
 
-**Result**: ✅ PASS
-- Solver converges successfully
-- All instances produce physically reasonable forces
-- Output files generated correctly with naming: `file_spectral#.cgns`
+**Result**: ✅ **PASSED**
+- Operators match with sign flip (convention difference)
+- Maximum difference: < 1e-12
 
-### 2. Equal Frequencies, Different Amplitudes
-**File**: `test_torus_omega_equal.py`
-
-**Parameters**:
-- omega1 = omega2 = 100.0 rad/s
-- A1 = 1.0°, A2 = 0.5° (different amplitudes)
-- Grid: 3×3 = 9 instances
-
-**Result**: ✅ PASS
-- Motion: α(θ₁,θ₂) = A1·sin(θ₁) + A2·sin(θ₂)
-- CL values vary across instances as expected
-- No exact duplicates (2D nature preserved with different amplitudes)
-- Solution shows correct physical behavior
-
-### 3. Truly Degenerate Case (A1=A2, omega1=omega2)
-**File**: `test_torus_degenerate.py`
-
-**Parameters**:
-- omega1 = omega2 = 100.0 rad/s (SAME)
-- A1 = A2 = 1.0° (SAME)
-- Grid: 3×3 = 9 instances
-
-**Result**: ✅ PASS - Verified 1D Collapse
-
-**Key Finding**: System correctly collapses to 1D-like behavior with 3 duplicate CL pairs:
-
-| Instance Pair | Grid Coords | Alpha (°) | CL (identical) |
-|--------------|-------------|-----------|----------------|
-| 2 & 4 | (1,0) & (0,1) | 0.87 | 0.09636419 |
-| 3 & 7 | (2,0) & (0,2) | -0.87 | -0.13564353 |
-| 6 & 8 | (2,1) & (1,2) | 0.00 | 0.04748762 |
-
-**Physical Explanation**: With A1=A2=A, the motion becomes:
-```
-α(θ₁,θ₂) = A·[sin(θ₁) + sin(θ₂)]
-```
-Points with the same (θ₁+θ₂) value have the same alpha, producing identical forces.
-
-### 4. Spectral Pattern Verification
-
-**Test**: Antisymmetry check on equal-frequency case
-
-**Finding**: ✅ PASS
-- Opposite alpha values → opposite CL values
-- Example: α=+0.43° gives CL=0.0719, α=-0.43° gives CL=-0.0505
-- Physical antisymmetry confirmed (small asymmetry due to nonlinear effects at Mach 0.5)
-
-### 5. Comparison with Regular Time Spectral
-**File**: `test_torus_vs_ts.py`, `compare_degenerate_vs_1d.py`
-
-**Status**: Regular time spectral with external dynamic mesh is currently broken
-- Issue: timePeriod not set when using external mesh
-- Symptom: NaN at initialization
-- Note: Same fix applied to torus mode could fix regular TS
-
-**Alternative Verification**: Internal consistency of degenerate torus results proves correctness:
-- Same alpha → Same CL (regardless of grid coordinates i1,i2)
-- 3 duplicate pairs with machine precision agreement
-- Solution manifold correctly collapses from 2D to 1D
-
-## Code Fixes Applied
-
-### 1. Time Period Initialization (partitioning.F90)
-Fixed missing timePeriod initialization for torus mode:
-```fortran
-if (useTorusTimeSpectral) then
-    if (omegaFourier1 > zero .and. omegaFourier2 > zero) then
-        timePeriod = two * pi / min(omegaFourier1, omegaFourier2)
-    else if (omegaFourier1 > zero) then
-        timePeriod = two * pi / omegaFourier1
-    else if (omegaFourier2 > zero) then
-        timePeriod = two * pi / omegaFourier2
-    end if
-
-    do nn = 1, nSections
-        sections(nn)%timePeriod = timePeriod / sections(nn)%nSlices
-    end do
-end if
-```
-
-### 2. Output File Naming
-Fixed CGNS file naming in three files:
-- `writeCGNSGrid.F90`
-- `writeCGNSVolume.F90`
-- `writeCGNSSurface.F90`
-
-Changed from: `file.cgnsSpectral1` → `file_spectral1.cgns`
-
-### 3. Debug Code Removal
-Removed all debug print statements from:
-- `partitioning.F90`
-- `solverUtils.F90`
-- `smoothers.F90`
-- `residuals.F90`
-
-## Conclusions
-
-### ✅ Torus Time Spectral Solver: VERIFIED
-
-1. **General Operation**: Solver works correctly for two-frequency quasi-periodic motion
-2. **Degenerate Cases**: Correctly handles omega1=omega2 collapse to 1D-like behavior
-3. **Physical Accuracy**: Force coefficients show expected symmetry and antisymmetry properties
-4. **Output**: CGNS files generated with correct naming convention
-5. **Code Quality**: Clean implementation without debug artifacts
-
-### Known Issues
-
-1. **Regular Time Spectral**: External mesh mode broken (needs timePeriod fix)
-2. **API Limitation**: Instance-specific forces not exposed via Python evalFunctions (only available in solver output logs)
-
-### Recommendations
-
-1. Consider applying the same timePeriod fix to regular time spectral mode
-2. Consider exposing instance-specific forces through Python API for easier post-processing
-3. All torus functionality is production-ready for quasi-periodic motion analysis
+**Key Finding**: The torus with n₂=1 is mathematically equivalent to classical 1D time spectral.
 
 ---
 
-**Verification Date**: 2025-11-14
-**Verified By**: Automated testing suite
-**Status**: All critical tests PASSED
+### 2. Operator Comparison: Matrix Analysis
+**File**: `compare_torus_n2_1_vs_1d.py`
+
+**Purpose**: Compare the spectral derivative matrices (dscalar) between torus n₂=1 and 1D TS.
+
+**Setup**:
+- Torus: n₁=3, n₂=1
+- 1D TS: n=3
+- Both with ω=100 rad/s
+
+**Result**: ✅ **Matrices match perfectly** (with sign convention difference)
+- Max normalized difference: < 1e-16
+
+---
+
+### 3. CFD Comparison: Diagonal Instances vs 1D TS
+**File**: `compare_torus_diagonal_vs_1d_ts.py`
+
+**Purpose**: Verify that the diagonal instances of a 3×3 degenerate torus match 3-point 1D TS.
+
+**Setup**:
+- Torus: 3×3 grid, ω₁=ω₂=100 rad/s, A₁=A₂=1.0°
+- Extract diagonal instances: (0,0), (1,1), (2,2)
+- 1D TS: 3 instances, ω=100 rad/s, A=2.0°
+
+**Phase Mapping for Diagonal**:
+- Instance (0,0): θ = 0°, α = 0°
+- Instance (1,1): θ = 120°, α = 1.732°
+- Instance (2,2): θ = 240°, α = -1.732°
+
+**Result**: ✅ **PERFECT MATCH**
+- Instance (0,0): ΔCL = 8.013e-11
+- Instance (1,1): ΔCL = 2.939e-10
+- Instance (2,2): ΔCL = 3.787e-11
+- **Maximum CL difference: 2.939e-10** (machine precision)
+
+**Key Finding**: For degenerate torus (ω₁=ω₂, A₁=A₂):
+- **Diagonal instances** (i₁=i₂) correspond to physical time instants
+- **Phase mapping**: θ = θ₁ = θ₂ (NOT (θ₁+θ₂)/2)
+- **Off-diagonal instances** do NOT correspond to physical time - they are coupling artifacts
+
+---
+
+### 4. Mesh and Grid Velocity Verification
+**File**: `verify_mesh_gridvel_match.py`
+
+**Purpose**: Verify that mesh positions match at corresponding phases.
+
+**Result**: ✅ **Confirmed**
+- At θ=0°: Mesh positions match exactly (diff = 0.000e+00)
+- At other matching phases: Mesh positions differ because α values differ
+- This confirms that only diagonal instances represent the same physical state
+
+---
+
+## Key Conclusions
+
+### 1. Mathematical Equivalence
+- **Torus with n₂=1 ≡ Classical 1D Time Spectral**
+- The spectral derivative operators are identical (up to sign convention)
+
+### 2. Degenerate Torus Structure
+For a degenerate torus with ω₁=ω₂ and A₁=A₂:
+- **Diagonal instances (i₁=i₂)**: True physical time instances
+  - Phase: θ = θ₁ = θ₂
+  - Motion: α(θ) = 2A·sin(θ)
+  - Match 1D TS with amplitude 2A
+
+- **Off-diagonal instances (i₁≠i₂)**: Spectral coupling artifacts
+  - Do NOT correspond to physical time
+  - Different α at same projected phase
+  - Required for spectral accuracy but not physical states
+
+### 3. Phase Mapping
+**CORRECT mapping for diagonal**:
+```
+θ_physical = θ₁ = θ₂
+```
+
+**INCORRECT mapping** (previously used):
+```
+θ_proj = (θ₁ + θ₂) / 2  ❌
+```
+
+### 4. Sign Convention
+- Torus and classical 1D TS use **opposite sign conventions** in dscalar
+- This is a convention difference, not an error
+- Both give identical results
+
+---
+
+## Test Coverage
+
+| Test | Aspect | Status |
+|------|--------|--------|
+| Unit test | Operator equivalence (n₂=1) | ✅ PASSED |
+| Matrix comparison | Operator matching | ✅ PASSED |
+| CFD diagonal comparison | Physical solution matching | ✅ PASSED |
+| Mesh verification | Geometric consistency | ✅ PASSED |
+
+---
+
+## Running the Tests
+
+### Unit Test (fast - no CFD solve)
+```bash
+cd /home/sicheng/repo/adflow/adflow/tests
+testflo unit_tests/test_torus_degenerate_matches_ts.py -v
+```
+
+### Operator Comparison (fast - no CFD solve)
+```bash
+python compare_torus_n2_1_vs_1d.py
+```
+
+### Diagonal CFD Comparison (slow - full CFD solve)
+```bash
+mpirun -np 4 python compare_torus_diagonal_vs_1d_ts.py
+```
+
+### Mesh Verification (medium - setup only)
+```bash
+mpirun -np 4 python verify_mesh_gridvel_match.py
+```
+
+---
+
+## References
+
+- **Torus Time Spectral Method**: Treats time as a 2D torus parameterized by (θ₁, θ₂)
+- **Classical Time Spectral**: Treats time as 1D circle parameterized by θ
+- **Degenerate Case**: When ω₁=ω₂, the 2D problem collapses to 1D on the diagonal
+
+---
+
+**Date**: 2025-11-14
+**Verified by**: Claude Code + User Testing
+**Status**: All tests passing ✅
