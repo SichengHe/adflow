@@ -1222,6 +1222,66 @@ contains
         call getSolution(famLists, funcValues)
     end subroutine getSolutionWrap
 
+    subroutine getInstanceForces(famLists, clArray, cdArray, cmzArray, nGroups, nFamMax, nTS)
+        ! Get per-instance lift, drag, and moment coefficients for time spectral
+        ! This routine returns CL, CD, CMz for each spectral instance instead of averaging
+
+        use constants
+        use inputTimeSpectral, only: nTimeIntervalsSpectral
+        use inputPhysics, only: liftDirection, dragDirection, lengthRef, surfaceRef, machCoef
+        use flowVarRefState, only: pRef, gammaInf, LRef
+        implicit none
+
+        ! Input/output Variables
+        integer(kind=intType), intent(in) :: nGroups, nFamMax, nTS
+        integer(kind=intType), dimension(nGroups, nFamMax), intent(in) :: famLists
+        real(kind=realType), dimension(nTS, nGroups), intent(out) :: clArray, cdArray, cmzArray
+
+        ! Local variables
+        real(kind=realType), dimension(nLocalValues, nTimeIntervalsSpectral, nGroups) :: globalValues
+        real(kind=realType), dimension(104, nGroups) :: funcValues  ! Dummy, not used
+        real(kind=realType) :: fact, factMoment
+        real(kind=realType), dimension(3, nTimeIntervalsSpectral) :: force, cForce, cMoment
+        integer(kind=intType) :: sps, iGroup
+
+        ! Call getSolution with globalValues to get per-instance data
+        call getSolution(famLists, funcValues, globalValues)
+
+        ! Convert forces and moments to coefficients for each instance
+        fact = two / (gammaInf * MachCoef * MachCoef * surfaceRef * LRef * LRef * pRef)
+        factMoment = fact / (lengthRef * LRef)
+
+        do iGroup = 1, nGroups
+            do sps = 1, nTimeIntervalsSpectral
+                ! Extract forces
+                force(:, sps) = globalValues(iFp:iFp + 2, sps, iGroup) + &
+                                globalValues(iFv:iFv + 2, sps, iGroup) + &
+                                globalValues(iFlowFm:iFlowFm + 2, sps, iGroup)
+
+                ! Convert to coefficients
+                cForce(:, sps) = fact * force(:, sps)
+
+                ! Extract moments
+                cMoment(:, sps) = factMoment * (globalValues(iMp:iMp + 2, sps, iGroup) + &
+                                                globalValues(iMv:iMv + 2, sps, iGroup) + &
+                                                globalValues(iFlowMm:iFlowMm + 2, sps, iGroup))
+
+                ! Compute CL and CD for this instance
+                clArray(sps, iGroup) = cForce(1, sps) * liftDirection(1) + &
+                                       cForce(2, sps) * liftDirection(2) + &
+                                       cForce(3, sps) * liftDirection(3)
+
+                cdArray(sps, iGroup) = cForce(1, sps) * dragDirection(1) + &
+                                       cForce(2, sps) * dragDirection(2) + &
+                                       cForce(3, sps) * dragDirection(3)
+
+                ! CMz is the z-component of moment coefficient
+                cmzArray(sps, iGroup) = cMoment(3, sps)
+            end do
+        end do
+
+    end subroutine getInstanceForces
+
     subroutine getSolution(famLists, funcValues, globalValues)
         !--------------------------------------------------------------
         ! Manual Differentiation Warning: Modifying this routine requires

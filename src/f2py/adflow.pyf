@@ -666,6 +666,15 @@ python module libadflow
            integer(kind=inttype), optional,check(shape(famlists,0)==ngroups),depend(famlists) :: ngroups=shape(famlists,0)
            integer(kind=inttype), optional,check(shape(famlists,1)==nfammax),depend(famlists) :: nfammax=shape(famlists,1)
          end subroutine getsolutionwrap
+         subroutine getinstanceforces(famlists,clarray,cdarray,cmzarray,ngroups,nfammax,nts) ! in :test:surfaceIntegrations.F90:surfaceintegrations
+           integer(kind=inttype) dimension(ngroups,nfammax),intent(in) :: famlists
+           real(kind=realtype) dimension(nts,ngroups),intent(out),depend(nts,ngroups) :: clarray
+           real(kind=realtype) dimension(nts,ngroups),intent(out),depend(nts,ngroups) :: cdarray
+           real(kind=realtype) dimension(nts,ngroups),intent(out),depend(nts,ngroups) :: cmzarray
+           integer(kind=inttype), optional,check(shape(famlists,0)==ngroups),depend(famlists) :: ngroups=shape(famlists,0)
+           integer(kind=inttype), optional,check(shape(famlists,1)==nfammax),depend(famlists) :: nfammax=shape(famlists,1)
+           integer(kind=inttype) :: nts
+         end subroutine getinstanceforces
        end module surfaceintegrations
 
        module usersurfaceintegrations

@@ -3170,6 +3170,58 @@ class ADFLOW(AeroSolver):
 
         return sol
 
+    def getInstanceForces(self, groupName=None):
+        """Retrieve instance-specific force coefficients for time spectral simulations.
+        This returns CL, CD, and CMz for each spectral instance instead of the time-averaged values.
+
+        Parameters
+        ----------
+        groupName : str
+            The family group on which to evaluate the functions.
+
+        Returns
+        -------
+        forces : dict
+            Dictionary with keys 'cl', 'cd', 'cmz', each containing a numpy array
+            of length nTimeIntervalsSpectral with the coefficient for each instance.
+
+        Notes
+        -----
+        This function is only useful for time spectral simulations. For steady or
+        unsteady simulations, use getSolution() or evalFunctions() instead.
+
+        Examples
+        --------
+        >>> forces = CFDSolver.getInstanceForces()
+        >>> print(f"Instance 1 CL: {forces['cl'][0]}")
+        >>> print(f"Instance 2 CL: {forces['cl'][1]}")
+        """
+
+        # Check if this is a time spectral simulation
+        if self.getOption('equationMode').lower() != 'time spectral':
+            raise Error("getInstanceForces() is only valid for time spectral simulations")
+
+        # Get number of time spectral instances
+        if self.getOption('useTorusTimeSpectral'):
+            nTS = self.getOption('nTimeIntervalsSpectral1') * self.getOption('nTimeIntervalsSpectral2')
+        else:
+            nTS = self.getOption('timeIntervals')
+
+        # Extract the family list
+        famLists = self._expandGroupNames([groupName])
+
+        # Call the Fortran routine
+        clArray, cdArray, cmzArray = self.adflow.surfaceintegrations.getinstanceforces(famLists, nTS)
+
+        # Build the result dictionary (extract first group)
+        forces = {
+            'cl': clArray[:, 0].copy(),
+            'cd': cdArray[:, 0].copy(),
+            'cmz': cmzArray[:, 0].copy()
+        }
+
+        return forces
+
     def getIblankCheckSum(self, fileName=None):
         ncells = self.adflow.adjointvars.ncellslocal[0]
         nCellTotal = self.comm.allreduce(ncells)
