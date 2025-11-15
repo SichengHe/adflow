@@ -43,7 +43,25 @@ def extract_and_analyze_modes():
     # 1. Setup and solve CFD (same as before)
     # =========================================================================
 
-    meshFile = "../tests/input_files/naca64A010_euler-L2.cgns"
+    # Try multiple possible locations for mesh file
+    possible_paths = [
+        "../tests/input_files/naca64A010_euler-L2.cgns",  # From examples/
+        "./tests/input_files/naca64A010_euler-L2.cgns",   # From repo root
+        "./input_files/naca64A010_euler-L2.cgns",         # From tests/
+    ]
+
+    meshFile = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            meshFile = path
+            break
+
+    if meshFile is None:
+        print(f"ERROR: Mesh file not found in any of these locations:")
+        for path in possible_paths:
+            print(f"  - {path}")
+        print("\nPlease run from repo root, examples/, or tests/ directory")
+        return None
 
     aeroOptions = {
         'gridFile': meshFile,
