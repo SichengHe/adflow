@@ -5424,6 +5424,108 @@ class ADFLOW(AeroSolver):
         rhoRes, totalRRes = self.adflow.nksolver.getfreestreamresidual()
         return totalRRes
 
+    def setupResolventJacobian(self, aeroProblem, frozenTurbulence=None):
+        """
+        Setup and assemble the Jacobian matrix for resolvent analysis.
+
+        This assembles the residual Jacobian J = ∂R/∂w at the current
+        flow solution, which is needed for resolvent analysis.
+
+        The resolvent operator is: R(ω) = (jω*I - J)^{-1}
+
+        Parameters
+        ----------
+        aeroProblem : AeroProblem
+            The aerodynamic problem (must have converged solution)
+        frozenTurbulence : bool, optional
+            If True, use frozen turbulence (flow variables only).
+            If False, include turbulence variables.
+            If None, uses the 'frozenTurbulence' option setting.
+
+        Notes
+        -----
+        This must be called before using getJacobianMatrix() for
+        resolvent analysis.
+        """
+        self.setAeroProblem(aeroProblem)
+
+        if frozenTurbulence is None:
+            frozenTurbulence = self.getOption("frozenTurbulence")
+
+        # Setup adjoint if not already done
+        if not self.adjointSetup:
+            self.adflow.adjointapi.setupadjoint()
+            self.adjointSetup = True
+
+        # Assemble the Jacobian matrix
+        self.adflow.resolventapi.setupresolventmatrix(frozenTurbulence)
+
+    def getJacobianMatrix(self, outputType="dense"):
+        """
+        Get the Jacobian matrix J = ∂R/∂w for resolvent analysis.
+
+        WARNING: For large problems, this is very memory intensive!
+        Use matrix-free methods for production cases.
+
+        Parameters
+        ----------
+        outputType : str, optional
+            Type of output:
+            - "dense": Return as dense NumPy array (default)
+            - "info": Return matrix info (size, nnz)
+            - "file": Export to PETSc binary file
+
+        Returns
+        -------
+        J : numpy array or dict
+            If outputType="dense": Dense Jacobian matrix (n x n)
+            If outputType="info": Dict with 'nRows', 'nCols', 'nnz'
+
+        Notes
+        -----
+        Must call setupResolventJacobian() first to assemble the matrix.
+
+        The returned matrix is J = ∂R/∂w (NOT the transpose).
+        ADflow internally stores dRdWT = (∂R/∂w)^T for adjoint,
+        but this function transposes it back to give J.
+        """
+        if outputType == "info":
+            # Get matrix information
+            nRows, nCols, nnz = self.adflow.resolventapi.getresolventmatrixinfo()
+            return {"nRows": nRows, "nCols": nCols, "nnz": nnz}
+
+        elif outputType == "dense":
+            # Get dense matrix
+            n = self.getStateSize()
+            J = numpy.zeros((n, n), dtype=self.dtype)
+            self.adflow.resolventapi.getresolventmatrixdense(J, n)
+            return J
+
+        elif outputType == "file":
+            raise NotImplementedError(
+                "File export not yet implemented. "
+                "Use exportJacobianToFile() instead."
+            )
+        else:
+            raise ValueError(f"Unknown outputType: {outputType}")
+
+    def exportJacobianToFile(self, filename):
+        """
+        Export the Jacobian matrix to a PETSc binary file.
+
+        This can be loaded in Python using PETSc for large problems.
+
+        Parameters
+        ----------
+        filename : str
+            Filename to save the matrix (e.g., "jacobian.bin")
+
+        Notes
+        -----
+        Must call setupResolventJacobian() first.
+        """
+        self.adflow.resolventapi.exportresolventmatrixtofile(filename)
+
     def _getSurfaceSize(self, groupName, includeZipper=True):
         """Internal routine to return the size of a particular surface. This
         does *NOT* set the actual family group
