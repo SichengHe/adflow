@@ -1,0 +1,85 @@
+\PassOptionsToPackage{expansion=false}{microtype} % disable font expansion to avoid bitmap font errors
+\documentclass[journal]{new-aiaa}
+\ifdefined\pdfmapfile
+  \pdfmapfile{+qtm.map} % load TeX Gyre Termes map (not included by default in this MiKTeX setup)
+  \pdfmapfile{+newtx.map} % ensure newtx fonts use bundled map data
+\fi
+\usepackage{graphicx}
+\graphicspath{ {./figures/} }
+\usepackage[rightcaption]{sidecap}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{imakeidx}
+\usepackage{comment}
+\usepackage{commath}
+\usepackage[titletoc]{appendix}
+\usepackage{graphicx}
+\usepackage{resizegather}
+\usepackage[english]{babel}
+\usepackage{tabu}
+\usepackage{booktabs}
+\usepackage{xfrac}
+\usepackage{tabularx}
+\usepackage{amsmath}
+\usepackage{commath}
+\usepackage{graphicx,bm}
+\usepackage{verbatim}
+\usepackage{lscape}
+\usepackage{relsize}
+\usepackage{enumitem}
+\usepackage{textcomp}
+\usepackage{breqn}
+\usepackage{makecell}
+\usepackage{longtable,tabularx}
+\usepackage{multirow}
+\usepackage{doi}
+\usepackage{fancyhdr}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{setspace}
+\usepackage{footnote}
+\PassOptionsToPackage{hyphens}{url}
+\usepackage{hyperref}
+\hypersetup{colorlinks,linkcolor={blue},citecolor={blue},urlcolor={blue}}
+\usepackage[numbers]{natbib}
+\usepackage{mathtools}
+\usepackage[disable]{todonotes}
+\usepackage[framemethod=tikz]{mdframed}
+\usepackage{booktabs,xcolor,siunitx}
+\usepackage{soul}
+\usepackage{cleveref}
+\renewcommand{\ttdefault}{lmtt} % ensure scalable typewriter font for \texttt
+
+% Custom commands
+\newcommand{\ra}[1]{\renewcommand{\arraystretch}{#1}}
+\newcommand{\degree}{\ensuremath{^\circ\,}}
+\newcommand{\overbar}[1]{\mkern 1.5mu\overline{\mkern-1.5mu#1\mkern-1.5mu}\mkern 1.5mu}
+\newcommand{\f}[2]{\frac{#1}{#2}}
+\newcommand{\mb}[1]{\mathbf{#1}}
+\newcommand{\tr}[1]{\mathrm{Tr}\left({#1}\right)}
+\newcommand{\mbg}[1]{\boldsymbol{\mathbf{#1}}}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+\DeclareMathAlphabet\mathbfcal{OMS}{cmsy}{b}{n}
+\renewcommand{\d}{\mathop{}\!\mathrm{d}} % total derivative
+\newcommand{\p}{\partial}
+
+\title{Matrix-Free Resolvent Analysis for \\Large-Scale Aerodynamic Systems}
+
+\author{Sicheng He\footnote{Assistant Professor, AIAA member, sicheng@utk.edu}}
+\affil{University of Tennessee, Department of Mechanical, Aerospace, and Biomedical Engineering, Knoxville, TN 37996}
+
+\date{\today}
+
+\begin{document}
+\maketitle{}
+
+
+\begin{abstract}
+
+\end{abstract}
+
+\section{Introduction}
+
+\bibliography{bib/references.bib}
+
+\end{document}
