@@ -21,7 +21,8 @@
 * In paragraph eqn frac use xx/xx. Out paragraph eqn opposite.
 * Make sure all tables, figures and appendices are refed.
 * Use coloneqq instead of :=.
-
+* Use ^\intercal instead of T for transpose.
+* For algorithms, list only equations and words and comments on the right in comments env.
 
 
 
