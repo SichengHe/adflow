@@ -32,7 +32,8 @@ from petsc4py import PETSc
 
 # ADflow constants for equationMode (from src/modules/constants.F90)
 _STEADY = 1
-_UNSTEADY = 3
+_UNSTEADY = 2
+_TIME_SPECTRAL = 3
 
 
 class ADflowJacobianFD:
@@ -311,9 +312,9 @@ class ADflowDADISNES:
         adflow.preprocessingapi.shiftcoorandvolumes()
         adflow.solvers.updateunsteadygeometry()
 
-        # ADflow must be in unsteady mode so initres_block adds
-        # the BDF temporal source term to the residual.
-        adflow.inputphysics.equationmode = _UNSTEADY
+        # Note: equationMode is already set to _UNSTEADY (=2) by
+        # setAeroProblem. Do NOT override it — the Fortran constants are
+        # steady=1, unsteady=2, timeSpectral=3.
 
         # solverUnsteadyStep internally calls:
         #   shiftSolution         — w -> wOld(1), saves X_n

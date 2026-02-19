@@ -94,7 +94,6 @@ def main():
     }
 
     solver = ADFLOW(options=options, debug=False)
-    solver.adflow.solvers.solverunsteadyinit()
 
     ts = ADflowTS(
         solver, create_aeroproblem(),
