@@ -79,6 +79,12 @@ module NKSolver
     ! Parameter for external preconditioner
     integer(kind=intType) :: applyPCSubSpaceSize
 
+    ! TS preconditioner: assembled approximate Jacobian with ASM+ILU
+    Mat :: TS_PC_Mat
+    KSP :: TS_PC_KSP
+    Vec :: TS_PC_wv1, TS_PC_wv2
+    logical :: TS_PC_setup = .False.
+
 contains
 
     subroutine setupNKsolver
@@ -1449,6 +1455,48 @@ contains
 
     end subroutine getRes
 
+    subroutine getResDw(res, ndimw)
+
+        ! Read the current dw from block arrays WITHOUT recomputing.
+        ! Unlike getRes(), this does NOT call computeResidualNK(), and
+        ! does NOT normalize by 1/volRef. It returns dw as-is.
+        !
+        ! This is intended for reading residuals after master() or
+        ! master_d() has already been called (which includes resScale).
+
+        use constants
+        use blockPointers, only: il, jl, kl, nDom, dw
+        use inputTimeSpectral, only: nTimeIntervalsSpectral
+        use flowvarrefstate, only: nw
+        use utils, only: setPointers
+
+        implicit none
+
+        integer(kind=intType), intent(in) :: ndimw
+        real(kind=realType), dimension(ndimw), intent(inout) :: res(ndimw)
+
+        ! Local Variables
+        integer(kind=intType) :: nn, i, j, k, l, counter, sps
+
+        counter = 0
+        do nn = 1, nDom
+            do sps = 1, nTimeIntervalsSpectral
+                call setPointers(nn, 1, sps)
+                do k = 2, kl
+                    do j = 2, jl
+                        do i = 2, il
+                            do l = 1, nw
+                                counter = counter + 1
+                                res(counter) = dw(i, j, k, l)
+                            end do
+                        end do
+                    end do
+                end do
+            end do
+        end do
+
+    end subroutine getResDw
+
     subroutine setStates(states, ndimw)
 
         ! Take in externallly generated states and set them in ADflow
@@ -1638,6 +1686,275 @@ contains
         rtol = min(rtol, rtol_max)
 
     end subroutine getEWTol
+
+    subroutine setupTSPreconditioner(shift)
+
+        ! Assemble an approximate Jacobian P ≈ diag_shift - dR/dw and set up
+        ! an ASM+ILU preconditioner for the PETSc TS implicit solve.
+        !
+        ! The assembled matrix uses the 1st-order PC stencil (same as the
+        ! NK solver) via setupStateResidualMatrix.
+        !
+        ! For the diagonal shift, a per-cell CFL-based value is used instead
+        ! of a uniform scalar.  This matches the NK/ANK solver's approach:
+        ! each cell's diagonal contribution is 1/(dtl * volRef), scaled so
+        ! that the diagonal dominates the off-diagonal spatial stencil.
+        ! This ensures stable ILU factorization regardless of the physical
+        ! time step (which may give a shift far below the spectral radius).
+        !
+        ! turbResScale is undone from SA rows (left-scaling) so that the
+        ! PC is in 1/volRef space, consistent with the IFunction.
+
+        use constants
+        use stencils, only: visc_pc_stencil, euler_pc_stencil, &
+            N_visc_pc, N_euler_pc
+        use communication, only: adflow_comm_world
+        use inputTimeSpectral, only: nTimeIntervalsSpectral
+        use inputIteration, only: turbResScale
+        use flowVarRefState, only: nw, nwf, viscous
+        use InputAdjoint, only: viscPC
+        use ADjointVars, only: nCellsLocal
+        use utils, only: EChk, setPointers
+        use blockPointers, only: nDom, il, jl, kl, globalCell, dtl, volRef
+        use adjointUtils, only: myMatCreate, statePreAllocation, &
+            setupStateResidualMatrix
+        use solverUtils, only: timeStep
+
+        implicit none
+
+        real(kind=realType), intent(in) :: shift
+
+        ! Working variables
+        integer(kind=intType) :: ierr, nDimW, n_stencil, nTurb
+        integer(kind=intType), dimension(:), allocatable :: nnzDiag, nnzOff
+        integer(kind=intType), dimension(:, :), pointer :: stencil
+        Vec :: scaleVec
+        real(kind=realType), pointer :: sPtr(:)
+        integer(kind=intType) :: ii, l, nn, sps, i, j, k, idx
+        real(kind=realType) :: cfl_shift
+        PC :: pc_asm
+        KSP :: subksp
+        PC :: subpc
+        integer(kind=intType) :: nlocal, first
+
+        nDimW = nw * nCellsLocal(1_intType) * nTimeIntervalsSpectral
+        nTurb = nw - nwf
+
+        ! ------ Create PETSc objects on first call ------
+        if (.not. TS_PC_setup) then
+            allocate (nnzDiag(nCellsLocal(1_intType) * nTimeIntervalsSpectral), &
+                      nnzOff(nCellsLocal(1_intType) * nTimeIntervalsSpectral))
+
+            if (viscous .and. viscPC) then
+                stencil => visc_pc_stencil
+                n_stencil = N_visc_pc
+            else
+                stencil => euler_pc_stencil
+                n_stencil = N_euler_pc
+            end if
+
+            call statePreAllocation(nnzDiag, nnzOff, nDimW / nw, &
+                                    stencil, n_stencil, 1_intType, .False.)
+            call myMatCreate(TS_PC_Mat, nw, nDimW, nDimW, nnzDiag, nnzOff, &
+                             __FILE__, __LINE__)
+            call MatSetOption(TS_PC_Mat, MAT_STRUCTURALLY_SYMMETRIC, &
+                              PETSC_TRUE, ierr)
+            call EChk(ierr, __FILE__, __LINE__)
+            deallocate (nnzDiag, nnzOff)
+
+            ! Work vectors for applyTSPreconditioner
+            call VecCreate(ADFLOW_COMM_WORLD, TS_PC_wv1, ierr)
+            call EChk(ierr, __FILE__, __LINE__)
+            call VecSetSizes(TS_PC_wv1, nDimW, PETSC_DECIDE, ierr)
+            call EChk(ierr, __FILE__, __LINE__)
+            call VecSetBlockSize(TS_PC_wv1, nw, ierr)
+            call EChk(ierr, __FILE__, __LINE__)
+            call VecSetType(TS_PC_wv1, VECMPI, ierr)
+            call EChk(ierr, __FILE__, __LINE__)
+            call VecDuplicate(TS_PC_wv1, TS_PC_wv2, ierr)
+            call EChk(ierr, __FILE__, __LINE__)
+
+            ! KSP: PREONLY + ASM + ILU(0)
+            call KSPCreate(ADFLOW_COMM_WORLD, TS_PC_KSP, ierr)
+            call EChk(ierr, __FILE__, __LINE__)
+
+            TS_PC_setup = .True.
+        end if
+
+        ! ------ Assemble approximate Jacobian ------
+        call setupStateResidualMatrix(TS_PC_Mat, .True., .True., .False., &
+                                      .False., .False., 1_intType)
+
+        ! setupStateResidualMatrix returns +dR/dw (positive spatial Jacobian,
+        ! same convention as the NK solver).  We need P = shift*I - dR/dw,
+        ! so negate the assembled matrix first.
+        call MatScale(TS_PC_Mat, -one, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        ! Undo turbResScale from SA rows via left-scaling
+        if (nTurb > 0) then
+            call VecDuplicate(TS_PC_wv1, scaleVec, ierr)
+            call EChk(ierr, __FILE__, __LINE__)
+            call VecGetArrayF90(scaleVec, sPtr, ierr)
+            call EChk(ierr, __FILE__, __LINE__)
+            do ii = 0, nDimW / nw - 1
+                do l = 1, nwf
+                    sPtr(ii * nw + l) = one
+                end do
+                do l = 1, nTurb
+                    if (abs(turbResScale(l)) > 1e-30) then
+                        sPtr(ii * nw + nwf + l) = one / turbResScale(l)
+                    else
+                        sPtr(ii * nw + nwf + l) = one
+                    end if
+                end do
+            end do
+            call VecRestoreArrayF90(scaleVec, sPtr, ierr)
+            call EChk(ierr, __FILE__, __LINE__)
+            call MatDiagonalScale(TS_PC_Mat, scaleVec, PETSC_NULL_VEC, ierr)
+            call EChk(ierr, __FILE__, __LINE__)
+            call VecDestroy(scaleVec, ierr)
+            call EChk(ierr, __FILE__, __LINE__)
+        end if
+
+        ! Add diagonal shift: max(physical_shift, CFL_shift) per cell.
+        ! When the physical shift a = 1/(theta*dt) is large (small dt),
+        ! it dominates and P closely approximates K = aI - J.
+        ! When a is small (large dt), the CFL-based shift stabilizes ILU.
+        ! Compute local time steps dtl (spectral radius / volume).
+        call timeStep(.false.)
+
+        ! Build diagonal shift vector: max(shift, d_i) per cell
+        call VecDuplicate(TS_PC_wv1, scaleVec, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+        call VecGetArrayF90(scaleVec, sPtr, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+        sPtr = zero
+        do nn = 1, nDom
+            do sps = 1, nTimeIntervalsSpectral
+                call setPointers(nn, 1_intType, sps)
+                do k = 2, kl
+                    do j = 2, jl
+                        do i = 2, il
+                            idx = globalCell(i, j, k)
+                            ! CFL-based shift for this cell
+                            cfl_shift = one / (dtl(i, j, k) * volRef(i, j, k))
+                            ! Use the larger of physical shift and CFL shift
+                            cfl_shift = max(shift, cfl_shift)
+                            do l = 1, nw
+                                sPtr(idx * nw + l) = cfl_shift
+                            end do
+                        end do
+                    end do
+                end do
+            end do
+        end do
+        call VecRestoreArrayF90(scaleVec, sPtr, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+        call MatDiagonalSet(TS_PC_Mat, scaleVec, ADD_VALUES, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+        call VecDestroy(scaleVec, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        ! ------ Configure KSP: PREONLY + ASM + ILU(0) ------
+        call KSPSetOperators(TS_PC_KSP, TS_PC_Mat, TS_PC_Mat, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        call KSPSetType(TS_PC_KSP, KSPPREONLY, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        call KSPGetPC(TS_PC_KSP, pc_asm, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        call PCSetType(pc_asm, PCASM, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        call PCASMSetOverlap(pc_asm, 1_intType, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        call KSPSetUp(TS_PC_KSP, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        ! Configure sub-KSP: preonly + ILU(2) with RCM ordering
+        ! ILU fill level 2 matches NK/ANK solver defaults.
+        call PCASMGetSubKSP(pc_asm, nlocal, first, subksp, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        call KSPSetType(subksp, KSPPREONLY, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        call KSPGetPC(subksp, subpc, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        call PCSetType(subpc, PCILU, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        call PCFactorSetMatOrderingType(subpc, MATORDERINGRCM, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        call PCFactorSetLevels(subpc, 2_intType, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        ! Re-setup to trigger ILU factorization with new settings
+        call KSPSetUp(TS_PC_KSP, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+    end subroutine setupTSPreconditioner
+
+    subroutine applyTSPreconditioner(in_vec, out_vec, ndof)
+
+        ! Apply the TS preconditioner: out = P^{-1} * in
+        ! where P = shift*I - dR/dw (approximate, factored via ILU).
+
+        use constants
+        use utils, only: EChk
+
+        implicit none
+
+        integer(kind=intType), intent(in) :: ndof
+        real(kind=realType), dimension(ndof), intent(in) :: in_vec
+        real(kind=realType), dimension(ndof), intent(inout) :: out_vec
+
+        integer(kind=intType) :: ierr
+
+        call VecPlaceArray(TS_PC_wv1, in_vec, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        call VecPlaceArray(TS_PC_wv2, out_vec, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        call KSPSolve(TS_PC_KSP, TS_PC_wv1, TS_PC_wv2, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        call VecResetArray(TS_PC_wv1, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        call VecResetArray(TS_PC_wv2, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+    end subroutine applyTSPreconditioner
+
+    subroutine destroyTSPreconditioner()
+
+        ! Clean up TS preconditioner PETSc objects.
+
+        use constants
+        use utils, only: EChk
+
+        implicit none
+
+        integer(kind=intType) :: ierr
+
+        if (TS_PC_setup) then
+            call KSPDestroy(TS_PC_KSP, ierr)
+            call MatDestroy(TS_PC_Mat, ierr)
+            call VecDestroy(TS_PC_wv1, ierr)
+            call VecDestroy(TS_PC_wv2, ierr)
+            TS_PC_setup = .False.
+        end if
+
+    end subroutine destroyTSPreconditioner
+
 end module NKSolver
 
 module ANKSolver

@@ -1,8 +1,8 @@
 \PassOptionsToPackage{expansion=false}{microtype} % disable font expansion to avoid bitmap font errors
 \documentclass[journal]{new-aiaa}
 \ifdefined\pdfmapfile
-  \pdfmapfile{+qtm.map} % load TeX Gyre Termes map (not included by default in this MiKTeX setup)
-  \pdfmapfile{+newtx.map} % ensure newtx fonts use bundled map data
+\pdfmapfile{+qtm.map} % load TeX Gyre Termes map (not included by default in this MiKTeX setup)
+\pdfmapfile{+newtx.map} % ensure newtx fonts use bundled map data
 \fi
 \usepackage{graphicx}
 \graphicspath{ {./figures/} }
@@ -120,7 +120,8 @@ We verify the adjoint sensitivities against finite differences on three test cas
 
 The remainder of this paper is organized as follows.
 \Cref{sec:governing} presents the governing equations and their spatial discretization.
-\Cref{sec:adjoint} describes the discrete adjoint formulation for time-accurate problems, including the time-integrated objective, matrix-free implementation, and checkpointing.
+\Cref{sec:forward} describes the implicit theta method for time integration, including the preconditioner construction.
+\Cref{sec:adjoint} presents the discrete adjoint formulation, the matrix-free implementation, and the checkpointing strategy.
 \Cref{sec:implementation} details the implementation in ADflow.
 \Cref{sec:verification} presents verification results, and \Cref{sec:demonstration} demonstrates unsteady shape optimization.
 \Cref{sec:conclusions} provides concluding remarks.
@@ -129,7 +130,7 @@ The remainder of this paper is organized as follows.
 The compressible RANS equations express the conservation of mass, momentum, and energy for a fluid element.
 In integral form over a control volume $\Omega$ with boundary $\p \Omega$, the equations read
 \begin{equation}\label{eq:rans_integral}
-    \f{\p}{\p t} \int_{\Omega} \mb{q} \, \d V + \oint_{\p \Omega} \left( \mb{f}_c - \mb{f}_v \right) \cdot \hat{\mb{n}} \, \d S = \mb{0},
+\f{\p}{\p t} \int_{\Omega} \mb{q} \, \d V + \oint_{\p \Omega} \left( \mb{f}_c - \mb{f}_v \right) \cdot \hat{\mb{n}} \, \d S = \mb{0},
 \end{equation}
 where $\mb{q} = [\rho, \, \rho u, \, \rho v, \, \rho w, \, \rho E]^\intercal \in \mathbb{R}^5$ is the vector of conservative variables, $\mb{f}_c$ and $\mb{f}_v$ are the inviscid and viscous flux vectors, and $\hat{\mb{n}}$ is the outward unit normal to $\p \Omega$.
 Here $\rho$ is the density, $(u, v, w)$ are the Cartesian velocity components, and $E$ is the total energy per unit mass.
@@ -145,7 +146,7 @@ The viscous fluxes are discretized using a second-order central scheme.
 The overall spatial discretization is second-order accurate.
 After spatial discretization, the governing equations reduce to a system of ODEs in semi-discrete form,
 \begin{equation}\label{eq:semi_discrete}
-    \f{\d \mb{w}}{\d t} = \mb{r}(\mb{w}, \mb{x}),
+\f{\d \mb{w}}{\d t} = \mb{r}(\mb{w}, \mb{x}),
 \end{equation}
 where $\mb{w} \in \mathbb{R}^n$ is the vector of conservative flow variables at all $n/m$ cells (with $m = 6$ variables per cell for RANS), $\mb{x} \in \mathbb{R}^{n_x}$ denotes the design parameters (e.g., shape variables or flow conditions), and $\mb{r}: \mathbb{R}^n \times \mathbb{R}^{n_x} \to \mathbb{R}^n$ is the spatial residual operator that encapsulates the inviscid fluxes, viscous fluxes, and turbulence source terms.
 
@@ -153,107 +154,124 @@ For problems with moving or deforming grids (e.g., pitching airfoils), the gover
 The grid velocities enter the convective fluxes, and the geometric conservation law (GCL) is satisfied to preserve freestream preservation on moving meshes.
 In this case, the residual depends additionally on the mesh coordinates and their time derivatives, both of which are functions of the design parameters $\mb{x}$.
 
-\section{Discrete Adjoint for Time-Accurate Problems}\label{sec:adjoint}
-This section describes the discrete adjoint formulation for time-accurate simulations, including the forward time integration scheme, the adjoint derivation for both final-time and time-integrated objectives, the matrix-free implementation, and the checkpointing strategy.
-
-\subsection{Forward Time Integration}\label{sec:forward}
+\section{Implicit Theta Method}\label{sec:forward}
 We cast the semi-discrete system~\eqref{eq:semi_discrete} in implicit form as required by PETSc's TS framework~\cite{Zhang2022},
 \begin{equation}\label{eq:implicit_form}
-    \mb{h}(t, \mb{w}, \dot{\mb{w}}) \coloneqq \dot{\mb{w}} - \mb{r}(\mb{w}, \mb{x}) = \mb{0},
+\mb{h}(t, \mb{w}, \dot{\mb{w}}) \coloneqq \dot{\mb{w}} - \mb{r}(\mb{w}, \mb{x}) = \mb{0},
 \end{equation}
 where $\dot{\mb{w}} \coloneqq \d \mb{w} / \d t$ is the time derivative of the state vector.
 In PETSc's notation, the user provides the implicit residual $\mb{h}$ through an \texttt{IFunction} callback and the associated Jacobian $\p \mb{h}/\p \mb{w} + a \, \p \mb{h}/\p \dot{\mb{w}}$ through an \texttt{IJacobian} callback, where $a$ is a shift parameter determined by the time integration scheme.
-For \cref{eq:implicit_form}, the Jacobian simplifies to $a \, \mb{I} - \p \mb{r}/\p \mb{w}$, where $\mb{I} \in \mathbb{R}^{n \times n}$ is the identity matrix.
+For \cref{eq:implicit_form}, the Jacobian simplifies to $a \, \mb{I} - \mb{J}$, where $\mb{J} \coloneqq \p \mb{r}/\p \mb{w}$ is the spatial Jacobian and $\mb{I} \in \mathbb{R}^{n \times n}$ is the identity matrix.
 
-We use the implicit theta method, which advances the solution from $t^n$ to $t^{n+1} = t^n + \Delta t$ as
+We use the implicit theta method, which advances the solution from $t_n$ to $t_{n+1} = t_n + \Delta t$ as
 \begin{equation}\label{eq:theta_method}
-    \mb{w}^{n+1} = \mb{w}^n + \Delta t \left[\theta \, \mb{r}(\mb{w}^{n+1}, \mb{x}) + (1-\theta) \, \mb{r}(\mb{w}^n, \mb{x})\right],
+\mb{w}_{n+1} = \mb{w}_n + \Delta t \left[\theta \, \mb{r}(\mb{w}_{n+1}, \mb{x}) + (1-\theta) \, \mb{r}(\mb{w}_n, \mb{x})\right],
 \end{equation}
 where $\Delta t$ is the time step size and $\theta \in [0, 1]$ controls the degree of implicitness.
 Setting $\theta = 1$ recovers the first-order backward Euler method, while $\theta = 1/2$ yields the second-order Crank--Nicolson (CN) scheme.
 We use CN ($\theta = 1/2$) throughout this work for its second-order temporal accuracy and A-stability.
 At each time step, the nonlinear system arising from \cref{eq:theta_method} is solved using a Newton--Krylov method.
-Defining the nonlinear residual for the $n$-th time step as $\mb{g}(\mb{w}^{n+1}) \coloneqq \mb{w}^{n+1} - \mb{w}^n - \Delta t [\theta \, \mb{r}(\mb{w}^{n+1}, \mb{x}) + (1-\theta) \, \mb{r}(\mb{w}^n, \mb{x})]$, the Newton update $\delta \mb{w}$ at each iteration is obtained by solving the linear system
+Dividing \cref{eq:theta_method} by $\theta \, \Delta t$ and rearranging, the nonlinear residual becomes $\mb{g}(\mb{w}_{n+1}) \coloneqq a \, (\mb{w}_{n+1} - \mb{w}_n) - \mb{r}(\mb{w}_{n+1}, \mb{x}) - \tfrac{1-\theta}{\theta} \, \mb{r}(\mb{w}_n, \mb{x})$, where $a \coloneqq 1/(\theta \, \Delta t)$ is the shift parameter from \cref{eq:implicit_form}.
+The Newton update $\delta \mb{w}^{(k)}$ at the $k$-th iteration is obtained by solving the linear system
 \begin{equation}\label{eq:newton_system}
-    \left(\mb{I} - \theta \, \Delta t \, \f{\p \mb{r}}{\p \mb{w}}\right) \delta \mb{w} = -\mb{g}(\mb{w}^{n+1}),
+\mb{K} \, \delta \mb{w}^{(k)} = -\mb{g}(\mb{w}_{n+1}^{(k)}), \qquad \mb{K} \coloneqq a \, \mb{I} - \mb{J}_{n+1},
 \end{equation}
-where $\mb{I} - \theta \, \Delta t \, \p \mb{r}/\p \mb{w}$ is the Jacobian of the nonlinear system.
-This linear system is solved iteratively using a preconditioned Krylov method (GMRES).
-ADflow constructs a preconditioner from an approximate Jacobian assembled using first-order spatial discretization with scalar dissipation, which is factored with an incomplete LU (ILU) decomposition within an additive Schwarz method (ASM) framework.
-The matrix-vector products for GMRES are computed exactly using forward-mode AD (Tapenade), so only the preconditioner uses the approximate Jacobian.
+where $\mb{J}_{n+1} \coloneqq \mb{J}(\mb{w}_{n+1}^{(k)})$.
+This linear system is solved using right-preconditioned GMRES,
+\begin{equation}\label{eq:precond_system}
+\mb{K} \mb{P}^{-1} \mb{y}^{(k)} = -\mb{g}(\mb{w}_{n+1}^{(k)}), \qquad \delta \mb{w}^{(k)} = \mb{P}^{-1} \mb{y}^{(k)},
+\end{equation}
+where $\mb{P} \approx \mb{K}$ is a preconditioner matrix.
+The matrix-vector product $\mb{K} \mb{v}$ is computed matrix-free via forward-mode AD (Tapenade), and the preconditioner application $\mb{P}^{-1} \mb{v}$ is obtained from an approximate factorization of $\mb{P}$.
+If $\mb{P}$ is a good approximation to $\mb{K}$, then $\mb{K} \mb{P}^{-1} \approx \mb{I}$ and GMRES converges in few iterations.
 The mean flow and turbulence equations are solved in a fully coupled manner; that is, the state vector $\mb{w}$ and the Jacobian include both the mean flow and the SA turbulence variable at every Newton iteration.
+
+\subsection{Preconditioner Construction}\label{sec:preconditioner}
+The preconditioner uses an approximate Jacobian $\tilde{\mb{J}} \approx \mb{J}$ assembled from a first-order spatial discretization with scalar artificial dissipation.
+This first-order stencil produces a sparser matrix than the full second-order discretization: for a structured hexahedral grid, the first-order stencil connects each cell only to its immediate neighbors (7-point stencil in 3D), whereas the second-order stencil includes wider connectivity due to the higher-order dissipation operators.
+The assembly uses forward-mode AD applied to the first-order residual, so the entries are exact derivatives of the first-order operator.
+The preconditioner matrix is
+\begin{equation}\label{eq:pc_matrix}
+\mb{P} = \text{diag}\!\left(\max(a, \, d_i)\right) \mb{I} - \tilde{\mb{J}},
+\end{equation}
+where $d_i = 1/(\Delta t_i^{\text{local}} \, V_i^{\text{ref}})$ is a per-cell CFL-based diagonal shift computed from the spectral radius of the flux Jacobians at cell~$i$.
+When $a \gg d_i$ (small $\Delta t$), the physical shift dominates and $\mb{P}$ closely approximates $\mb{K}$.
+When $a \ll d_i$ (large $\Delta t$), the CFL-based diagonal stabilizes the incomplete LU (ILU) factorization at the cost of a less accurate approximation; GMRES compensates for this spectral mismatch.
+The matrix $\mb{P}$ is factored using an additive Schwarz method (ASM) with one level of overlap, where each subdomain is preconditioned with ILU at fill level~2 using reverse Cuthill--McKee ordering.
+
+For RANS simulations, ADflow's residual evaluation applies an internal scaling factor to the SA turbulence equation to improve conditioning of the coupled system.
+Since the \texttt{IFunction} callback strips this scaling to present a uniformly normalized residual to PETSc, a corresponding left diagonal scaling is applied to $\tilde{\mb{J}}$ before constructing $\mb{P}$, ensuring consistency between the operator and its preconditioner.
+
+\section{Discrete Adjoint Formulation}\label{sec:adjoint}
 
 \subsection{Adjoint Time Integration}\label{sec:adjoint_time}
 We consider two types of objective functions.
 The first depends only on the solution at the final time $t_f$,
 \begin{equation}\label{eq:objective_final}
-    f_{\text{final}} = \phi(\mb{w}(t_f), \mb{x}),
+f_{\text{final}} = \phi(\mb{w}(t_f), \mb{x}),
 \end{equation}
 where $\phi: \mathbb{R}^n \times \mathbb{R}^{n_x} \to \mathbb{R}$ is a scalar function (e.g., the lift or drag coefficient at the final time).
 The second is a time-integrated objective,
 \begin{equation}\label{eq:objective_integral}
-    f_{\text{int}} = \int_{t_0}^{t_f} r(\mb{w}(t), \mb{x}, t) \, \d t,
+f_{\text{int}} = \int_{t_0}^{t_f} r(\mb{w}(t), \mb{x}, t) \, \d t,
 \end{equation}
 where $r: \mathbb{R}^n \times \mathbb{R}^{n_x} \times \mathbb{R} \to \mathbb{R}$ is an instantaneous cost rate (e.g., the time-averaged drag coefficient is obtained by setting $r = C_D(\mb{w}, \mb{x}) / (t_f - t_0)$).
 The general objective combines both contributions,
 \begin{equation}\label{eq:objective_general}
-    f = \phi(\mb{w}(t_f), \mb{x}) + \int_{t_0}^{t_f} r(\mb{w}(t), \mb{x}, t) \, \d t.
+f = \phi(\mb{w}(t_f), \mb{x}) + \int_{t_0}^{t_f} r(\mb{w}(t), \mb{x}, t) \, \d t.
 \end{equation}
 
 The discrete adjoint computes the total sensitivity $\d f / \d \mb{x}$ by integrating the adjoint equations backward in time.
 PETSc's TS adjoint framework~\cite{Zhang2022} derives the adjoint equations by differentiating the discrete time-stepping scheme.
-The adjoint variable $\mbg{\lambda}^n \in \mathbb{R}^n$ is initialized at the final time with
+The adjoint variable $\mbg{\lambda}_n \in \mathbb{R}^n$ is initialized at the final time with
 \begin{equation}\label{eq:adjoint_terminal}
-    \mbg{\lambda}^{n_t} = \left(\f{\p \phi}{\p \mb{w}}\bigg|^{n_t}\right)^\intercal,
+\mbg{\lambda}_{n_t} = \left(\f{\p \phi}{\p \mb{w}}\bigg|_{n_t}\right)^\intercal,
 \end{equation}
 where $n_t$ is the total number of time steps, and then marched backward.
 For the theta method, the adjoint update at step $n$ requires solving the transposed linear system
 \begin{equation}\label{eq:adjoint_system}
-    \left(\mb{I} - \theta \, \Delta t \, \f{\p \mb{r}}{\p \mb{w}}\bigg|^{n}\right)^\intercal \mbg{\lambda}^{n}_{\text{stage}} = \mbg{\lambda}^{n+1} + \Delta t \left(\f{\p r}{\p \mb{w}}\bigg|^n\right)^\intercal,
+\mb{K}_n^\intercal \, \mbg{\lambda}_{n,\text{stage}} = a \, \mbg{\lambda}_{n+1} + \frac{1}{\theta} \left(\f{\p r}{\p \mb{w}}\bigg|_n\right)^\intercal,
 \end{equation}
-where $\mbg{\lambda}^{n}_{\text{stage}}$ is the stage adjoint variable and the second term on the right-hand side is present only when time-integrated objectives are used.
+where $\mb{J}_n \coloneqq \mb{J}(\mb{w}_n)$, $\mb{K}_n = a \, \mb{I} - \mb{J}_n$ is the system Jacobian evaluated at time step $n$, $\mbg{\lambda}_{n,\text{stage}}$ is the stage adjoint variable, and the second term on the right-hand side is present only when time-integrated objectives are used.
 The adjoint variable is then updated as
 \begin{equation}\label{eq:adjoint_update}
-    \mbg{\lambda}^{n} = \mbg{\lambda}^{n}_{\text{stage}} + (1-\theta) \, \Delta t \left(\f{\p \mb{r}}{\p \mb{w}}\bigg|^{n}\right)^\intercal \mbg{\lambda}^{n}_{\text{stage}}.
+\mbg{\lambda}_{n} = \mbg{\lambda}_{n,\text{stage}} + (1-\theta) \, \Delta t \, \mb{J}_n^\intercal \, \mbg{\lambda}_{n,\text{stage}}.
 \end{equation}
 The parameter sensitivity is accumulated over all time steps as
 \begin{equation}\label{eq:param_sens}
-    \f{\d f}{\d \mb{x}} = \f{\p \phi}{\p \mb{x}}\bigg|^{n_t} + \sum_{n=0}^{n_t} \Delta t \left[\theta \left(\f{\p \mb{r}}{\p \mb{x}}\bigg|^{n+1}\right)^\intercal + (1-\theta) \left(\f{\p \mb{r}}{\p \mb{x}}\bigg|^{n}\right)^\intercal\right] \mbg{\lambda}^{n}_{\text{stage}} + \sum_{n=0}^{n_t} \Delta t \, \f{\p r}{\p \mb{x}}\bigg|^{n}.
+\f{\d f}{\d \mb{x}} = \f{\p \phi}{\p \mb{x}}\bigg|_{n_t} + \sum_{n=0}^{n_t} \Delta t \left[\theta \left(\f{\p \mb{r}}{\p \mb{x}}\bigg|_{n+1}\right)^\intercal + (1-\theta) \left(\f{\p \mb{r}}{\p \mb{x}}\bigg|_{n}\right)^\intercal\right] \mbg{\lambda}_{n,\text{stage}} + \sum_{n=0}^{n_t} \Delta t \, \f{\p r}{\p \mb{x}}\bigg|_{n}.
 \end{equation}
 PETSc handles the derivation, backward time marching, and accumulation internally; the user provides only the forward residual $\mb{h}$, the Jacobians $\p \mb{h}/\p \mb{w}$ and $\p \mb{h}/\p \mb{x}$, and the objective function derivatives.
 
 The time-integrated objective~\eqref{eq:objective_integral} is evaluated during the forward solve using a quadrature sub-integrator created by PETSc's \texttt{TSCreateQuadratureTS} interface.
 This sub-integrator advances a separate set of variables that accumulate the integral, and its adjoint is handled automatically during the backward sweep.
 
-The adjoint equations~\eqref{eq:adjoint_system}--\eqref{eq:param_sens} are derived under the assumption that the nonlinear system at each forward time step is solved exactly, i.e., $\mb{g}(\mb{w}^{n+1}) = \mb{0}$.
+The adjoint equations~\eqref{eq:adjoint_system}--\eqref{eq:param_sens} are derived under the assumption that the nonlinear system at each forward time step is solved exactly, i.e., $\mb{g}(\mb{w}_{n+1}) = \mb{0}$.
 In practice, the Newton--Krylov solver converges the residual to a finite tolerance $\|\mb{g}\| \leq \epsilon$.
 If the forward residual is $O(\epsilon)$, the adjoint gradient inherits an $O(\epsilon)$ error because the adjoint equations correspond to the exact discrete map rather than the approximate one realized by the inexact solve.
 This error can accumulate over the $n_t$ time steps, so the forward solve tolerance must be chosen sufficiently tight to ensure that the adjoint sensitivities agree with finite differences to the desired accuracy.
 We investigate this trade-off numerically in \cref{sec:verification}.
 
 \subsection{Matrix-Free Implementation}\label{sec:matfree}
-The transposed linear system~\eqref{eq:adjoint_system} requires the Jacobian-transpose--vector product $(\p \mb{r}/\p \mb{w})^\intercal \mbg{\lambda}$ at each adjoint time step.
+The transposed linear system~\eqref{eq:adjoint_system} requires the Jacobian-transpose--vector product $\mb{J}^\intercal \mbg{\lambda}$ at each adjoint time step.
 For large-scale problems, explicit assembly and storage of the $n \times n$ Jacobian matrix is prohibitively expensive.
 ADflow provides matrix-free Jacobian-transpose--vector products generated by applying the reverse mode of AD (via Tapenade~\cite{Hascoet2013}) to the residual evaluation routine.
 These products are exposed to PETSc through a \texttt{MatShell} object, which implements the \texttt{MATOP\_MULT\_TRANSPOSE} operation.
 
-When the \texttt{IJacobian} callback is invoked with shift parameter $a$, the \texttt{MatShell} stores the current state $\mb{w}^n$ and the shift $a$.
+When the \texttt{IJacobian} callback is invoked with shift parameter $a$, the \texttt{MatShell} stores the current state $\mb{w}_n$ and the shift $a$.
 Subsequent calls to \texttt{MatMultTranspose} compute
 \begin{equation}\label{eq:matshell}
-    \mb{y} = \left(a \, \mb{I} - \f{\p \mb{r}}{\p \mb{w}}\right)^\intercal \mb{v} = a \, \mb{v} - \left(\f{\p \mb{r}}{\p \mb{w}}\right)^\intercal \mb{v},
+\mb{y} = \left(a \, \mb{I} - \mb{J}\right)^\intercal \mb{v} = a \, \mb{v} - \mb{J}^\intercal \mb{v},
 \end{equation}
-where the second term is evaluated by ADflow's reverse-mode AD routine using the stored state $\mb{w}^n$, and $\mb{v} \in \mathbb{R}^n$ is the input vector.
+where the second term is evaluated by ADflow's reverse-mode AD routine using the stored state $\mb{w}_n$, and $\mb{v} \in \mathbb{R}^n$ is the input vector.
 
-A preconditioner is required for efficient convergence of the Krylov solver within each adjoint time step.
-ADflow provides an approximate Jacobian assembled using first-order spatial discretization with scalar dissipation, which serves as the preconditioner matrix.
-This approximate Jacobian is passed as the second argument to PETSc's \texttt{TSSetIJacobian}, allowing PETSc to use it for preconditioning while the matrix-free \texttt{MatShell} is used for the actual matrix-vector products.
-The approximate Jacobian is factored using an incomplete LU (ILU) decomposition within an additive Schwarz method (ASM) domain decomposition framework.
+The same preconditioner~\eqref{eq:pc_matrix} described in \cref{sec:preconditioner} is used for the adjoint linear systems.
+The preconditioner is implemented as a PETSc ``python'' PC type whose \texttt{apply} method calls the Fortran-level ILU solve, while the matrix-free \texttt{MatShell} is used for the actual matrix-vector products in GMRES.
 
-Similarly, the parameter Jacobian-transpose--vector product $(\p \mb{r}/\p \mb{x})^\intercal \mbg{\lambda}$ needed in \cref{eq:param_sens} is computed using ADflow's reverse-mode AD with respect to the design variables.
-This product is provided to PETSc through the \texttt{IJacobianP} callback.
+Similarly, the parameter Jacobian-transpose--vector product $(\p \mb{r}/\p \mb{x})^\intercal \mbg{\lambda}$ needed in \cref{eq:param_sens} can be computed using ADflow's reverse-mode AD with respect to the design variables and provided to PETSc through the \texttt{IJacobianP} callback.
 
 \subsection{Checkpointing}\label{sec:checkpointing}
-The adjoint time integration requires access to the forward solution $\mb{w}^n$ at every time step $n = n_t, n_t-1, \ldots, 0$.
+The adjoint time integration requires access to the forward solution $\mb{w}_n$ at every time step $n = n_t, n_t-1, \ldots, 0$.
 For large-scale three-dimensional RANS simulations, each state snapshot can require hundreds of megabytes, making storage of the full trajectory infeasible for long time horizons.
 For example, a simulation with $5 \times 10^6$ cells, six variables per cell, and 1000 time steps requires approximately 240~GB of storage.
 
@@ -278,17 +296,35 @@ Trajectory saving is enabled via \texttt{TSSetSaveTrajectory} to store checkpoin
 Second, the \texttt{IFunction} callback wraps ADflow's spatial residual evaluation.
 Given the current state $\mb{w}$ and time derivative $\dot{\mb{w}}$, it evaluates $\mb{h} = \dot{\mb{w}} - \mb{r}(\mb{w}, \mb{x})$ by calling ADflow's Fortran-level residual routine and subtracting the result from $\dot{\mb{w}}$.
 
-Third, the \texttt{IJacobian} callback creates a \texttt{MatShell} for the matrix-free Jacobian $a \, \mb{I} - \p \mb{r}/\p \mb{w}$ and assembles ADflow's approximate Jacobian for preconditioning.
-The \texttt{MatShell}'s \texttt{MultTranspose} operation calls ADflow's Tapenade-generated reverse-mode routine to evaluate $(\p \mb{r}/\p \mb{w})^\intercal \mb{v}$ and adds the shift contribution $a \, \mb{v}$.
+Third, the \texttt{IJacobian} callback creates a \texttt{MatShell} for the matrix-free Jacobian $a \, \mb{I} - \mb{J}$ and assembles ADflow's approximate Jacobian for preconditioning.
+The \texttt{MatShell}'s \texttt{MultTranspose} operation calls ADflow's Tapenade-generated reverse-mode routine to evaluate $\mb{J}^\intercal \mb{v}$ and adds the shift contribution $a \, \mb{v}$.
 
-Fourth, for parameter sensitivities, the \texttt{IJacobianP} callback provides $(\p \mb{h}/\p \mb{x})^\intercal \mbg{\lambda}$ using ADflow's reverse-mode AD with respect to the design variables.
-This includes sensitivities with respect to mesh coordinates (for shape optimization) and flow conditions (e.g., angle of attack, Mach number).
+Fourth, for parameter sensitivities, the \texttt{IJacobianP} callback will provide $(\p \mb{h}/\p \mb{x})^\intercal \mbg{\lambda}$ using ADflow's reverse-mode AD with respect to the design variables, including mesh coordinates (for shape optimization) and flow conditions (e.g., angle of attack, Mach number).
+In the current implementation, the total parameter sensitivity is computed by combining the adjoint solution $\mbg{\lambda}_0$ with a separate evaluation of $\d \mb{w}_0/\d \mb{x}$ from ADflow's steady-state adjoint infrastructure.
 
-Fifth, for time-integrated objectives, a quadrature sub-integrator is created via \texttt{TSCreateQuadratureTS}.
+Fifth, for time-integrated objectives, a quadrature sub-integrator can be created via \texttt{TSCreateQuadratureTS}.
 The cost rate function $r(\mb{w}, \mb{x}, t)$ and its derivatives with respect to $\mb{w}$ and $\mb{x}$ are provided through the sub-integrator's callbacks.
 
 The overall workflow proceeds as follows: (1) compute the initial condition (e.g., a converged steady-state solution), (2) perform the forward solve via \texttt{TSSolve}, (3) set the adjoint terminal conditions via \texttt{TSSetCostGradients}, (4) execute the backward adjoint solve via \texttt{TSAdjointSolve}, and (5) extract the accumulated parameter sensitivities.
 \Cref{alg:workflow} summarizes this procedure.
+
+\subsection{Native Solver as Custom SNES}\label{sec:native_snes}
+The Newton--Krylov solver described in \cref{sec:forward} faces a fundamental conditioning challenge for compressible RANS simulations: the physical shift $a = 1/(\theta \, \Delta t)$ is typically orders of magnitude smaller than the spectral radius of the spatial Jacobian $\mb{J}$, rendering the system matrix $\mb{K} = a\mb{I} - \mb{J}$ indefinite.
+As a result, the ILU-based preconditioner cannot stabilize the Newton iteration at physical time-step sizes, and PETSc's adaptive time stepping reduces the step size by several orders of magnitude.
+
+ADflow's native unsteady solver avoids this difficulty by embedding a \emph{pseudo-time} sub-iteration within each physical time step.
+The implicit BDF temporal term is added to the spatial residual, and the combined system is driven to convergence using a diagonally implicit Runge--Kutta / alternating-direction implicit (DADI) smoother with geometric multigrid~\cite{VanLeer2009}.
+At each pseudo-time step, the CFL-based local time stepping provides a per-cell diagonal shift that is comparable to the spectral radius of $\mb{J}$, ensuring robust convergence.
+Optionally, an approximate Newton--Krylov (ANK) solver~\cite{Yildirim2019} or exact Newton--Krylov (NK) solver can be activated once the pseudo-time iteration has reduced the residual sufficiently.
+
+To leverage this robust forward solver while retaining PETSc's trajectory management and discrete adjoint infrastructure, we register ADflow's native solver as a custom \texttt{SNES} within PETSc's TS framework.
+At each time step, \texttt{TSSolve} calls \texttt{SNESSolve}, which delegates to the custom \texttt{SNES}: the current PETSc state vector $\mb{w}_n$ is copied into ADflow's internal arrays, the native DADI+MG (or ANK/NK) iteration is executed, and the converged state $\mb{w}_{n+1}$ is returned to PETSc.
+This approach is limited to $\theta = 1$ (backward Euler, equivalent to first-order BDF) to match ADflow's internal time integration.
+
+A key advantage of this design is that the adjoint does not require differentiating through the DADI or multigrid iterations.
+By the implicit function theorem, the discrete adjoint at each time step depends only on the \emph{converged} state and the spatial Jacobian $\mb{J} = \p\mb{r}/\p\mb{w}$, not on the iterative path taken to reach convergence.
+Specifically, \texttt{TSAdjointStep} retrieves the Jacobian $\mb{K} = a\mb{I} - \mb{J}$ through the \texttt{IJacobian} callback (evaluated via the same AD routines used in the Newton--Krylov variant) and solves the adjoint linear system $\mb{K}^\intercal \mbg{\lambda} = \mb{b}$ using GMRES with the preconditioner from \cref{sec:preconditioner}.
+Checkpointing via revolve (\cref{sec:checkpointing}) remains fully operational, as \texttt{TSSolve} manages the trajectory saving independently of the nonlinear solver type.
 
 \begin{algorithm}[t]
 \caption{Time-accurate adjoint workflow in ADflow.}\label{alg:workflow}
@@ -298,10 +334,10 @@ The overall workflow proceeds as follows: (1) compute the initial condition (e.g
 \State $\text{RegisterCallbacks}(\texttt{IFunction}, \texttt{IJacobian}, \texttt{IJacobianP})$
 \State $\text{EnableCheckpointing}(\text{revolve})$
 \State $\mb{w}(t_f) \gets \texttt{TSSolve}(\mb{w}_0)$ \Comment{forward solve}
-\State $\mbg{\lambda}^{n_t} \gets (\p \phi / \p \mb{w})^\intercal$ \Comment{terminal condition}
+\State $\mbg{\lambda}_{n_t} \gets (\p \phi / \p \mb{w})^\intercal$ \Comment{terminal condition}
 \State $\mbg{\mu} \gets (\p \phi / \p \mb{x})^\intercal$ \Comment{parameter seed}
-\State $\mbg{\lambda}^0, \mbg{\mu} \gets \texttt{TSAdjointSolve}()$ \Comment{backward sweep}
-\State $\d f/\d \mb{x} = \mbg{\mu} + \mbg{\lambda}^0 \cdot (\d \mb{w}_0 / \d \mb{x})$ \Comment{total sensitivity}
+\State $\mbg{\lambda}_0, \mbg{\mu} \gets \texttt{TSAdjointSolve}()$ \Comment{backward sweep}
+\State $\d f/\d \mb{x} = \mbg{\mu} + \mbg{\lambda}_0 \cdot (\d \mb{w}_0 / \d \mb{x})$ \Comment{total sensitivity}
 \end{algorithmic}
 \end{algorithm}
 
@@ -309,7 +345,7 @@ The overall workflow proceeds as follows: (1) compute the initial condition (e.g
 We verify the adjoint sensitivities by comparing them against finite-difference (FD) approximations for three test cases of increasing complexity.
 For each case, the relative error between the adjoint and FD sensitivities is computed as
 \begin{equation}\label{eq:rel_error}
-    \epsilon_{\text{rel}} = \f{\left| g_{\text{adj}} - g_{\text{FD}} \right|}{\left| g_{\text{FD}} \right|},
+\epsilon_{\text{rel}} = \f{\left| g_{\text{adj}} - g_{\text{FD}} \right|}{\left| g_{\text{FD}} \right|},
 \end{equation}
 where $g_{\text{adj}}$ and $g_{\text{FD}}$ denote the adjoint and FD sensitivity values, respectively.
 The FD step size is selected to balance truncation and round-off errors; we use centered differences with a step size of $h = 10^{-5}$ unless otherwise noted.
@@ -323,7 +359,7 @@ The computational domain extends [placeholder: domain size] diameters in each di
 The simulation is initialized from a steady-state solution and run for [placeholder: number] time steps with a time step size of $\Delta t = $ [placeholder: value].
 The objective function is the time-averaged drag coefficient,
 \begin{equation}\label{eq:cylinder_obj}
-    f = \f{1}{t_f - t_0} \int_{t_0}^{t_f} C_D(\mb{w}(t)) \, \d t.
+f = \f{1}{t_f - t_0} \int_{t_0}^{t_f} C_D(\mb{w}(t)) \, \d t.
 \end{equation}
 
 % placeholder: sensitivity results table comparing adjoint vs FD
@@ -333,7 +369,7 @@ The objective function is the time-averaged drag coefficient,
 The second test case is a NACA 0012 airfoil undergoing prescribed pitching motion about its quarter-chord.
 The freestream conditions are $M = 0.3$ and $\text{Re} = 1 \times 10^6$, and the pitching motion is
 \begin{equation}\label{eq:pitch_motion}
-    \alpha(t) = \alpha_0 + \alpha_1 \sin(2 \pi f \, t),
+\alpha(t) = \alpha_0 + \alpha_1 \sin(2 \pi f \, t),
 \end{equation}
 where $\alpha_0$ is the mean angle of attack, $\alpha_1$ is the pitching amplitude, and $f$ is the pitching frequency.
 The specific values are $\alpha_0 = 0\degree$, $\alpha_1 = 1\degree$, and $f =$ [placeholder: value]~Hz.
@@ -342,7 +378,7 @@ This case uses the SA turbulence model and an ALE formulation with mesh deformat
 The grid contains [placeholder: cell count] cells, and the simulation is run for [placeholder: number] periods with [placeholder: steps per period] time steps per period.
 The objective function is the peak lift coefficient over the simulation window,
 \begin{equation}\label{eq:pitch_obj}
-    f = C_L(\mb{w}(t^*)),
+f = C_L(\mb{w}(t^*)),
 \end{equation}
 where $t^*$ is the time at which $C_L$ reaches its maximum.
 Sensitivities are computed with respect to the airfoil shape parameters and the mean angle of attack $\alpha_0$.

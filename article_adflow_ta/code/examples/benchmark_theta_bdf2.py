@@ -1,15 +1,15 @@
 """
-Benchmark: PETSc TSTHETA (Crank--Nicolson) vs ADflow native BDF2.
+Benchmark: native ADflow BDF2 on pitching NACA 0012.
 
-Runs the NACA 0012 pitching airfoil test case with both time integration
-methods and compares the force coefficient time histories.
+Runs the unsteady pitching airfoil case with manual time stepping to
+record CL, CD, CMz at every physical time step, then generates a CL
+history plot.
 
 Usage:
     mpirun -np 2 python benchmark_theta_bdf2.py
 
 Requires:
     - ADflow built and importable
-    - petsc4py installed
     - Input mesh: input_files/naca0012_rans-L2.cgns
       (download via input_files/get-input-files.sh)
 """
@@ -22,16 +22,18 @@ import pickle
 import numpy as np
 from mpi4py import MPI
 from baseclasses import AeroProblem
-from adflow import ADFLOW, ADflowTS
+from adflow import ADFLOW
+
+sys.stdout.reconfigure(line_buffering=True)
 
 comm = MPI.COMM_WORLD
 rank = comm.rank
 
-# --- Problem parameters ---
+# --- Problem parameters (same as reg_tests/test_time_accurate_naca0012) ---
 freq = 10.0  # [Hz] Forcing frequency
 period = 1.0 / freq  # [sec]
 n_steps_per_period = 8
-n_periods = 1
+n_periods = 3
 n_steps = n_steps_per_period * n_periods
 dt = period / n_steps_per_period  # [s]
 t_final = period * n_periods
@@ -51,7 +53,7 @@ delta_alpha = -alpha_amp * np.pi / 180.0
 
 # Paths
 base_dir = os.path.dirname(os.path.abspath(__file__))
-repo_dir = os.path.join(base_dir, "../..")
+repo_dir = os.path.join(base_dir, "../../..")
 grid_file = os.path.join(repo_dir, "input_files/naca0012_rans-L2.cgns")
 output_dir = os.path.join(base_dir, "output")
 
@@ -89,9 +91,16 @@ def create_aeroproblem():
     )
 
 
-def get_common_options():
-    """Return solver options common to both methods."""
-    return {
+def run_bdf2_with_history():
+    """Run native ADflow BDF2 with manual stepping, recording CL at each step."""
+    if rank == 0:
+        print("=" * 70)
+        print("Running native ADflow BDF2 — manual stepping")
+        print(f"  dt = {dt:.4e}, n_steps = {n_steps}, t_final = {t_final:.4f}")
+        print(f"  n_periods = {n_periods}, steps/period = {n_steps_per_period}")
+        print("=" * 70)
+
+    options = {
         "gridfile": grid_file,
         "outputdirectory": output_dir,
         "writevolumesolution": False,
@@ -101,6 +110,11 @@ def get_common_options():
         "restrictionrelaxation": 0.5,
         "smoother": "DADI",
         "equationtype": "RANS",
+        "equationmode": "unsteady",
+        "timeIntegrationscheme": "BDF",
+        "ntimestepsfine": n_steps,
+        "deltat": dt,
+        "timeaccuracy": 2,
         "nsubiterturb": 10,
         "nsubiter": 5,
         "useale": False,
@@ -119,143 +133,154 @@ def get_common_options():
         "alphafollowing": False,
         "blockSplitting": True,
         "useblockettes": False,
+        "printAllOptions": False,
+        "printIterations": False,
     }
 
-
-def run_bdf2():
-    """Run the native ADflow BDF2 unsteady solver."""
-    if rank == 0:
-        print("\n" + "=" * 70)
-        print("Running native ADflow BDF2")
-        print("=" * 70)
-
-    options = get_common_options()
-    options.update({
-        "equationmode": "unsteady",
-        "timeIntegrationscheme": "BDF",
-        "ntimestepsfine": n_steps,
-        "deltat": dt,
-        "timeaccuracy": 2,
-    })
-
     ap = create_aeroproblem()
     solver = ADFLOW(options=options, debug=False)
-
-    t_start = time.time()
-    solver(ap)
-    t_elapsed = time.time() - t_start
-
-    # Evaluate final functions
-    funcs = {}
-    solver.evalFunctions(ap, funcs)
-
-    if rank == 0:
-        print(f"\nBDF2 completed in {t_elapsed:.2f} s")
-        for key, val in funcs.items():
-            print(f"  {key} = {val:.10e}")
-
-    return funcs, t_elapsed
-
-
-def run_theta():
-    """Run PETSc TSTHETA (Crank--Nicolson) wrapping ADflow."""
-    if rank == 0:
-        print("\n" + "=" * 70)
-        print("Running PETSc TSTHETA (Crank--Nicolson, theta=0.5)")
-        print("=" * 70)
-
-    # Set up ADflow in steady mode for spatial residual evaluation.
-    # Grid motion is handled by ADflowTS internally.
-    options = get_common_options()
-    options.update({
-        "equationmode": "unsteady",
-        "timeIntegrationscheme": "BDF",
-        "ntimestepsfine": n_steps,
-        "deltat": dt,
-        "timeaccuracy": 2,
-    })
-
-    ap = create_aeroproblem()
-    solver = ADFLOW(options=options, debug=False)
-
-    # Initialize unsteady arrays
+    solver.setAeroProblem(ap)
     solver.adflow.solvers.solverunsteadyinit()
 
-    # Create and set up the PETSc TS wrapper
-    ts_wrapper = ADflowTS(
-        solver, ap, dt=dt, t_final=t_final,
-        theta=0.5, grid_motion=True,
-    )
-    ts_wrapper.setup()
+    # Record history
+    time_hist = [0.0]
+    cl_hist = []
+    cd_hist = []
+    cmz_hist = []
 
-    t_start = time.time()
-    reason = ts_wrapper.solve()
-    t_elapsed = time.time() - t_start
-
-    # Evaluate final functions
+    # Evaluate initial CL
     funcs = {}
-    solver.evalFunctions(ap, funcs)
+    solver.evalFunctions(ap, funcs, evalFuncs=["cl", "cd", "cmz"])
+    cl_hist.append(funcs.get(f"{ap.name}_cl", 0.0))
+    cd_hist.append(funcs.get(f"{ap.name}_cd", 0.0))
+    cmz_hist.append(funcs.get(f"{ap.name}_cmz", 0.0))
+    if rank == 0:
+        print(f"  Step   0 | t = 0.000000e+00 | "
+              f"CL = {cl_hist[0]:.6e} | CD = {cd_hist[0]:.6e} | "
+              f"CMz = {cmz_hist[0]:.6e}")
+
+    t_wall_start = time.time()
+
+    for step in range(1, n_steps + 1):
+        # Advance time counter
+        curTime, _ = solver.advanceTimeStepCounter()
+
+        # Update mesh for prescribed motion
+        solver.adflow.preprocessingapi.shiftcoorandvolumes()
+        solver.adflow.solvers.updateunsteadygeometry()
+
+        # Converge the implicit system at this time step
+        solver.solveTimeStep()
+
+        # Evaluate force coefficients
+        funcs = {}
+        solver.evalFunctions(ap, funcs, evalFuncs=["cl", "cd", "cmz"])
+        cl = funcs.get(f"{ap.name}_cl", 0.0)
+        cd = funcs.get(f"{ap.name}_cd", 0.0)
+        cmz = funcs.get(f"{ap.name}_cmz", 0.0)
+
+        time_hist.append(curTime)
+        cl_hist.append(cl)
+        cd_hist.append(cd)
+        cmz_hist.append(cmz)
+
+        if rank == 0:
+            print(f"  Step {step:3d} | t = {curTime:.6e} | "
+                  f"CL = {cl:.6e} | CD = {cd:.6e} | CMz = {cmz:.6e}")
+
+    t_wall = time.time() - t_wall_start
 
     if rank == 0:
-        print(f"\nTSTHETA completed in {t_elapsed:.2f} s")
-        print(f"  Converged reason: {reason}")
-        for key, val in funcs.items():
-            print(f"  {key} = {val:.10e}")
+        print(f"\nBDF2 completed in {t_wall:.2f} s")
 
-    history = ts_wrapper.get_history()
-    return funcs, t_elapsed, history
+    history = {
+        "time": np.array(time_hist),
+        "cl": np.array(cl_hist),
+        "cd": np.array(cd_hist),
+        "cmz": np.array(cmz_hist),
+        "wall_time": t_wall,
+        "dt": dt,
+        "n_steps": n_steps,
+        "n_periods": n_periods,
+    }
+    return history
 
 
-def compare_results(funcs_bdf2, funcs_theta):
-    """Compare force coefficients between the two methods."""
-    if rank != 0:
+def plot_history(history, save_path):
+    """Generate CL, CD, CMz history plots."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print("matplotlib not available — skipping plot")
         return
 
-    print("\n" + "=" * 70)
-    print("Comparison: BDF2 vs TSTHETA (Crank--Nicolson)")
-    print("=" * 70)
-    print(f"{'Function':<25s} {'BDF2':>15s} {'TSTHETA':>15s} {'Rel. Diff':>12s}")
-    print("-" * 70)
+    t = history["time"]
+    cl = history["cl"]
+    cd = history["cd"]
+    cmz = history["cmz"]
 
-    for key in sorted(funcs_bdf2.keys()):
-        val_bdf2 = funcs_bdf2[key]
-        val_theta = funcs_theta.get(key, float("nan"))
-        if abs(val_bdf2) > 1e-15:
-            rel_diff = abs(val_theta - val_bdf2) / abs(val_bdf2)
-        else:
-            rel_diff = abs(val_theta - val_bdf2)
-        print(f"  {key:<23s} {val_bdf2:>15.8e} {val_theta:>15.8e} {rel_diff:>12.4e}")
+    # Compute alpha(t) for reference
+    alpha_t = alpha_mean + alpha_amp * np.sin(omega * t) * (180.0 / np.pi)
+    # (Note: the Fourier representation gives alpha in a specific form;
+    #  for plotting we just show the sinusoidal variation.)
+    alpha_t = alpha_mean + alpha_amp * np.sin(omega * t)
 
-    print("=" * 70)
+    fig, axes = plt.subplots(3, 1, figsize=(10, 10), sharex=True)
+
+    # CL
+    ax = axes[0]
+    ax.plot(t, cl, "bo-", markersize=5, label="BDF2")
+    ax.set_ylabel("$C_L$")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    ax.set_title(
+        f"Pitching NACA 0012 — BDF2, dt={dt:.4e}, {n_steps_per_period} steps/period"
+    )
+
+    # CD
+    ax = axes[1]
+    ax.plot(t, cd, "ro-", markersize=5, label="BDF2")
+    ax.set_ylabel("$C_D$")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    # CMz
+    ax = axes[2]
+    ax.plot(t, cmz, "go-", markersize=5, label="BDF2")
+    ax.set_ylabel("$C_{Mz}$")
+    ax.set_xlabel("Time [s]")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    print(f"Plot saved to {save_path}")
+    plt.close()
 
 
 if __name__ == "__main__":
-    # Run BDF2
-    funcs_bdf2, time_bdf2 = run_bdf2()
+    history = run_bdf2_with_history()
 
-    # Run TSTHETA
-    funcs_theta, time_theta, history_theta = run_theta()
-
-    # Compare
-    compare_results(funcs_bdf2, funcs_theta)
-
-    # Save results
     if rank == 0:
-        results = {
-            "bdf2": {"funcs": funcs_bdf2, "time": time_bdf2},
-            "theta": {
-                "funcs": funcs_theta,
-                "time": time_theta,
-                "history": history_theta,
-            },
-            "params": {
-                "dt": dt,
-                "t_final": t_final,
-                "n_steps": n_steps,
-                "theta": 0.5,
-            },
-        }
-        pkl_path = os.path.join(output_dir, "benchmark_results.pkl")
+        # Save raw data
+        pkl_path = os.path.join(output_dir, "bdf2_history.pkl")
         with open(pkl_path, "wb") as fh:
-            pickle.dump(results, fh)
-        print(f"\nResults saved to {pkl_path}")
+            pickle.dump(history, fh)
+        print(f"Data saved to {pkl_path}")
+
+        # Plot
+        plot_path = os.path.join(output_dir, "cl_history_bdf2.png")
+        plot_history(history, plot_path)
+
+        # Print summary table
+        print("\n" + "=" * 70)
+        print("Time step summary:")
+        print(f"{'Step':>5s} {'Time':>12s} {'CL':>14s} {'CD':>14s} {'CMz':>14s}")
+        print("-" * 70)
+        for i in range(len(history["time"])):
+            print(f"{i:5d} {history['time'][i]:12.6e} "
+                  f"{history['cl'][i]:14.8e} {history['cd'][i]:14.8e} "
+                  f"{history['cmz'][i]:14.8e}")
+        print("=" * 70)
