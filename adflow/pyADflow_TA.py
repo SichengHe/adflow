@@ -235,6 +235,13 @@ class _TSPreconditioner:
         self.ts_wrapper.solver.adflow.nksolver.applytspreconditioner(x_arr, y_arr)
         y.getArray()[:] = y_arr
 
+    def applyTranspose(self, pc, x, y):
+        """y = P^{-T} * x using Fortran-side ILU^{-T} (for adjoint)."""
+        x_arr = x.getArray(readonly=True).copy()
+        y_arr = np.zeros(self.ts_wrapper.n_local)
+        self.ts_wrapper.solver.adflow.nksolver.applytspreconditionertranspose(x_arr, y_arr)
+        y.getArray()[:] = y_arr
+
 
 class _ScalePreconditioner:
     """Trivial PC: y = x / shift.  For J = a*I - dR/dw with large a,
@@ -247,6 +254,76 @@ class _ScalePreconditioner:
         a = self.ts_wrapper.jac_ctx.shift
         x_arr = x.getArray(readonly=True)
         y.getArray()[:] = x_arr / a
+
+    def applyTranspose(self, pc, x, y):
+        # Scale PC is symmetric: P^{-T} = P^{-1} = (1/a) * I
+        a = self.ts_wrapper.jac_ctx.shift
+        x_arr = x.getArray(readonly=True)
+        y.getArray()[:] = x_arr / a
+
+
+class _NativeAdjointPC:
+    """PC that uses ADflow's native adjoint solver as preconditioner.
+
+    For the TS adjoint, we need to precondition ``J = a*I - dR/dw`` where
+    ``a = 1/(theta*dt)`` is the temporal shift.  Since ``a`` is small
+    relative to the spectral radius of ``dR/dw``, the dominant part is
+    ``-dR/dw``.  We use ``P = -dR/dw`` as preconditioner:
+
+    - ``PCApply(x, y)``:  ``y = P^{-1} x = -(dR/dw)^{-1} x``
+      via ``solveDirectForRHS``
+    - ``PCApplyTranspose(x, y)``:  ``y = P^{-T} x = -(dR/dw^T)^{-1} x``
+      via ``solveAdjointForRHS``
+
+    For the adjoint, PETSc calls ``KSPSolveTranspose`` which uses
+    ``PCApplyTranspose``.  The preconditioned adjoint system is::
+
+        P^{-T} J^T = (dR/dw^T)^{-1} (a*I - dR/dw^T)
+                    = a*(dR/dw^T)^{-1} - I
+
+    Since ``a << spectral_radius(dR/dw)``, eigenvalues cluster near -1,
+    so GMRES converges in O(1) iterations.
+
+    Note: ``PCApplyTranspose`` uses ``solveAdjointForRHS`` which calls
+    ``KSPSolve`` (not ``KSPSolveTranspose``), avoiding nested
+    ``KSPSolveTranspose`` calls that cause SEGV in PETSc.
+    """
+
+    def __init__(self, ts_wrapper, inner_tol=0.01):
+        self.ts_wrapper = ts_wrapper
+        self.inner_tol = inner_tol
+        self._setup_done = False
+
+    def setUp(self, pc):
+        """Set up ADflow's native adjoint solver (once)."""
+        if not self._setup_done:
+            solver = self.ts_wrapper.solver
+            # Set up adjoint PETSc vectors, matrices, and KSP
+            # Must destroy NK/ANK first (matches pyADflow._setupAdjoint)
+            if not solver.adjointSetup:
+                solver.adflow.nksolver.destroynksolver()
+                solver.adflow.anksolver.destroyanksolver()
+                solver.adflow.adjointapi.createpetscvars()
+                solver.adflow.adjointapi.setupallresidualmatricesfwd()
+                solver.adflow.adjointapi.setuppetscksp()
+                solver.adjointSetup = True
+            self._setup_done = True
+
+    def apply(self, pc, x, y):
+        """y = P^{-1} * x = -(dR/dw)^{-1} * x."""
+        x_arr = x.getArray(readonly=True).copy()
+        y_arr = self.ts_wrapper.solver.adflow.adjointapi.solvedirectforrhs(
+            x_arr, self.inner_tol
+        )
+        y.getArray()[:] = -y_arr
+
+    def applyTranspose(self, pc, x, y):
+        """y = P^{-T} * x = -(dR/dw^T)^{-1} * x."""
+        x_arr = x.getArray(readonly=True).copy()
+        y_arr = self.ts_wrapper.solver.adflow.adjointapi.solveadjointforrhs(
+            x_arr, self.inner_tol
+        )
+        y.getArray()[:] = -y_arr
 
 
 class ADflowDADISNES:
@@ -440,6 +517,10 @@ class ADflowTS:
         self.cd_history = []
         self.cmz_history = []
 
+        # State trajectory for manual backward sweep (saved when save_trajectory=True)
+        # List of (t_n, w_n) pairs: t_n = time, w_n = local state numpy array
+        self._state_trajectory = []
+
         # Jacobian context.
         # "ad" (default): uses AD from master_d with turbResScale correction.
         #   Consistent with IFunction which also undoes turbResScale.
@@ -461,6 +542,11 @@ class ADflowTS:
 
         # Adjoint outputs (filled by solve_adjoint)
         self.adjoint_init = {}
+
+        # Flag to indicate adjoint backward sweep is active.
+        # During adjoint, _update_grid must NOT call shiftCoorAndVolumes
+        # (which shifts the coordinate history stack for forward stepping).
+        self._adjoint_mode = False
 
     def setup(self, skip_set_ap=False):
         """Create PETSc TS, vectors, and MatShell.
@@ -540,6 +626,9 @@ class ADflowTS:
             elif self.pc_type == "scale":
                 pc.setType("python")
                 pc.setPythonContext(_ScalePreconditioner(self))
+            elif self.pc_type == "native_adjoint":
+                pc.setType("python")
+                pc.setPythonContext(_NativeAdjointPC(self))
             else:
                 pc.setType("python")
                 pc.setPythonContext(_TSPreconditioner(self))
@@ -559,10 +648,11 @@ class ADflowTS:
             # KSP for adjoint linear system  K^T * lambda = rhs
             # (used by TSAdjointStep_Theta via KSPSolveTranspose)
             ksp = snes.getKSP()
-            ksp.setType("gmres")
+            ksp.setType(self.ksp_type)
             ksp.setPCSide(PETSc.PC.Side.RIGHT)
             ksp.setTolerances(rtol=self.ksp_rtol, max_it=self.ksp_max_it)
-            ksp.setGMRESRestart(self.ksp_gmres_restart)
+            if self.ksp_type == "gmres":
+                ksp.setGMRESRestart(self.ksp_gmres_restart)
 
             # PC for adjoint
             pc = ksp.getPC()
@@ -571,6 +661,9 @@ class ADflowTS:
             elif self.pc_type == "scale":
                 pc.setType("python")
                 pc.setPythonContext(_ScalePreconditioner(self))
+            elif self.pc_type == "native_adjoint":
+                pc.setType("python")
+                pc.setPythonContext(_NativeAdjointPC(self))
             else:
                 pc.setType("python")
                 pc.setPythonContext(_TSPreconditioner(self))
@@ -648,9 +741,16 @@ class ADflowTS:
             lambda_vecs.append(lam)
             clean_names.append(obj_name)
 
-        # No explicit parameter Jacobian is provided yet, so pass empty mu list.
-        self.ts.setCostGradients(lambda_vecs, [])
-        self.ts.adjointSolve()
+        # No explicit parameter Jacobian — pass None for mu vectors.
+        self.ts.setCostGradients(lambda_vecs, None)
+
+        # Enable adjoint mode so _update_grid skips shiftCoorAndVolumes
+        self._adjoint_mode = True
+        self._grid_time = None  # force grid update on first adjoint step
+        try:
+            self.ts.adjointSolve()
+        finally:
+            self._adjoint_mode = False
 
         self.adjoint_init = {}
         for i, obj_name in enumerate(clean_names):
@@ -666,12 +766,621 @@ class ADflowTS:
 
         return self.adjoint_init
 
+    def _jtranspose_matvec(self, v, shift):
+        """Compute y = J_u^T * v = shift*v - (dR_u/dw)^T * v.
+
+        This is the unscaled adjoint Jacobian-vector product. The AD routine
+        ``computeJacobianVectorProductBwd`` returns ``(S * dR_u/dw)^T * resBar``
+        where S = diag(resScale). To get ``(dR_u/dw)^T * v``, we pass
+        ``resBar = S^{-1} * v`` and read back wDeriv directly.
+
+        Parameters
+        ----------
+        v : ndarray
+            Input vector (local part).
+        shift : float
+            Temporal shift ``a = 1/(theta*dt)``.
+
+        Returns
+        -------
+        y : ndarray
+            ``J_u^T * v = shift*v - (dR_u/dw)^T * v``
+        """
+        import time as _time
+        t0 = _time.time()
+        if self.comm.rank == 0:
+            print(f"      [Jt-matvec] enter, shift={shift:.4e}, ||v||={np.linalg.norm(v):.4e}", flush=True)
+
+        adflow = self.solver.adflow
+        orig_mode = adflow.inputphysics.equationmode
+        adflow.inputphysics.equationmode = _STEADY
+
+        # Apply inverse turbResScale to SA DOFs of resBar
+        jac_ctx = self.jac_ctx
+        if hasattr(jac_ctx, '_apply_inv_turb_res_scale_to_resbar'):
+            v_adj = jac_ctx._apply_inv_turb_res_scale_to_resbar(v)
+        else:
+            v_adj = v.copy()
+
+        wbar = self.solver.computeJacobianVectorProductBwd(
+            resBar=v_adj, wDeriv=True
+        )
+
+        adflow.inputphysics.equationmode = orig_mode
+        y = shift * v - wbar
+        if self.comm.rank == 0:
+            print(f"      [Jt-matvec] done in {_time.time()-t0:.2f}s, ||y||={np.linalg.norm(y):.4e}", flush=True)
+        return y
+
+    def _adjoint_precond(self, v, resscale_diag, inner_tol):
+        """Apply preconditioner P^{-1} * v for the adjoint linear system.
+
+        Uses ADflow's native adjoint solver: P = -(S * dR_u/dw)^T.
+        ``solveAdjointForRHS`` inverts (S * dR_u/dw)^T, and we post-multiply
+        by S to get (dR_u/dw)^T inverse, then negate.
+
+        Parameters
+        ----------
+        v : ndarray
+            Input vector (local part).
+        resscale_diag : ndarray
+            Diagonal of resScale (turbResScale for SA DOFs, 1 for flow).
+        inner_tol : float
+            Relative tolerance for the inner DADI+MG solve.
+
+        Returns
+        -------
+        y : ndarray
+            ``-(dR_u/dw)^{-T} * v``
+        """
+        import time as _time
+        t0 = _time.time()
+        if self.comm.rank == 0:
+            print(f"      [PC-apply] enter, inner_tol={inner_tol}, ||v||={np.linalg.norm(v):.4e}", flush=True)
+        z = self.solver.adflow.adjointapi.solveadjointforrhs(v, inner_tol)
+        y = -(resscale_diag * z)
+        if self.comm.rank == 0:
+            print(f"      [PC-apply] done in {_time.time()-t0:.2f}s, ||z||={np.linalg.norm(z):.4e}, ||y||={np.linalg.norm(y):.4e}", flush=True)
+        return y
+
+    def _adjoint_precond_ts(self, v, use_transpose=True):
+        """Apply TS preconditioner for the adjoint linear system.
+
+        Uses the ILU factorization of ``shift*I - dR/dw`` assembled by
+        ``setupTSPreconditioner(shift)``.  This includes the temporal shift,
+        making it a much better approximation to the true Jacobian
+        ``J = shift*I - dR/dw`` than the native adjoint PC (which only
+        approximates ``dR/dw``).
+
+        Must call ``setupTSPreconditioner(shift)`` before first use.
+
+        Parameters
+        ----------
+        v : ndarray
+            Input vector (local part).
+        use_transpose : bool
+            If True (default), use ``KSPSolveTranspose`` (exact transpose).
+            If False, use ``KSPSolve`` (forward ILU as approximate transpose,
+            for debugging when the transpose solve is broken).
+
+        Returns
+        -------
+        y : ndarray
+            Approximate ``(shift*I - dR/dw)^{-T} * v`` via ILU.
+        """
+        import time as _time
+        t0 = _time.time()
+        tag = "TS-PC-T" if use_transpose else "TS-PC-fwd"
+        if self.comm.rank == 0:
+            print(f"      [{tag}] enter, ||v||={np.linalg.norm(v):.4e}", flush=True)
+        x_arr = v.copy()
+        y_arr = np.zeros(self.n_local)
+        if use_transpose:
+            self.solver.adflow.nksolver.applytspreconditionertranspose(x_arr, y_arr)
+        else:
+            self.solver.adflow.nksolver.applytspreconditioner(x_arr, y_arr)
+        if self.comm.rank == 0:
+            print(f"      [{tag}] done in {_time.time()-t0:.3f}s, ||y||={np.linalg.norm(y_arr):.4e}", flush=True)
+        return y_arr
+
+    @staticmethod
+    def _fgmres_solve(matvec, precond, b, n_local, comm,
+                      rtol=1e-10, max_it=50, restart=30, verbose=False):
+        """Flexible right-preconditioned GMRES (FGMRES) for solving A*x = b.
+
+        Unlike standard GMRES, FGMRES stores the preconditioned vectors
+        Z[j] = M^{-1}*V[j] explicitly. This handles variable/inexact
+        preconditioners correctly (e.g. inner iterative solves that give
+        slightly different results each time).
+
+        Parameters
+        ----------
+        matvec : callable(v) -> ndarray
+            Matrix-vector product ``A * v``.
+        precond : callable(v) -> ndarray
+            Preconditioner application ``M^{-1} * v``.
+        b : ndarray
+            Right-hand side (local part).
+        n_local : int
+            Local vector size.
+        comm : MPI communicator
+            For global dot products.
+        rtol : float
+            Relative tolerance for residual reduction.
+        max_it : int
+            Maximum total iterations (across restarts).
+        restart : int
+            FGMRES restart (number of Arnoldi vectors per cycle).
+        verbose : bool
+            Print convergence info on rank 0.
+
+        Returns
+        -------
+        x : ndarray
+            Approximate solution (local part).
+        converged : bool
+            Whether the relative tolerance was achieved.
+        n_iter : int
+            Total number of iterations.
+        """
+        def global_dot(a, b_vec):
+            return comm.allreduce(np.dot(a, b_vec))
+
+        def global_norm(a):
+            return np.sqrt(global_dot(a, a))
+
+        x = np.zeros(n_local)
+        r = b.copy()
+        b_norm = global_norm(b)
+        if b_norm < 1e-30:
+            return x, True, 0
+
+        total_iter = 0
+        converged = False
+
+        while total_iter < max_it:
+            r_norm = global_norm(r)
+            if r_norm / b_norm < rtol:
+                converged = True
+                break
+
+            m = min(restart, max_it - total_iter)
+
+            # Arnoldi basis V[0..m], preconditioned vectors Z[0..m-1]
+            V = [None] * (m + 1)
+            Z = [None] * m  # Z[j] = M^{-1} * V[j] (stored for FGMRES)
+            H = np.zeros((m + 1, m))
+            V[0] = r / r_norm
+
+            # Givens rotation arrays
+            cs = np.zeros(m)
+            sn = np.zeros(m)
+            g = np.zeros(m + 1)
+            g[0] = r_norm
+
+            for j in range(m):
+                # FGMRES: store preconditioned vector
+                Z[j] = precond(V[j])
+                w = matvec(Z[j])
+
+                # Compute debug norms on ALL ranks (allreduce is collective),
+                # but only print on rank 0.
+                if verbose and total_iter < 3:
+                    nV = global_norm(V[j])
+                    nZ = global_norm(Z[j])
+                    nW = global_norm(w)
+                    if comm.rank == 0:
+                        print(f"    [debug] j={j}: ||V[j]||={nV:.4e}, "
+                              f"||Z[j]||={nZ:.4e}, "
+                              f"||A*Z[j]||={nW:.4e}", flush=True)
+
+                # Modified Gram-Schmidt
+                for i in range(j + 1):
+                    H[i, j] = global_dot(w, V[i])
+                    w = w - H[i, j] * V[i]
+
+                H[j + 1, j] = global_norm(w)
+                if H[j + 1, j] > 1e-30:
+                    V[j + 1] = w / H[j + 1, j]
+                else:
+                    V[j + 1] = np.zeros(n_local)
+
+                if verbose and total_iter < 3 and comm.rank == 0:
+                    print(f"    [debug] j={j}: H[{j},{j}]={H[j,j]:.4e}, "
+                          f"H[{j+1},{j}]={H[j+1,j]:.4e}", flush=True)
+
+                # Apply previous Givens rotations to column j
+                for i in range(j):
+                    temp = cs[i] * H[i, j] + sn[i] * H[i + 1, j]
+                    H[i + 1, j] = -sn[i] * H[i, j] + cs[i] * H[i + 1, j]
+                    H[i, j] = temp
+
+                # Compute new Givens rotation
+                denom = np.sqrt(H[j, j] ** 2 + H[j + 1, j] ** 2)
+                if denom > 1e-30:
+                    cs[j] = H[j, j] / denom
+                    sn[j] = H[j + 1, j] / denom
+                else:
+                    cs[j] = 1.0
+                    sn[j] = 0.0
+
+                # Apply Givens rotation
+                H[j, j] = cs[j] * H[j, j] + sn[j] * H[j + 1, j]
+                H[j + 1, j] = 0.0
+                g[j + 1] = -sn[j] * g[j]
+                g[j] = cs[j] * g[j]
+
+                total_iter += 1
+                res_est = abs(g[j + 1])
+
+                if verbose and comm.rank == 0:
+                    print(f"    FGMRES iter {total_iter:3d} | "
+                          f"|r| = {res_est:.4e} | "
+                          f"|r|/|b| = {res_est/b_norm:.4e}")
+
+                if res_est / b_norm < rtol:
+                    # Converged — solve triangular system and recover x
+                    y = np.zeros(j + 1)
+                    for i in range(j, -1, -1):
+                        y[i] = g[i]
+                        for k in range(i + 1, j + 1):
+                            y[i] -= H[i, k] * y[k]
+                        y[i] /= H[i, i]
+
+                    # FGMRES: use stored Z vectors (no re-application of precond)
+                    for i in range(j + 1):
+                        x += y[i] * Z[i]
+
+                    converged = True
+                    break
+
+            if converged:
+                break
+
+            # Not converged within this restart cycle — solve and update
+            j_last = min(m, total_iter) - 1
+            if j_last < 0:
+                break
+            y = np.zeros(j_last + 1)
+            for i in range(j_last, -1, -1):
+                y[i] = g[i]
+                for k in range(i + 1, j_last + 1):
+                    y[i] -= H[i, k] * y[k]
+                y[i] /= H[i, i]
+
+            # FGMRES: use stored Z vectors
+            for i in range(j_last + 1):
+                x += y[i] * Z[i]
+
+            # Update residual
+            r = b - matvec(x)
+
+        return x, converged, total_iter
+
+    def solve_adjoint_manual(self, objectives, inner_tol=0.01,
+                             gmres_rtol=1e-10, gmres_max_it=200,
+                             gmres_restart=200, reassemble=False,
+                             adjoint_pc="ts_ilu", pc_shift_factor=1.0,
+                             dv_sens=None):
+        """Run discrete adjoint via manual backward sweep with GMRES.
+
+        Avoids PETSc's internal KSPSolveTranspose (which causes SEGV with
+        nested native-adjoint preconditioning) by implementing the BEuler
+        adjoint update directly in Python with right-preconditioned GMRES.
+
+        For backward Euler (theta=1), each adjoint step solves::
+
+            J_u^T * delta = lambda / dt
+
+        where ``J_u^T = (1/dt)*I - (dR_u/dw)^T`` (unscaled Jacobian).
+        Then ``lambda_new = delta``.
+
+        The GMRES uses:
+        - **Matvec**: ``J_u^T * v = shift*v - (dR_u/dw)^T * v``
+          via AD reverse mode (same as MatShell multTranspose).
+        - **Preconditioner** (depends on ``adjoint_pc``):
+
+          - ``"ts_ilu"`` (default): ILU factorization of
+            ``pc_shift*I - dR/dw`` via ``setupTSPreconditioner``.
+            Uses forward ILU solve (not transpose, which is broken
+            in PETSc 3.18 with ASM+ILU).  ``pc_shift`` may be larger
+            than the physical shift (controlled by ``pc_shift_factor``)
+            to ensure ILU stability on the indefinite Jacobian.
+          - ``"native"``: ADflow's DADI+MG adjoint solver for ``dR/dw^T``.
+            Does NOT include the shift, so the preconditioned operator has
+            eigenvalues near ``1 - shift/eig_i``, which is poor when
+            ``eig_i ~ shift``.  Slow per-application (~0.2s).
+
+        The total derivative for a final-time objective is::
+
+            dJ/dalpha = pJ/palpha
+                      + dt * SUM_{n=1}^{N} delta_n^T * pR_n/palpha
+                      + lambda_0^T * dw_0/dalpha
+
+        where the first two terms are computed when ``dv_sens`` is provided,
+        and ``lambda_0^T * dw_0/dalpha`` (the initial-condition contribution)
+        must be computed externally.
+
+        Parameters
+        ----------
+        objectives : list[str]
+            Objective names, e.g. ``["cl"]``.
+        inner_tol : float
+            Relative tolerance for the inner DADI+MG preconditioner
+            (only used when ``adjoint_pc="native"``). Default 0.01.
+        gmres_rtol : float
+            Relative tolerance for the outer GMRES (default 1e-10).
+        gmres_max_it : int
+            Maximum GMRES iterations per adjoint step (default 200).
+        gmres_restart : int
+            GMRES restart parameter (default 200).
+        reassemble : bool
+            If True, reassemble dRdwT at each time step. Default False
+            (uses the matrix from the steady state for all steps).
+        adjoint_pc : str
+            Preconditioner type: ``"ts_ilu"`` (default) or ``"native"``.
+        pc_shift_factor : float
+            Multiplier for the shift used in PC assembly (default 1.0).
+            When the physical shift is too small for ILU stability
+            (matrix indefinite), increase this (e.g. 10-100) so the
+            PC matrix ``pc_shift*I - dR/dw`` is diagonally dominant.
+        dv_sens : list[str] or None
+            If provided, accumulate parameter sensitivities during the
+            backward sweep.  Returns ``result[obj + "_dJdp"]`` as a dict
+            mapping DV names to ``pJ/palpha + dt * SUM delta_n^T * pR/palpha``
+            (excludes the initial-condition term ``lambda_0^T * dw0/dalpha``).
+
+        Returns
+        -------
+        dict
+            Mapping ``objective -> lambda(t0)`` (local numpy arrays).
+            If ``dv_sens`` is not None, also contains
+            ``objective + "_dJdp" -> {dv_name: float}``.
+        """
+        if not self.save_trajectory or len(self._state_trajectory) < 2:
+            raise RuntimeError(
+                "State trajectory not available. Run forward solve with "
+                "save_trajectory=True first."
+            )
+
+        N = len(self._state_trajectory) - 1  # number of time steps
+        shift = 1.0 / (self.theta * self.dt)
+        comm = self.comm
+
+        solver = self.solver
+
+        if adjoint_pc == "native":
+            # --- Set up native adjoint solver (once) ---
+            solver._setupAdjoint()
+            # --- Build resScale diagonal for PC scaling correction ---
+            jac_ctx = self.jac_ctx
+            resscale_diag = np.ones(self.n_local)
+            if hasattr(jac_ctx, '_n_turb') and jac_ctx._n_turb > 0:
+                n_cells = self.n_local // jac_ctx._nw
+                rs2d = resscale_diag.reshape(n_cells, jac_ctx._nw)
+                for l in range(jac_ctx._n_turb):
+                    rs2d[:, jac_ctx._nwf + l] = jac_ctx._trs[l]
+
+        pc_shift = shift * pc_shift_factor
+
+        if comm.rank == 0:
+            print("=" * 70)
+            print(f"ADflowTS: Manual backward sweep (GMRES, rtol={gmres_rtol})")
+            print(f"  {N} adjoint steps, shift = {shift:.4e}")
+            print(f"  adjoint_pc = {adjoint_pc}, GMRES max_it = {gmres_max_it}")
+            if adjoint_pc == "ts_ilu":
+                print(f"  pc_shift_factor = {pc_shift_factor}, pc_shift = {pc_shift:.4e}")
+            if adjoint_pc == "native":
+                print(f"  inner PC tol = {inner_tol}")
+            print(f"  reassemble = {reassemble}")
+            print("=" * 70)
+
+        # Enable adjoint mode so _update_grid skips shiftCoorAndVolumes
+        self._adjoint_mode = True
+        self._grid_time = None
+        try:
+            # --- Terminal cost gradients ---
+            t_N, w_N = self._state_trajectory[N]
+            solver.setStates(w_N)
+            self._update_grid(t_N)
+
+            results = {}
+            for obj in objectives:
+                obj_name = self._normalize_obj_name(obj)
+                dphi_dw = self._compute_terminal_state_gradient(obj_name)
+
+                # --- Terminal partial pJ/palpha (if dv_sens requested) ---
+                if dv_sens is not None:
+                    adflow = solver.adflow
+                    orig_mode = adflow.inputphysics.equationmode
+                    adflow.inputphysics.equationmode = _STEADY
+                    funcsBar = solver._getFuncsBar(obj_name)
+                    term_sens = solver.computeJacobianVectorProductBwd(
+                        funcsBar=funcsBar, xDvDeriv=True
+                    )
+                    adflow.inputphysics.equationmode = orig_mode
+                    dJdp = {key: float(term_sens.get(key, 0.0)) for key in dv_sens}
+                    if comm.rank == 0:
+                        print(f"  Terminal partials (pJ/p):")
+                        for key in dv_sens:
+                            print(f"    {key}: {dJdp[key]:.10e}")
+
+                # --- Backward sweep ---
+                lam = dphi_dw.copy()  # lambda_N = dCL/dU_N
+
+                for n in range(N, 0, -1):
+                    # Restore forward state at step n
+                    t_n, w_n = self._state_trajectory[n]
+                    if comm.rank == 0:
+                        print(f"\n  --- Adjoint step {N-n+1}/{N}: restoring state at t={t_n:.6e} ---", flush=True)
+                    solver.setStates(w_n)
+                    self._update_grid(t_n)
+
+                    import time as _time
+
+                    if reassemble or n == N:
+                        t_asm = _time.time()
+                        if adjoint_pc == "native":
+                            if comm.rank == 0:
+                                print(f"    Reassembling dR/dw matrices (native)...", flush=True)
+                            solver.adflow.adjointapi.setupallresidualmatricesfwd()
+                        if comm.rank == 0:
+                            print(f"    Assembling TS PC (pc_shift={pc_shift:.4e})...", flush=True)
+                        adflow = solver.adflow
+                        orig_mode = adflow.inputphysics.equationmode
+                        adflow.inputphysics.equationmode = _STEADY
+                        adflow.nksolver.setuptspreconditioner(pc_shift)
+                        adflow.inputphysics.equationmode = orig_mode
+                        if comm.rank == 0:
+                            print(f"    Assembly done in {_time.time()-t_asm:.2f}s", flush=True)
+
+                        # Diagnostic: compare forward vs transpose ILU on first step
+                        if n == N and adjoint_pc == "ts_ilu":
+                            test_v = shift * lam
+                            tv_norm = np.sqrt(comm.allreduce(np.dot(test_v, test_v)))
+                            y_fwd = self._adjoint_precond_ts(test_v, use_transpose=False)
+                            y_trn = self._adjoint_precond_ts(test_v, use_transpose=True)
+                            yfn = np.sqrt(comm.allreduce(np.dot(y_fwd, y_fwd)))
+                            ytn = np.sqrt(comm.allreduce(np.dot(y_trn, y_trn)))
+                            if comm.rank == 0:
+                                print(f"    [DIAG] ||test_v||={tv_norm:.4e}")
+                                print(f"    [DIAG] ILU forward:   ||y||={yfn:.4e}  ratio={yfn/tv_norm:.4e}")
+                                print(f"    [DIAG] ILU transpose: ||y||={ytn:.4e}  ratio={ytn/tv_norm:.4e}")
+                                print(f"    [DIAG] If transpose >> forward, KSPSolveTranspose is broken", flush=True)
+
+                    # RHS = shift * lambda (= lambda / dt)
+                    rhs = shift * lam
+
+                    # Solve J_u^T * delta = rhs via right-preconditioned GMRES
+                    def matvec(v):
+                        return self._jtranspose_matvec(v, shift)
+
+                    if adjoint_pc == "ts_ilu":
+                        def precond(v):
+                            # use_transpose=False: forward ILU as approximate
+                            # transpose PC (KSPSolveTranspose+ASM+ILU is broken
+                            # in PETSc 3.18, producing O(1e23) norms)
+                            return self._adjoint_precond_ts(v, use_transpose=False)
+                    else:
+                        def precond(v):
+                            return self._adjoint_precond(v, resscale_diag, inner_tol)
+
+                    import time as _time
+                    t_step_start = _time.time()
+                    if comm.rank == 0:
+                        rhs_norm = np.linalg.norm(rhs)
+                        print(f"    [step {N-n+1}/{N}] FGMRES start, ||rhs||={rhs_norm:.4e}, "
+                              f"||lam||={np.linalg.norm(lam):.4e}", flush=True)
+
+                    delta, conv, n_iter = self._fgmres_solve(
+                        matvec, precond, rhs,
+                        self.n_local, comm,
+                        rtol=gmres_rtol, max_it=gmres_max_it,
+                        restart=gmres_restart, verbose=True,
+                    )
+
+                    # For BEuler: lambda_{n-1} = delta
+                    lam = delta
+
+                    # Accumulate intermediate parameter sensitivity:
+                    # dt * delta_n^T * pR_n/palpha
+                    if dv_sens is not None:
+                        # Re-set state (GMRES matvec may have modified internals)
+                        solver.setStates(w_n)
+                        adflow = solver.adflow
+                        orig_mode = adflow.inputphysics.equationmode
+                        adflow.inputphysics.equationmode = _STEADY
+                        jac_ctx = self.jac_ctx
+                        if hasattr(jac_ctx, '_apply_inv_turb_res_scale_to_resbar'):
+                            d_adj = jac_ctx._apply_inv_turb_res_scale_to_resbar(delta)
+                        else:
+                            d_adj = delta.copy()
+                        step_sens = solver.computeJacobianVectorProductBwd(
+                            resBar=d_adj, xDvDeriv=True
+                        )
+                        adflow.inputphysics.equationmode = orig_mode
+                        for key in dv_sens:
+                            val = float(step_sens.get(key, 0.0))
+                            dJdp[key] += self.dt * val
+                        if comm.rank == 0 and n == N:
+                            d_norm = np.linalg.norm(d_adj)
+                            print(f"    [dv_sens debug] step {N-n+1}: ||d_adj||={d_norm:.4e}")
+                            print(f"    [dv_sens debug] step_sens = {step_sens}")
+                            print(f"    [dv_sens debug] step_sens type = {type(step_sens)}")
+                            # Test with ones vector (same as diagnostic)
+                            solver.setStates(w_n)
+                            adflow.inputphysics.equationmode = _STEADY
+                            ones_test = np.ones(self.n_local)
+                            test_ones = solver.computeJacobianVectorProductBwd(
+                                resBar=ones_test, xDvDeriv=True
+                            )
+                            adflow.inputphysics.equationmode = orig_mode
+                            print(f"    [dv_sens debug] resBar=ones → alpha = {test_ones.get('alpha', 0.0)}")
+                            # Also try forward mode
+                            solver.setStates(w_n)
+                            adflow.inputphysics.equationmode = _STEADY
+                            res_fwd = solver.computeJacobianVectorProductFwd(
+                                xDvDot={"alpha": 1.0}, residualDeriv=True
+                            )
+                            adflow.inputphysics.equationmode = orig_mode
+                            print(f"    [dv_sens debug] ||dR/dalpha|| fwd = {np.linalg.norm(res_fwd):.6e}")
+                            # Check dot product
+                            dot_val = np.dot(d_adj, res_fwd)
+                            dot_val_g = comm.allreduce(dot_val)
+                            print(f"    [dv_sens debug] d_adj . dR/dalpha = {dot_val_g:.10e}")
+
+                    lam_norm_sq = comm.allreduce(np.dot(lam, lam))
+                    if comm.rank == 0:
+                        conv_str = "OK" if conv else "FAIL"
+                        t_step = _time.time() - t_step_start
+                        print(f"  Adjoint step {N-n+1:3d}/{N} | t = {t_n:.6e} "
+                              f"| ||lambda|| = {np.sqrt(lam_norm_sq):.6e} "
+                              f"| GMRES: {n_iter} it ({conv_str}) | {t_step:.1f}s",
+                              flush=True)
+
+                results[obj_name] = lam.copy()
+                if dv_sens is not None:
+                    results[obj_name + "_dJdp"] = dJdp.copy()
+        finally:
+            self._adjoint_mode = False
+
+        norms = {}
+        for obj_name in results:
+            if obj_name.endswith("_dJdp"):
+                continue
+            norms[obj_name] = np.sqrt(
+                comm.allreduce(np.dot(results[obj_name], results[obj_name]))
+            )
+        if comm.rank == 0:
+            print("=" * 70)
+            print("ADflowTS: Manual adjoint sweep complete")
+            for obj_name in norms:
+                print(f"  objective={obj_name:>12s} | ||lambda(t0)||_2 = "
+                      f"{norms[obj_name]:.6e}")
+            if dv_sens is not None:
+                for obj in objectives:
+                    on = self._normalize_obj_name(obj)
+                    djdp = results.get(on + "_dJdp", {})
+                    for key in dv_sens:
+                        print(f"  {on}_dJdp[{key}] = {djdp.get(key, 0.0):.10e}"
+                              f"  (excl IC term)")
+            print("=" * 70)
+
+        self.adjoint_init = results
+        return results
+
     def _update_grid(self, t):
         """
         Update the mesh coordinates and velocities for time t.
 
         This sets the internal timeUnsteady variable and calls ADflow's
         grid motion routines. Only updates if the time has changed.
+
+        During the adjoint backward sweep (``_adjoint_mode=True``),
+        ``shiftCoorAndVolumes`` is skipped because it shifts the
+        coordinate history stack (xOld ← x), which is only meaningful
+        during forward time integration. The adjoint only needs the mesh
+        positioned at the correct time via ``updateUnsteadyGeometry``.
         """
         if not self.grid_motion:
             return
@@ -681,8 +1390,10 @@ class ADflowTS:
         # Set the physical time so that grid motion uses the correct time
         self.solver.adflow.monitor.timeunsteady = t
 
-        # Shift coordinate history and update mesh position
-        self.solver.adflow.preprocessingapi.shiftcoorandvolumes()
+        if not self._adjoint_mode:
+            # Forward: shift coordinate history, then update mesh
+            self.solver.adflow.preprocessingapi.shiftcoorandvolumes()
+        # Position the mesh at time t (prescribed motion)
         self.solver.adflow.solvers.updateunsteadygeometry()
 
         self._grid_time = t
@@ -827,19 +1538,20 @@ class ADflowTS:
         self.solver.setStates(u_arr)
 
         # Assemble the approximate Jacobian P = a_pc*I - dR/dw for the PC.
-        # Use a larger shift (a * pc_shift_factor) so that the assembled
-        # matrix is diagonally dominant and ILU factorization is stable.
-        # The MatShell operator keeps the exact shift a; GMRES handles the
-        # spectral mismatch between PC and operator.
-        a_pc = a * self.pc_shift_factor
-        adflow = self.solver.adflow
-        orig_mode = adflow.inputphysics.equationmode
-        adflow.inputphysics.equationmode = _STEADY
-        adflow.nksolver.setuptspreconditioner(a_pc)
-        adflow.inputphysics.equationmode = orig_mode
-        self._pc_assembled = True
-        if self.comm.rank == 0:
-            print(f"  [PC] shift_pc = {a_pc:.6e}  (factor = {self.pc_shift_factor})")
+        # Skip assembly when shift ≈ 0 (PETSc adjoint update step uses
+        # shift=0 for MatMultTransposeAdd only, no KSP solve needed).
+        # Assembling with shift=0 gives P = -dR/dw which can have zero
+        # pivots, causing NaN in the ILU factorization.
+        if self.pc_type not in ("none", "scale") and a > 1e-10:
+            a_pc = a * self.pc_shift_factor
+            adflow = self.solver.adflow
+            orig_mode = adflow.inputphysics.equationmode
+            adflow.inputphysics.equationmode = _STEADY
+            adflow.nksolver.setuptspreconditioner(a_pc)
+            adflow.inputphysics.equationmode = orig_mode
+            self._pc_assembled = True
+            if self.comm.rank == 0:
+                print(f"  [PC] shift_pc = {a_pc:.6e}  (factor = {self.pc_shift_factor})")
 
         # Signal that the matrix structure has not changed
         J.assemble()
@@ -877,6 +1589,10 @@ class ADflowTS:
         self.cl_history.append(cl)
         self.cd_history.append(cd)
         self.cmz_history.append(cmz)
+
+        # Save state for manual backward sweep
+        if self.save_trajectory:
+            self._state_trajectory.append((t, u_arr.copy()))
 
         if self.comm.rank == 0:
             step = ts.getStepNumber()
@@ -936,6 +1652,9 @@ class ADflowTS:
         self.cl_history.append(funcs.get(f"{ap_name}_cl", 0.0))
         self.cd_history.append(funcs.get(f"{ap_name}_cd", 0.0))
         self.cmz_history.append(funcs.get(f"{ap_name}_cmz", 0.0))
+        # Save initial state for trajectory
+        if self.save_trajectory:
+            self._state_trajectory.append((t0, w0.copy()))
         if self.comm.rank == 0:
             print(f"  TS step    0 | t = {t0:.6e} | "
                   f"CL = {self.cl_history[0]:.6e} | "

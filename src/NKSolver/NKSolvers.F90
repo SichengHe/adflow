@@ -1689,18 +1689,11 @@ contains
 
     subroutine setupTSPreconditioner(shift)
 
-        ! Assemble an approximate Jacobian P ≈ diag_shift - dR/dw and set up
+        ! Assemble an approximate Jacobian P ≈ shift*I - dR/dw and set up
         ! an ASM+ILU preconditioner for the PETSc TS implicit solve.
         !
         ! The assembled matrix uses the 1st-order PC stencil (same as the
         ! NK solver) via setupStateResidualMatrix.
-        !
-        ! For the diagonal shift, a per-cell CFL-based value is used instead
-        ! of a uniform scalar.  This matches the NK/ANK solver's approach:
-        ! each cell's diagonal contribution is 1/(dtl * volRef), scaled so
-        ! that the diagonal dominates the off-diagonal spatial stencil.
-        ! This ensures stable ILU factorization regardless of the physical
-        ! time step (which may give a shift far below the spectral radius).
         !
         ! turbResScale is undone from SA rows (left-scaling) so that the
         ! PC is in 1/volRef space, consistent with the IFunction.
@@ -1713,12 +1706,11 @@ contains
         use inputIteration, only: turbResScale
         use flowVarRefState, only: nw, nwf, viscous
         use InputAdjoint, only: viscPC
-        use ADjointVars, only: nCellsLocal
+        use ADjointVars, only: nCellsLocal, nCellOffsetLocal
         use utils, only: EChk, setPointers
-        use blockPointers, only: nDom, il, jl, kl, globalCell, dtl, volRef
+        use blockPointers, only: nDom, il, jl, kl, globalCell
         use adjointUtils, only: myMatCreate, statePreAllocation, &
             setupStateResidualMatrix
-        use solverUtils, only: timeStep
 
         implicit none
 
@@ -1730,8 +1722,7 @@ contains
         integer(kind=intType), dimension(:, :), pointer :: stencil
         Vec :: scaleVec
         real(kind=realType), pointer :: sPtr(:)
-        integer(kind=intType) :: ii, l, nn, sps, i, j, k, idx
-        real(kind=realType) :: cfl_shift
+        integer(kind=intType) :: ii, l, nn, sps, i, j, k, idx, cellOffset
         PC :: pc_asm
         KSP :: subksp
         PC :: subpc
@@ -1817,32 +1808,31 @@ contains
             call EChk(ierr, __FILE__, __LINE__)
         end if
 
-        ! Add diagonal shift: max(physical_shift, CFL_shift) per cell.
-        ! When the physical shift a = 1/(theta*dt) is large (small dt),
-        ! it dominates and P closely approximates K = aI - J.
-        ! When a is small (large dt), the CFL-based shift stabilizes ILU.
-        ! Compute local time steps dtl (spectral radius / volume).
-        call timeStep(.false.)
+        ! Add diagonal shift: use the exact physical shift a = 1/(theta*dt)
+        ! for all cells.  This ensures the assembled PC closely approximates
+        ! the actual operator J = a*I - dR/dw, giving the KSP an effective
+        ! condition number near 1.  Previously, max(shift, CFL_shift) was
+        ! used, but when CFL_shift >> shift (physical dt), the PC diagonal
+        ! was too large, making P a poor approximation of J and causing
+        ! KSPSolveTranspose to return inaccurate adjoint solutions.
 
-        ! Build diagonal shift vector: max(shift, d_i) per cell
+        ! Build diagonal shift vector: uniform physical shift
         call VecDuplicate(TS_PC_wv1, scaleVec, ierr)
         call EChk(ierr, __FILE__, __LINE__)
         call VecGetArrayF90(scaleVec, sPtr, ierr)
         call EChk(ierr, __FILE__, __LINE__)
         sPtr = zero
+        cellOffset = nCellOffsetLocal(1_intType)
         do nn = 1, nDom
             do sps = 1, nTimeIntervalsSpectral
                 call setPointers(nn, 1_intType, sps)
                 do k = 2, kl
                     do j = 2, jl
                         do i = 2, il
-                            idx = globalCell(i, j, k)
-                            ! CFL-based shift for this cell
-                            cfl_shift = one / (dtl(i, j, k) * volRef(i, j, k))
-                            ! Use the larger of physical shift and CFL shift
-                            cfl_shift = max(shift, cfl_shift)
+                            ! Convert global cell index to local (0-based)
+                            idx = globalCell(i, j, k) - cellOffset
                             do l = 1, nw
-                                sPtr(idx * nw + l) = cfl_shift
+                                sPtr(idx * nw + l) = shift
                             end do
                         end do
                     end do
@@ -1933,6 +1923,39 @@ contains
         call EChk(ierr, __FILE__, __LINE__)
 
     end subroutine applyTSPreconditioner
+
+    subroutine applyTSPreconditionerTranspose(in_vec, out_vec, ndof)
+
+        ! Apply the TS preconditioner TRANSPOSE: out = P^{-T} * in
+        ! Uses KSPSolveTranspose which applies ASM+ILU^{-T}.
+
+        use constants
+        use utils, only: EChk
+
+        implicit none
+
+        integer(kind=intType), intent(in) :: ndof
+        real(kind=realType), dimension(ndof), intent(in) :: in_vec
+        real(kind=realType), dimension(ndof), intent(inout) :: out_vec
+
+        integer(kind=intType) :: ierr
+
+        call VecPlaceArray(TS_PC_wv1, in_vec, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        call VecPlaceArray(TS_PC_wv2, out_vec, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        call KSPSolveTranspose(TS_PC_KSP, TS_PC_wv1, TS_PC_wv2, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        call VecResetArray(TS_PC_wv1, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+        call VecResetArray(TS_PC_wv2, ierr)
+        call EChk(ierr, __FILE__, __LINE__)
+
+    end subroutine applyTSPreconditionerTranspose
 
     subroutine destroyTSPreconditioner()
 

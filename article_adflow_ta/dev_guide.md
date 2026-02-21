@@ -395,6 +395,58 @@ For each test case:
 - **Inner solve tolerance:** Run with `SNES rtol = 1e-6, 1e-8, 1e-10, 1e-12`; verify adjoint accuracy improves with tighter inner tolerance
 - **Checkpointing:** Verify adjoint results are identical with and without revolve checkpointing
 
+### 4.5 Partial Derivative Verification (Current Focus)
+
+**Motivation:** Before debugging the adjoint time-stepping and PC (which are
+entangled with solver convergence), verify that all AD building blocks are
+correct independently. This isolates AD bugs from solver/PC issues.
+
+**Testing methodology for each partial derivative A of function f:**
+
+1. **Forward AD vs FD:** Pick random direction v, compare `A*v` from AD
+   with central FD `(f(x+εv) - f(x-εv))/(2ε)`. Validates forward mode.
+2. **Reverse AD vs Forward AD (dot product test):** For random u, v,
+   compute `y = A*v` (fwd) and `z = A^T*u` (rev), check `<y,u> = <v,z>`.
+   Should match to ~12 digits. Validates reverse is exact transpose.
+
+Together these prove both forward and reverse AD are correct.
+
+**Partials to test:**
+
+| # | Partial | Type | Forward API | Reverse API |
+|---|---------|------|-------------|-------------|
+| 1 | ∂R/∂w | n×n | `computeJacobianVectorProductFwd(wDot=v, residualDeriv=True)` | `computeJacobianVectorProductBwd(resBar=u, wDeriv=True)` |
+| 2 | ∂R/∂alpha | n×1 | `computeJacobianVectorProductFwd(xDvDot={"alpha":1}, residualDeriv=True)` | `computeJacobianVectorProductBwd(resBar=u, xDvDeriv=True)["alpha"]` |
+| 3 | ∂CL/∂w | 1×n | `computeJacobianVectorProductFwd(wDot=v, funcDeriv=True)["cl"]` | `computeJacobianVectorProductBwd(funcsBar={"cl":1}, wDeriv=True)` |
+| 4 | ∂CL/∂alpha | scalar | `computeJacobianVectorProductFwd(xDvDot={"alpha":1}, funcDeriv=True)["cl"]` | `computeJacobianVectorProductBwd(funcsBar={"cl":1}, xDvDeriv=True)["alpha"]` |
+
+Phase 3 (moving mesh) adds:
+
+| 5 | ∂R/∂Xv | n×3N | `Fwd(xVDot=v, residualDeriv=True)` | `Bwd(resBar=u, xVDeriv=True)` |
+| 6 | ∂CL/∂Xv | 1×3N | `Fwd(xVDot=v, funcDeriv=True)` | `Bwd(funcsBar={"cl":1}, xVDeriv=True)` |
+
+**turbResScale handling:**  AD routines return `dR_ad = resScale * dR_raw`
+where `resScale = (1/volRef) * turbResScale`.  The TA adjoint uses
+`R_ta = R_ad / turbResScale`.  Corrections:
+- Forward: divide SA DOF rows of AD output by turbResScale
+- Reverse: divide SA DOFs of resBar by turbResScale before passing to AD
+- For Euler (no turbulence), no correction needed.
+
+**Instance-wise vs full matrix:**  Instance-wise (random vector) testing is
+sufficient.  Full matrix requires `n_global` matvecs (~10k-100k), while
+3-5 random directions give high statistical confidence.  Only resort to
+unit vectors if a random test fails, to isolate the bad DOF.
+
+**Phased plan:**
+
+- **Phase 1:** Fixed mesh, steady state — test all 4 partials at converged
+  steady state with 3 random directions each.
+  Script: `article_adflow_ta/code/examples/test_partials.py`
+- **Phase 2:** Fixed mesh, non-equilibrium — run a few BDF1 steps from
+  steady state, repeat tests at intermediate states.
+- **Phase 3:** Moving mesh — add ∂R/∂Xv and ∂CL/∂Xv tests at states from
+  a pitching simulation.
+
 ---
 
 ## Stage 5: Optimization Demonstration

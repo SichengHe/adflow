@@ -77,7 +77,8 @@
 \begin{abstract}
 Gradient-based optimization of unsteady aerodynamic flows requires efficient sensitivity analysis, yet the cost of finite-difference approaches scales linearly with the number of design variables, making them impractical for high-dimensional problems.
 We present a discrete adjoint framework for time-accurate compressible flow simulations that leverages PETSc's time-stepping adjoint infrastructure to compute sensitivities at a cost independent of the number of design variables.
-The framework uses the Crank--Nicolson scheme for time integration, matrix-free Jacobian-transpose--vector products from reverse-mode algorithmic differentiation, and revolve checkpointing to manage memory for large-scale problems.
+The framework supports two forward solver strategies: (1)~a fully PETSc-integrated Crank--Nicolson scheme with Newton--Krylov time stepping, and (2)~ADflow's proven pseudo-time DADI solver registered as a custom PETSc \texttt{SNES}, which enables robust forward solves at physical time-step sizes while preserving access to PETSc's trajectory management and adjoint infrastructure.
+In both cases, matrix-free Jacobian-transpose--vector products from reverse-mode algorithmic differentiation are used for the adjoint linear systems, and revolve checkpointing manages memory for large-scale problems.
 We implement this approach in ADflow, an open-source finite-volume Reynolds-averaged Navier--Stokes solver, and support both final-time and time-integrated objective functions.
 The adjoint sensitivities are verified against finite differences on three test cases of increasing complexity: vortex shedding behind a circular cylinder, a pitching airfoil, and transonic buffet over a supercritical wing section.
 % placeholder: add quantitative accuracy statement
@@ -107,6 +108,13 @@ Nielsen and Diskin~\cite{Nielsen2004} demonstrated a discrete adjoint for unstea
 Vishnampet et al.~\cite{Vishnampet2015} developed a practical discrete adjoint for high-fidelity compressible turbulence simulations.
 Despite these advances, most existing implementations are tightly coupled to specific solvers and time-integration schemes, limiting code reuse and extensibility.
 
+A separate line of research concerns duality-preserving (DP) adjoint methods, which ensure that the adjoint solver shares the same asymptotic convergence rate as the primal solver.
+For coupled Navier--Stokes solvers, the Krylov-based adjoint naturally inherits the primal's convergence by transposing the exact Jacobian~\cite{Kenway2019}.
+For segregated solvers (e.g., SIMPLE), however, the sequential variable updates make this transposition nontrivial.
+Fang and He~\cite{Fang2024} derived a fixed-point DP adjoint formulation for steady-state segregated solvers by reformulating the primal iteration as a left-preconditioned Richardson scheme and transposing the preconditioner to obtain an adjoint with identical eigenvalues.
+They subsequently extended this approach to unsteady flows for field inversion~\cite{Fang2024b}.
+Our work differs in both the solver paradigm (coupled compressible RANS) and the adjoint strategy: rather than transposing the iterative solver, we invoke the implicit function theorem to decouple the forward and adjoint algorithms entirely (\cref{sec:dadi_petsc}).
+
 PETSc (Portable, Extensible Toolkit for Scientific Computation)~\cite{petsc-web-page, petsc-user-ref} provides a mature infrastructure for solving ordinary differential equations (ODEs) and differential-algebraic equations (DAEs) through its time-stepping (TS) component.
 Zhang et al.~\cite{Zhang2022} extended PETSc's TS module with a discrete adjoint capability that supports first- and second-order sensitivity analysis for the implicit theta family of time integrators.
 This infrastructure handles the adjoint equation derivation, backward time marching, and trajectory management internally, allowing solver developers to obtain adjoint sensitivities by providing only the residual function and its Jacobian.
@@ -114,15 +122,21 @@ The revolve algorithm~\cite{Griewank2000} is integrated for optimal checkpointin
 
 In this work, we leverage PETSc's TS adjoint infrastructure to develop a time-accurate discrete adjoint capability for ADflow~\cite{ADflow2020}, an open-source structured-multiblock finite-volume solver for the compressible RANS equations.
 ADflow already provides a well-validated steady-state adjoint solver~\cite{Kenway2019, Mader2020} based on AD-generated Jacobian products and PETSc's Krylov solvers.
-We extend this to the unsteady regime by casting ADflow's spatial residual evaluation as PETSc TS callbacks, using the Crank--Nicolson scheme for second-order temporal accuracy, and employing matrix-free operations via PETSc's \texttt{MatShell} to avoid explicit Jacobian assembly.
-Both final-time and time-integrated objective functions are supported through PETSc's quadrature time-stepping interface.
+We extend this to the unsteady regime by casting ADflow's spatial residual evaluation as PETSc TS callbacks, employing matrix-free operations via PETSc's \texttt{MatShell} to avoid explicit Jacobian assembly, and supporting both final-time and time-integrated objective functions through PETSc's quadrature time-stepping interface.
+
+A distinguishing aspect of our approach is the integration of ADflow's native pseudo-time solver with PETSc's time-stepping framework.
+The Newton--Krylov solver available in PETSc's implicit theta method faces a well-known conditioning difficulty for stiff CFD systems at physical time-step sizes: the temporal shift is far smaller than the spectral radius of the spatial Jacobian, rendering the system matrix indefinite and poorly suited to ILU-based preconditioning.
+ADflow's native solver overcomes this through DADI pseudo-time stepping with geometric multigrid.
+By registering this solver as a custom PETSc \texttt{SNES}, we retain robust forward convergence while gaining full access to PETSc's trajectory checkpointing and discrete adjoint machinery.
+By the implicit function theorem, the adjoint requires only the spatial Jacobian at the converged states---not differentiation through the pseudo-time iterations---enabling clean separation between the forward and adjoint solver strategies.
+
 We verify the adjoint sensitivities against finite differences on three test cases---cylinder vortex shedding, a pitching airfoil, and transonic buffet---and demonstrate the framework in an unsteady aerodynamic shape optimization.
 
 The remainder of this paper is organized as follows.
 \Cref{sec:governing} presents the governing equations and their spatial discretization.
-\Cref{sec:forward} describes the implicit theta method for time integration, including the preconditioner construction.
-\Cref{sec:adjoint} presents the discrete adjoint formulation, the matrix-free implementation, and the checkpointing strategy.
-\Cref{sec:implementation} details the implementation in ADflow.
+\Cref{sec:forward} describes the forward time integration, including the implicit theta method, the preconditioning strategy, the conditioning challenges at physical time-step sizes, and the DADI pseudo-time approach integrated with PETSc's TS framework.
+\Cref{sec:adjoint} presents the discrete adjoint formulation, the matrix-free implementation, checkpointing, and the amplification analysis for the adjoint linear system.
+\Cref{sec:implementation} details the implementation workflow in ADflow.
 \Cref{sec:verification} presents verification results, and \Cref{sec:demonstration} demonstrates unsteady shape optimization.
 \Cref{sec:conclusions} provides concluding remarks.
 
@@ -154,7 +168,9 @@ For problems with moving or deforming grids (e.g., pitching airfoils), the gover
 The grid velocities enter the convective fluxes, and the geometric conservation law (GCL) is satisfied to preserve freestream preservation on moving meshes.
 In this case, the residual depends additionally on the mesh coordinates and their time derivatives, both of which are functions of the design parameters $\mb{x}$.
 
-\section{Implicit Theta Method}\label{sec:forward}
+\section{Forward Time Integration}\label{sec:forward}
+
+\subsection{Implicit Theta Method}\label{sec:theta_method}
 We cast the semi-discrete system~\eqref{eq:semi_discrete} in implicit form as required by PETSc's TS framework~\cite{Zhang2022},
 \begin{equation}\label{eq:implicit_form}
 \mb{h}(t, \mb{w}, \dot{\mb{w}}) \coloneqq \dot{\mb{w}} - \mb{r}(\mb{w}, \mb{x}) = \mb{0},
@@ -201,6 +217,40 @@ The matrix $\mb{P}$ is factored using an additive Schwarz method (ASM) with one 
 
 For RANS simulations, ADflow's residual evaluation applies an internal scaling factor to the SA turbulence equation to improve conditioning of the coupled system.
 Since the \texttt{IFunction} callback strips this scaling to present a uniformly normalized residual to PETSc, a corresponding left diagonal scaling is applied to $\tilde{\mb{J}}$ before constructing $\mb{P}$, ensuring consistency between the operator and its preconditioner.
+
+\subsection{Conditioning of the Implicit System}\label{sec:conditioning}
+The system matrix $\mb{K} = a\mb{I} - \mb{J}$ couples the temporal shift $a = 1/(\theta \, \Delta t)$ with the spatial Jacobian $\mb{J}$.
+For practical unsteady simulations (e.g., pitching airfoils, buffet), the physical time step $\Delta t$ is determined by the temporal resolution requirements of the flow physics (e.g., tens to hundreds of steps per oscillation period), giving a shift on the order of $a \sim 10^1$--$10^2$.
+In contrast, the spectral radius $\rho(\mb{J})$ of the spatial Jacobian for a typical RANS discretization is on the order of $10^5$--$10^7$, governed by the smallest cells in the boundary-layer mesh.
+When $a \ll \rho(\mb{J})$, the system matrix $\mb{K}$ is indefinite: its eigenvalues $a - \lambda_i(\mb{J})$ range from $a - \rho(\mb{J}) \sim -10^6$ to $a + \rho(\mb{J}) \sim 10^6$, where $\lambda_i(\mb{J})$ are the eigenvalues of $\mb{J}$.
+The ILU-based preconditioner cannot stabilize the Newton iteration for such an indefinite system, and PETSc's adaptive time stepping would reduce the step size by several orders of magnitude to restore convergence, which defeats the purpose of an implicit scheme.
+
+\subsection{DADI Pseudo-Time Approach}\label{sec:dadi}
+ADflow's native unsteady solver avoids this difficulty entirely by embedding \emph{pseudo-time} sub-iterations within each physical time step.
+At each physical step, the backward Euler (BDF1) temporal term is added to the spatial residual, forming the nonlinear system
+\begin{equation}\label{eq:bdf1_system}
+\mb{g}_{\text{BDF}}(\mb{w}_{n+1}) = \frac{\mb{w}_{n+1} - \mb{w}_n}{\Delta t} - \mb{r}(\mb{w}_{n+1}) = \mb{0}.
+\end{equation}
+This system is solved iteratively using a diagonally implicit Runge--Kutta / alternating-direction implicit (DADI) smoother with geometric multigrid~\cite{VanLeer2009}.
+Convergence is driven by pseudo-time stepping: at each sub-iteration, a \emph{local} CFL-based time step is used, providing a per-cell diagonal shift $d_i = 1/(\Delta t_i^{\text{local}} \, V_i^{\text{ref}})$ that is comparable to the spectral radius of the flux Jacobians.
+This large diagonal shift ensures that the pseudo-time system is diagonally dominant at every sub-iteration, enabling robust convergence of the full nonlinear problem regardless of the physical time-step size.
+Optionally, an approximate Newton--Krylov (ANK) solver~\cite{Yildirim2019} or exact Newton--Krylov (NK) solver can be activated once the pseudo-time iteration has reduced the BDF residual sufficiently.
+
+\subsection{Integration with PETSc TS}\label{sec:dadi_petsc}
+To leverage this robust forward solver while retaining PETSc's trajectory management and discrete adjoint infrastructure, we register ADflow's native solver as a custom \texttt{SNES} (nonlinear solver) within PETSc's TS framework.
+PETSc's \texttt{SNES} class supports a Python type via \texttt{SNESSetType(SNESPYTHON)}, which delegates the nonlinear solve to a user-defined Python object.
+At each time step, the TS theta integrator calls \texttt{SNESSolve}: our custom implementation copies the PETSc state vector into ADflow's internal arrays, executes the native DADI+MG (or ANK/NK) iteration until \cref{eq:bdf1_system} is converged to a user-specified tolerance, and returns the converged state to PETSc.
+The TS module manages the time loop, trajectory checkpointing, and adjoint infrastructure without modification.
+This approach is restricted to $\theta = 1$ (backward Euler) to match ADflow's internal BDF1 time integration.
+
+A critical feature of this design is that the adjoint does \emph{not} require differentiating through the DADI or multigrid iterations.
+By the implicit function theorem, the discrete adjoint at each time step depends only on the \emph{converged} state and the spatial Jacobian $\mb{J} = \p\mb{r}/\p\mb{w}$, not on the iterative path taken to reach convergence.
+Specifically, \texttt{TSAdjointStep} retrieves the system Jacobian $\mb{K} = a\mb{I} - \mb{J}$ through the same \texttt{IJacobian} callback used in the Newton--Krylov variant (evaluated via AD) and solves the adjoint linear system $\mb{K}^\intercal \mbg{\lambda} = \mb{b}$ using \texttt{KSPSolveTranspose}.
+Checkpointing via revolve (\cref{sec:checkpointing}) remains fully operational, as \texttt{TSSolve} manages trajectory saving independently of the nonlinear solver type.
+
+This implicit-function-theorem approach contrasts with duality-preserving (DP) adjoint methods~\cite{Fang2024}, which transpose the iterative solver itself to guarantee that the primal and adjoint share identical eigenvalues and convergence rates.
+The DP approach is well suited to segregated solvers whose sequential update structure must be carefully reflected in the adjoint; our approach is natural for coupled solvers where the adjoint linear system $\mb{K}^\intercal \mbg{\lambda} = \mb{b}$ can be solved directly by a Krylov method using the AD-generated Jacobian transpose.
+A practical consequence is that the forward and adjoint solvers can use entirely different algorithmic strategies---pseudo-time marching (DADI) for the forward problem and preconditioned GMRES for the adjoint---while sharing the same AD-generated derivative routines.
 
 \section{Discrete Adjoint Formulation}\label{sec:adjoint}
 
@@ -280,6 +330,44 @@ Revolve stores a limited number of checkpoints in memory and recomputes intermed
 For $n_t$ time steps and $c$ available checkpoint slots, the optimal schedule results in an additional computational cost proportional to $\log(n_t / c)$ forward solves.
 The number of checkpoint slots is specified at runtime, allowing the user to balance memory usage against recomputation cost.
 
+\subsection{Adjoint Amplification and Preconditioning}\label{sec:adjoint_amplification}
+While the implicit function theorem guarantees that the adjoint equations are well-posed, the \emph{conditioning} of the adjoint linear system introduces practical challenges at physical time-step sizes.
+For backward Euler ($\theta = 1$), the adjoint propagation from step $n+1$ to $n$ takes the form
+\begin{equation}\label{eq:adjoint_amplification}
+\mbg{\lambda}_{n} = a \left(a\mb{I} - \mb{J}_n^{\intercal}\right)^{-1} \mbg{\lambda}_{n+1},
+\end{equation}
+where $a = 1/\Delta t$ is the shift parameter.
+The amplification factor for the $i$-th eigenmode is $|a / (a - \lambda_i)|$, where $\lambda_i$ is the corresponding eigenvalue of $\mb{J}$.
+When $a \gg \rho(\mb{J})$ (small $\Delta t$), all amplification factors are close to unity and the adjoint barely changes from one step to the next, and the system $\mb{K}^\intercal \mbg{\lambda} = \mb{b}$ is trivially well-conditioned.
+When $a$ lies within the spectrum of $\mb{J}$ (physical $\Delta t$), eigenvalues $\lambda_i \approx a$ produce large amplification factors that can cause the adjoint variable to grow rapidly over multiple time steps.
+
+The accuracy of the adjoint solution in this regime is controlled by the quality of the linear solve at each time step.
+The right-preconditioned GMRES solve of $\mb{K}^\intercal \mb{y} = \mb{b}$ yields a relative solution error on the order of $\kappa(\mb{P}^{-1}\mb{K}) \cdot \epsilon_{\text{KSP}}$, where $\kappa(\mb{P}^{-1}\mb{K})$ is the condition number of the preconditioned system and $\epsilon_{\text{KSP}}$ is the KSP relative tolerance.
+When $\mb{P}$ is a faithful approximation to $\mb{K}$---specifically, when the diagonal shift in $\mb{P}$ matches the physical shift $a$ rather than the larger CFL-based shift---$\kappa(\mb{P}^{-1}\mb{K})$ remains moderate and GMRES produces accurate solutions.
+Any per-step error is then amplified by the factor $|a/(a - \lambda_i)|$, so tight KSP tolerances and faithful preconditioning are essential.
+
+For this reason, when the DADI forward solver is used, the preconditioner~\eqref{eq:pc_matrix} is constructed with the exact physical shift $a$ for all cells, rather than the per-cell CFL-based maximum.
+This ensures $\mb{P} \approx \mb{K}$, keeping the effective condition number of the preconditioned system near unity.
+The CFL-based shift~\eqref{eq:pc_matrix}, while essential for stabilizing ILU factorization in the Newton--Krylov forward solver (where $a$ can be very small), is unnecessary---and counterproductive---for the adjoint linear system in the DADI approach, where $\mb{K}$ is the actual operator to be inverted.
+For moderately ill-conditioned systems, an LU factorization of $\mb{P}$ (using a parallel sparse direct solver such as SuperLU\_DIST) may be preferred over ILU to eliminate fill-in error from the preconditioner entirely.
+
+\paragraph{Preliminary numerical evidence.}
+We illustrate the amplification phenomenon with a NACA~0012 RANS test case ($M = 0.6$, $\text{Re} = 4.8 \times 10^6$, $\alpha = 2.77\degree$) using backward Euler ($\theta = 1$) and three forward time steps.
+The objective is the final-time lift coefficient $C_L$, and the adjoint sensitivity $\mbg{\lambda}_0^\intercal \mb{v}$ is compared against centered finite differences for a random unit perturbation direction $\mb{v}$ in the initial-state space.
+The spatial Jacobian's spectral radius for this mesh is on the order of $\rho(\mb{J}) \sim 3.5 \times 10^6$.
+\begin{itemize}
+  \item \textbf{Well-conditioned case} ($\Delta t = 10^{-8}$, $a = 10^8 \gg \rho(\mb{J})$):
+    The adjoint directional derivative is $\mbg{\lambda}_0^\intercal \mb{v} = -5.18 \times 10^{-4}$, and the centered FD value at $\varepsilon = 10^{-5}$ agrees to within a relative error of $O(10^{-2})$.
+    All amplification factors $|a/(a - \lambda_i)|$ are close to unity, and the ILU-preconditioned GMRES converges without difficulty.
+  \item \textbf{Physical time step} ($\Delta t = 10^{-5}$, $a = 10^5 < \rho(\mb{J})$):
+    The adjoint directional derivative grows to $\mbg{\lambda}_0^\intercal \mb{v} = -2.95 \times 10^{6}$---six orders of magnitude larger than the terminal condition $(\p C_L / \p \mb{w})^\intercal \mb{v} = -4.98 \times 10^{-4}$---and the FD comparison fails completely.
+    For eigenmodes with $\lambda_i \approx a$, the per-step amplification factor $|a/(a - \lambda_i)|$ can exceed $10^3$, and over three time steps the cumulative amplification is enormous.
+    The ILU-preconditioned GMRES solve introduces $O(\kappa(\mb{P}^{-1}\mb{K}) \cdot \epsilon_{\text{KSP}})$ relative error at each step, which is catastrophically amplified by the subsequent propagation.
+\end{itemize}
+These preliminary results confirm that the adjoint system is mathematically well-posed but numerically demanding at physical time-step sizes: the accuracy is controlled by the preconditioner quality and the KSP tolerance, not by the adjoint formulation itself.
+Improving the preconditioner fidelity---for instance, by replacing ILU with a sparse direct factorization---is expected to recover accurate adjoint solutions in this regime.
+A systematic study of this trade-off is presented in \cref{sec:verification}.
+
 \section{Implementation in ADflow}\label{sec:implementation}
 ADflow~\cite{ADflow2020} is a structured-multiblock finite-volume solver for the compressible RANS equations.
 It is written primarily in Fortran 90 with a Python interface provided through f2py, and it uses PETSc for linear algebra operations.
@@ -289,7 +377,7 @@ This section describes how we extend ADflow to support time-accurate adjoint sen
 The time-accurate adjoint integration is driven from the Python level.
 The key implementation steps are as follows.
 
-First, a PETSc TS object is created and configured with the Crank--Nicolson scheme (\texttt{TSCN}).
+First, a PETSc TS object is created and configured with the implicit theta method (\texttt{TSTHETA}), using either $\theta = 1/2$ (Crank--Nicolson) or $\theta = 1$ (backward Euler for the DADI approach).
 The time step size, final time, and convergence tolerances are set based on the user's input parameters.
 Trajectory saving is enabled via \texttt{TSSetSaveTrajectory} to store checkpoints for the adjoint solve, and the revolve schedule is configured through command-line options.
 
@@ -308,35 +396,23 @@ The cost rate function $r(\mb{w}, \mb{x}, t)$ and its derivatives with respect t
 The overall workflow proceeds as follows: (1) compute the initial condition (e.g., a converged steady-state solution), (2) perform the forward solve via \texttt{TSSolve}, (3) set the adjoint terminal conditions via \texttt{TSSetCostGradients}, (4) execute the backward adjoint solve via \texttt{TSAdjointSolve}, and (5) extract the accumulated parameter sensitivities.
 \Cref{alg:workflow} summarizes this procedure.
 
-\subsection{Native Solver as Custom SNES}\label{sec:native_snes}
-The Newton--Krylov solver described in \cref{sec:forward} faces a fundamental conditioning challenge for compressible RANS simulations: the physical shift $a = 1/(\theta \, \Delta t)$ is typically orders of magnitude smaller than the spectral radius of the spatial Jacobian $\mb{J}$, rendering the system matrix $\mb{K} = a\mb{I} - \mb{J}$ indefinite.
-As a result, the ILU-based preconditioner cannot stabilize the Newton iteration at physical time-step sizes, and PETSc's adaptive time stepping reduces the step size by several orders of magnitude.
-
-ADflow's native unsteady solver avoids this difficulty by embedding a \emph{pseudo-time} sub-iteration within each physical time step.
-The implicit BDF temporal term is added to the spatial residual, and the combined system is driven to convergence using a diagonally implicit Runge--Kutta / alternating-direction implicit (DADI) smoother with geometric multigrid~\cite{VanLeer2009}.
-At each pseudo-time step, the CFL-based local time stepping provides a per-cell diagonal shift that is comparable to the spectral radius of $\mb{J}$, ensuring robust convergence.
-Optionally, an approximate Newton--Krylov (ANK) solver~\cite{Yildirim2019} or exact Newton--Krylov (NK) solver can be activated once the pseudo-time iteration has reduced the residual sufficiently.
-
-To leverage this robust forward solver while retaining PETSc's trajectory management and discrete adjoint infrastructure, we register ADflow's native solver as a custom \texttt{SNES} within PETSc's TS framework.
-At each time step, \texttt{TSSolve} calls \texttt{SNESSolve}, which delegates to the custom \texttt{SNES}: the current PETSc state vector $\mb{w}_n$ is copied into ADflow's internal arrays, the native DADI+MG (or ANK/NK) iteration is executed, and the converged state $\mb{w}_{n+1}$ is returned to PETSc.
-This approach is limited to $\theta = 1$ (backward Euler, equivalent to first-order BDF) to match ADflow's internal time integration.
-
-A key advantage of this design is that the adjoint does not require differentiating through the DADI or multigrid iterations.
-By the implicit function theorem, the discrete adjoint at each time step depends only on the \emph{converged} state and the spatial Jacobian $\mb{J} = \p\mb{r}/\p\mb{w}$, not on the iterative path taken to reach convergence.
-Specifically, \texttt{TSAdjointStep} retrieves the Jacobian $\mb{K} = a\mb{I} - \mb{J}$ through the \texttt{IJacobian} callback (evaluated via the same AD routines used in the Newton--Krylov variant) and solves the adjoint linear system $\mb{K}^\intercal \mbg{\lambda} = \mb{b}$ using GMRES with the preconditioner from \cref{sec:preconditioner}.
-Checkpointing via revolve (\cref{sec:checkpointing}) remains fully operational, as \texttt{TSSolve} manages the trajectory saving independently of the nonlinear solver type.
-
 \begin{algorithm}[t]
-\caption{Time-accurate adjoint workflow in ADflow.}\label{alg:workflow}
+\caption{Time-accurate adjoint workflow in ADflow.  Steps 2--3 differ between the two forward solver strategies; all other steps are shared.}\label{alg:workflow}
 \begin{algorithmic}[1]
 \State $\mb{w}_0 \gets \text{SteadySolve}()$ \Comment{base flow}
-\State $\text{TS} \gets \text{CreateTS}(\theta = 1/2)$ \Comment{Crank--Nicolson}
-\State $\text{RegisterCallbacks}(\texttt{IFunction}, \texttt{IJacobian}, \texttt{IJacobianP})$
+\If{\text{Crank--Nicolson (Newton--Krylov)}}
+    \State $\text{TS} \gets \text{CreateTS}(\theta = 1/2)$ \Comment{second-order CN}
+    \State $\text{RegisterCallbacks}(\texttt{IFunction}, \texttt{IJacobian})$
+\ElsIf{\text{DADI (pseudo-time)}}
+    \State $\text{TS} \gets \text{CreateTS}(\theta = 1)$ \Comment{first-order backward Euler}
+    \State $\text{RegisterCallbacks}(\texttt{IFunction}, \texttt{IJacobian})$
+    \State $\text{SNES} \gets \text{CustomSNES}(\text{ADflow DADI+MG})$ \Comment{forward solver}
+\EndIf
 \State $\text{EnableCheckpointing}(\text{revolve})$
 \State $\mb{w}(t_f) \gets \texttt{TSSolve}(\mb{w}_0)$ \Comment{forward solve}
 \State $\mbg{\lambda}_{n_t} \gets (\p \phi / \p \mb{w})^\intercal$ \Comment{terminal condition}
 \State $\mbg{\mu} \gets (\p \phi / \p \mb{x})^\intercal$ \Comment{parameter seed}
-\State $\mbg{\lambda}_0, \mbg{\mu} \gets \texttt{TSAdjointSolve}()$ \Comment{backward sweep}
+\State $\mbg{\lambda}_0, \mbg{\mu} \gets \texttt{TSAdjointSolve}()$ \Comment{backward sweep (shared)}
 \State $\d f/\d \mb{x} = \mbg{\mu} + \mbg{\lambda}_0 \cdot (\d \mb{w}_0 / \d \mb{x})$ \Comment{total sensitivity}
 \end{algorithmic}
 \end{algorithm}
@@ -417,8 +493,13 @@ To demonstrate the practical utility of the time-accurate adjoint framework, we 
 
 \section{Conclusions}\label{sec:conclusions}
 We developed a scalable time-accurate discrete adjoint framework for unsteady compressible flow simulations by interfacing ADflow with PETSc's time-stepping adjoint infrastructure.
-The framework uses the Crank--Nicolson scheme for second-order temporal accuracy, matrix-free Jacobian-transpose--vector products from reverse-mode algorithmic differentiation via Tapenade, and revolve checkpointing to manage memory for large-scale problems.
-Both final-time and time-integrated objective functions are supported through PETSc's quadrature time-stepping interface.
+The framework supports two complementary forward solver strategies: a Crank--Nicolson scheme with Newton--Krylov time stepping for second-order temporal accuracy, and ADflow's native DADI pseudo-time solver registered as a custom PETSc \texttt{SNES} for robust convergence at physical time-step sizes.
+Both approaches share the same adjoint infrastructure: matrix-free Jacobian-transpose--vector products from reverse-mode algorithmic differentiation via Tapenade, PETSc's automatic adjoint time integration, and revolve checkpointing for memory management.
+Final-time and time-integrated objective functions are both supported through PETSc's quadrature time-stepping interface.
+
+The integration of ADflow's native solver with PETSc's TS framework is enabled by the implicit function theorem: the adjoint at each time step requires only the spatial Jacobian at the converged state, not differentiation through the pseudo-time iterations.
+This clean separation allows the forward and adjoint solvers to use fundamentally different algorithmic strategies---pseudo-time marching for the forward problem and Krylov methods for the adjoint---while sharing the same AD-generated derivative routines.
+The conditioning of the adjoint linear system is governed by the spectral proximity of the temporal shift to the eigenvalues of the spatial Jacobian, and we discuss preconditioning strategies to ensure accurate adjoint solutions at physical time-step sizes.
 
 The adjoint sensitivities were verified against finite differences on three test cases: vortex shedding behind a circular cylinder, a pitching airfoil with mesh deformation, and transonic buffet over a supercritical airfoil.
 % placeholder: summarize accuracy (e.g., relative errors below X for all cases)
@@ -429,7 +510,7 @@ By leveraging PETSc's TS adjoint module, the implementation avoids manually deri
 The matrix-free approach enables application to large-scale three-dimensional problems without explicit Jacobian storage.
 The revolve checkpointing strategy provides a practical balance between memory and computational cost, with the number of checkpoints configurable at runtime.
 
-% placeholder: future work (e.g., second-order adjoint for Hessian, aeroelastic coupling, higher-order time schemes)
+% placeholder: future work (e.g., second-order adjoint for Hessian, aeroelastic coupling, higher-order time schemes, DADI-based transpose solver for adjoint)
 
 \bibliography{bib/references.bib,bib/agi.bib}
 

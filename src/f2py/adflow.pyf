@@ -450,6 +450,12 @@ python module libadflow
            integer(kind=inttype) optional,check(len(in_vec)>=ndof),depend(in_vec) :: ndof=len(in_vec)
          end subroutine applytspreconditioner
 
+         subroutine applytspreconditionertranspose(in_vec,out_vec,ndof)
+           real(kind=realtype) dimension(ndof),intent(in) :: in_vec
+           real(kind=realtype) dimension(ndof),intent(in, out),depend(ndof) :: out_vec
+           integer(kind=inttype) optional,check(len(in_vec)>=ndof),depend(in_vec) :: ndof=len(in_vec)
+         end subroutine applytspreconditionertranspose
+
          subroutine destroytspreconditioner
          end subroutine destroytspreconditioner
 
